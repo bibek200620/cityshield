@@ -103,13 +103,13 @@ def _ensure_single_component(road_graph: nx.Graph, drain_edges: set[frozenset]) 
     if len(components) <= 1:
         return drain_edges
 
-    components.sort(key=len, reverse=True)
+    components.sort(key=lambda component: (-len(component), tuple(sorted(component))))
     main = set(components[0])
     for comp in components[1:]:
         best_path = None
-        for src in comp:
+        for src in sorted(comp):
             lengths, paths = nx.single_source_dijkstra(road_graph, src, weight="length_m")
-            for target in main:
+            for target in sorted(main):
                 if target in paths:
                     path = paths[target]
                     if best_path is None or len(path) < len(best_path):
@@ -139,7 +139,7 @@ def build_drainage_graph(provider: WardDataProvider) -> nx.DiGraph:
     for e in drain_edges:
         drain_nodes.update(e)
 
-    for node in drain_nodes:
+    for node in sorted(drain_nodes):
         data = road_graph.nodes[node]
         g.add_node(
             node,
@@ -151,7 +151,7 @@ def build_drainage_graph(provider: WardDataProvider) -> nx.DiGraph:
             is_major_junction=data.get("is_major_junction", False),
         )
 
-    for e in drain_edges:
+    for e in sorted(drain_edges, key=lambda edge: tuple(sorted(edge))):
         u, v = tuple(e)
         edge_data = road_graph.get_edge_data(u, v)
         length_m = max(edge_data.get("length_m", 1.0), 1.0)

@@ -47,6 +47,13 @@ SPATIAL_BLOCK_SIZE_M = 900.0
 SPATIAL_BUFFER_BLOCKS = 1
 SPATIAL_TEST_SIZE = 0.2
 RANDOM_SEED = 42
+MODEL_PARAMETERS = {
+    "n_estimators": 300,
+    "max_depth": 6,
+    "n_jobs": 4,
+    "random_state": RANDOM_SEED,
+    "tree_method": "hist",
+}
 QA_BAD_BITS_SET = tuple(bit for bit in range(16) if QA_BAD_BITS & (1 << bit))
 BOUNDARY = Path("../frontend/public/data/bengaluru-boundary.geojson")
 OUTPUT = Path("data/heat/city-study")
@@ -435,7 +442,7 @@ def main() -> None:
     train_north = np.concatenate([row[4] for row in train])
 
     spatial_train, spatial_test = spatial_holdout_indices(train_east, train_north)
-    spatial_model = XGBRegressor(n_estimators=300, max_depth=6, n_jobs=4, random_state=RANDOM_SEED, tree_method="hist")
+    spatial_model = XGBRegressor(**MODEL_PARAMETERS)
     spatial_model.fit(train_x[spatial_train], train_y[spatial_train])
     spatial_linear = LinearRegression().fit(train_x[spatial_train], train_y[spatial_train])
     spatial_blocks = np.column_stack((
@@ -459,7 +466,7 @@ def main() -> None:
         "training_mean_baseline": metrics(train_y[spatial_test], np.full(len(spatial_test), train_y[spatial_train].mean())),
     }
 
-    model = XGBRegressor(n_estimators=300, max_depth=6, n_jobs=4, random_state=42, tree_method="hist")
+    model = XGBRegressor(**MODEL_PARAMETERS)
     model.fit(train_x, train_y)
     linear = LinearRegression().fit(train_x, train_y)
     evaluations = []
@@ -499,7 +506,10 @@ def main() -> None:
         "random_seed": RANDOM_SEED,
         "train_pixels": len(train_y),
         "spatial_block_evaluation": spatial_eval,
-        "model_parameters": model.get_params(), "training": [row[2] for row in train], "test": evaluations,
+        "model_parameters": MODEL_PARAMETERS,
+        "xgboost_version": xgb.__version__,
+        "training": [row[2] for row in train],
+        "test": evaluations,
     }
     model.save_model(MODEL_PATH)
     EVALUATION_PATH.write_text(json.dumps(report, indent=2) + "\n")
