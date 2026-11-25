@@ -1,10 +1,10 @@
 """Historical backtest hook (§6.6).
 
-Ships with ZERO pre-filled events -- no historical flood is invented
-here. One stub event with every field null/"TODO..." exercises the
-schema and the run_backtest() mechanism end-to-end. GET
-/api/backtest/{event_id} returns 501 until a real, sourced event is
-added -- see docs/DATA_SOURCES.md for how.
+No evaluation-grade historical event is configured. A coarse narrative
+reference is recorded in flood_event_sources.json for provenance only; it
+does not contain verified geometry, observed outcome labels, or matched event
+rainfall and cannot be used by run_backtest(). GET /api/backtest/{event_id}
+returns 501 until evaluation-grade data are added -- see docs/FLOOD_EVENT_DATA.md.
 """
 from __future__ import annotations
 

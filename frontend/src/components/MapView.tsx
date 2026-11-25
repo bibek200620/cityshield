@@ -8,7 +8,7 @@ import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, Hea
 import { getMapDetail, summarizeHexes, type HexGrids, type HexSummary, type MapDetail } from "../map/hexGrid";
 import { useFloodStore } from "../store/useFloodStore";
 import type { BengaluruPlace } from "./PlaceSearch";
-import { getRoutePosition, type DrivePreviewMode, type Waypoints } from "../map/drivingPlanner";
+import type { LiveLocation, NavigationMode, RouteMatch, Waypoints } from "../map/drivingPlanner";
 
 export interface CityHeat {
   scene_id: string;
@@ -22,7 +22,7 @@ export interface CityHeat {
 const BASEMAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DEFAULT_BBOX = [77.655, 12.915, 77.680, 12.940];
 const PILOT_VIEW = { padding: 48, maxZoom: 14.2 };
-const CITY_BOUNDS: maplibregl.LngLatBoundsLike = [[77.46005, 12.83362], [77.78437, 13.14266]];
+const CITY_BOUNDS: maplibregl.LngLatBoundsLike = [[77.44, 12.62], [77.80, 13.16]];
 const CITY_VIEW = { padding: 30, duration: 0 };
 const ROAD_COLORS = {
   clear: [80, 124, 179],
@@ -66,7 +66,7 @@ function temperatureColor(temperature: number): [number, number, number, number]
 
 export default function MapView({
   place, cityHeat, cityFlood, onReset, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
-  drivePreview,
+  navigation,
 }: {
   place: BengaluruPlace | null;
   cityHeat: CityHeat | null;
@@ -76,7 +76,7 @@ export default function MapView({
   drivingRoutes?: DrivingOption[];
   selectedDrivingId: string;
   onPickPoint?: (point: LatLng) => void;
-  drivePreview: { mode: DrivePreviewMode; progress: number };
+  navigation: { mode: NavigationMode; location: LiveLocation | null; routeMatch: RouteMatch | null };
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -93,10 +93,7 @@ export default function MapView({
   const visibility = useFloodStore((s) => s.layerVisibility);
   const mesh = detail === "cells" ? null : hexGrids?.[detail];
   const selectedDrivingRoute = drivingRoutes?.find((option) => option.id === selectedDrivingId) ?? null;
-  const previewPosition = useMemo(() => drivePreview.mode === "idle" || !selectedDrivingRoute
-    ? null
-    : getRoutePosition(selectedDrivingRoute.coordinates, drivePreview.progress),
-  [drivePreview.mode, drivePreview.progress, selectedDrivingRoute]);
+  const navigationActive = navigation.mode !== "idle" && navigation.mode !== "error";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -246,7 +243,7 @@ export default function MapView({
     const updateBuildings = () => {
       if (!live || !instance.isStyleLoaded()) return;
       const style = instance.getStyle();
-      if (drivePreview.mode === "idle") {
+      if (!navigationActive) {
         if (instance.getLayer("cityshield-drive-buildings")) instance.removeLayer("cityshield-drive-buildings");
         return;
       }
@@ -277,15 +274,16 @@ export default function MapView({
       live = false;
       instance.off("style.load", updateBuildings);
     };
-  }, [drivePreview.mode]);
+  }, [navigationActive]);
 
   useEffect(() => {
     const instance = map.current;
     if (!instance) return;
-    if (drivePreview.mode === "idle" || !previewPosition || !selectedDrivingRoute) {
+    const location = navigation.location;
+    if (!navigationActive || !location) {
       driveMarker.current?.remove();
       driveMarker.current = null;
-      if (drivePreview.mode === "idle") {
+      if (!navigationActive && navigation.mode === "idle") {
         const bounds = new maplibregl.LngLatBounds();
         for (const coordinate of selectedDrivingRoute?.coordinates ?? []) bounds.extend(coordinate);
         if (!bounds.isEmpty()) {
@@ -303,27 +301,29 @@ export default function MapView({
     }
     if (!driveMarker.current) {
       const element = document.createElement("div");
-      element.className = "drive-car-marker";
+      element.className = "gps-navigation-marker";
       element.setAttribute("role", "img");
-      element.setAttribute("aria-label", "Simulated car on the selected route");
-      element.innerHTML = '<svg viewBox="0 0 32 42" aria-hidden="true"><path d="M10 2h12l6 9v20l-6 9H10l-6-9V11z"/><path d="M9 15h14v12H9z"/><path d="M9 7h14M8 33h16"/></svg>';
+      element.setAttribute("aria-label", "Your current GPS location");
+      element.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 27 27l-11-6-11 6L16 2Z"/></svg>';
       driveMarker.current = new maplibregl.Marker({
         element,
         anchor: "center",
         rotationAlignment: "map",
         pitchAlignment: "map",
-      }).setLngLat([previewPosition.lng, previewPosition.lat]).addTo(instance);
+      }).setLngLat([location.lng, location.lat]).addTo(instance);
+      driveMarker.current.getElement().setAttribute("aria-label", "Your current GPS location");
     }
-    driveMarker.current.setLngLat([previewPosition.lng, previewPosition.lat]);
-    driveMarker.current.setRotation(previewPosition.bearing);
+    const bearing = location.heading_deg ?? navigation.routeMatch?.bearing ?? 0;
+    driveMarker.current.setLngLat([location.lng, location.lat]);
+    driveMarker.current.setRotation(bearing);
     instance.easeTo({
-      center: [previewPosition.lng, previewPosition.lat],
+      center: [location.lng, location.lat],
       zoom: 16.5,
       pitch: 55,
-      bearing: previewPosition.bearing,
-      duration: 480,
+      bearing,
+      duration: 250,
     });
-  }, [drivePreview.mode, previewPosition, selectedDrivingRoute]);
+  }, [navigationActive, navigation.location, navigation.mode, navigation.routeMatch?.bearing, selectedDrivingRoute]);
 
   useEffect(() => {
     const instance = map.current;
@@ -363,7 +363,7 @@ export default function MapView({
     if (!instance) return;
     const markers: maplibregl.Marker[] = [];
     for (const [index, point] of [drivePoints.source, drivePoints.destination].entries()) {
-      if (!point) continue;
+      if (!point || (index === 0 && navigationActive)) continue;
       const marker = document.createElement("div");
       marker.className = `route-marker marker-${index}`;
       marker.textContent = index === 0 ? "A" : "B";
@@ -371,11 +371,11 @@ export default function MapView({
       markers.push(new maplibregl.Marker({ element: marker }).setLngLat([point.lng, point.lat]).addTo(instance));
     }
     return () => markers.forEach((marker) => marker.remove());
-  }, [drivePoints]);
+  }, [drivePoints, navigationActive]);
 
   useEffect(() => {
     const instance = map.current;
-    if (!instance || !drivingRoutes?.length) return;
+    if (!instance || !drivingRoutes?.length || navigationActive) return;
     const bounds = new maplibregl.LngLatBounds();
     for (const option of drivingRoutes) {
       for (const coordinate of option.coordinates) bounds.extend(coordinate);
@@ -388,7 +388,7 @@ export default function MapView({
         duration: 0,
       });
     }
-  }, [drivingRoutes]);
+  }, [drivingRoutes, navigationActive]);
 
   useEffect(() => {
     const layers: Layer[] = [];
@@ -538,7 +538,8 @@ export default function MapView({
         {hasCityOverlay && <strong className="map-detail" role="status">
           {hasHexes ? (detail === "city" ? "City hexagons · averages" : "District hexagons · averages") : "300 m cells"}
         </strong>}
-        <span><i style={{ background: "#164f46" }} /> Municipal boundary</span>
+        <span><i style={{ background: "#164f46" }} /> 2025 GBA risk-data boundary</span>
+        <span className="coverage-note">Southern suburbs are visible for basemap and routing; current flood and heat risk data stop at this boundary.</span>
         {(visibility.pilotFlood || visibility.combined) && <span><i className="pilot-line" /> Bellandur pilot boundary</span>}
         {visibility.floodDepth && cityFlood && <div className="flood-legend">
           <strong>Runoff on terrain depressions</strong>

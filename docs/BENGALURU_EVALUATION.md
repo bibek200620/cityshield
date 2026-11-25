@@ -2,7 +2,9 @@
 
 ## City boundary and search
 
-The map covers the five Greater Bengaluru Authority corporations. Its outline is a dissolved and 30 m simplified copy of the 2025 corporation polygons. Search indexes 369 notified wards by their English and Kannada names and zooms to the selected ward. Ward IDs use corporation and ward numbers together. Search coverage is limited to the ward index and its spelling aliases. The official map reference is [GBA city corporation maps](https://www.bbmp.gov.in/maps/). Machine-readable geometry is from OpenCity via the [bharatlas layer catalog](https://bharatlas.com/layers#city-wards), where the two layers are marked CC0.
+The risk-data boundary is the five Greater Bengaluru Authority corporations. Its outline is a dissolved and 30 m simplified copy of the 2025 corporation polygons. Search indexes 369 notified wards by their English and Kannada names and zooms to the selected ward. Ward IDs use corporation and ward numbers together. Search coverage is limited to the ward index and its spelling aliases. The official map reference is [GBA city corporation maps](https://www.bbmp.gov.in/maps/). Machine-readable geometry is from OpenCity via the [bharatlas layer catalog](https://bharatlas.com/layers#city-wards), where the two layers are marked CC0.
+
+The map viewport, general place search, and driving route bounds extend south to 12.62°N (and span 77.44–77.80°E), so southern suburbs through Anekal can be seen and used for routing. This is basemap and route coverage only. The 2025 GBA polygon remains the cutoff for city flood and heat risk outputs; no values are extrapolated south of it. The route bounds are a rectangular supported region, not an administrative boundary.
 
 ## City land-surface temperature
 
