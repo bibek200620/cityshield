@@ -3,11 +3,12 @@ import type { Layer } from "@deck.gl/core";
 import { PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import maplibregl from "maplibre-gl";
+import type { FillExtrusionLayerSpecification } from "maplibre-gl";
 import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, HeatCell, LatLng, NodePrediction, RoadSegment } from "../api/client";
 import { getMapDetail, summarizeHexes, type HexGrids, type HexSummary, type MapDetail } from "../map/hexGrid";
 import { useFloodStore } from "../store/useFloodStore";
 import type { BengaluruPlace } from "./PlaceSearch";
-import type { Waypoints } from "../map/drivingPlanner";
+import { getRoutePosition, type DrivePreviewMode, type Waypoints } from "../map/drivingPlanner";
 
 export interface CityHeat {
   scene_id: string;
@@ -65,6 +66,7 @@ function temperatureColor(temperature: number): [number, number, number, number]
 
 export default function MapView({
   place, cityHeat, cityFlood, onReset, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
+  drivePreview,
 }: {
   place: BengaluruPlace | null;
   cityHeat: CityHeat | null;
@@ -74,10 +76,12 @@ export default function MapView({
   drivingRoutes?: DrivingOption[];
   selectedDrivingId: string;
   onPickPoint?: (point: LatLng) => void;
+  drivePreview: { mode: DrivePreviewMode; progress: number };
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const overlay = useRef<MapboxOverlay | null>(null);
+  const driveMarker = useRef<maplibregl.Marker | null>(null);
   const [mapError, setMapError] = useState(false);
   const [detail, setDetail] = useState<MapDetail>("city");
   const [hexGrids, setHexGrids] = useState<HexGrids | null>(null);
@@ -88,6 +92,11 @@ export default function MapView({
   const selectedRoute = useFloodStore((s) => s.selectedRouteId);
   const visibility = useFloodStore((s) => s.layerVisibility);
   const mesh = detail === "cells" ? null : hexGrids?.[detail];
+  const selectedDrivingRoute = drivingRoutes?.find((option) => option.id === selectedDrivingId) ?? null;
+  const previewPosition = useMemo(() => drivePreview.mode === "idle" || !selectedDrivingRoute
+    ? null
+    : getRoutePosition(selectedDrivingRoute.coordinates, drivePreview.progress),
+  [drivePreview.mode, drivePreview.progress, selectedDrivingRoute]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -147,6 +156,12 @@ export default function MapView({
       setDetail(next);
     });
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+    instance.addControl(new maplibregl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true, timeout: 10_000 },
+      trackUserLocation: true,
+      showUserLocation: true,
+      showAccuracyCircle: true,
+    }), "bottom-right");
     const deckOverlay = new MapboxOverlay({
       layers: [],
       getTooltip: ({ object, layer }) => {
@@ -216,11 +231,99 @@ export default function MapView({
     });
 
     return () => {
+      driveMarker.current?.remove();
+      driveMarker.current = null;
       instance.remove();
       overlay.current = null;
       map.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+    let live = true;
+    const updateBuildings = () => {
+      if (!live || !instance.isStyleLoaded()) return;
+      const style = instance.getStyle();
+      if (drivePreview.mode === "idle") {
+        if (instance.getLayer("cityshield-drive-buildings")) instance.removeLayer("cityshield-drive-buildings");
+        return;
+      }
+      const hasBuildings = Boolean(style.sources.protomaps && style.layers?.some((layer) =>
+        "source" in layer && layer.source === "protomaps"
+        && "source-layer" in layer && layer["source-layer"] === "buildings",
+      ));
+      if (!hasBuildings || instance.getLayer("cityshield-drive-buildings")) return;
+      const extrusion: FillExtrusionLayerSpecification = {
+        id: "cityshield-drive-buildings",
+        type: "fill-extrusion",
+        source: "protomaps",
+        "source-layer": "buildings",
+        minzoom: 14,
+        paint: {
+          "fill-extrusion-color": "#c9d8d1",
+          "fill-extrusion-height": ["max", 4, ["to-number", ["get", "height"], 8]],
+          "fill-extrusion-base": ["max", 0, ["to-number", ["get", "min_height"], 0]],
+          "fill-extrusion-opacity": 0.82,
+        },
+      };
+      const firstLabel = style.layers?.find((layer) => layer.type === "symbol")?.id;
+      instance.addLayer(extrusion, firstLabel);
+    };
+    if (instance.isStyleLoaded()) updateBuildings();
+    else instance.once("style.load", updateBuildings);
+    return () => {
+      live = false;
+      instance.off("style.load", updateBuildings);
+    };
+  }, [drivePreview.mode]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+    if (drivePreview.mode === "idle" || !previewPosition || !selectedDrivingRoute) {
+      driveMarker.current?.remove();
+      driveMarker.current = null;
+      if (drivePreview.mode === "idle") {
+        const bounds = new maplibregl.LngLatBounds();
+        for (const coordinate of selectedDrivingRoute?.coordinates ?? []) bounds.extend(coordinate);
+        if (!bounds.isEmpty()) {
+          const wide = instance.getContainer().clientWidth > 750;
+          instance.fitBounds(bounds, {
+            padding: { top: 85, bottom: 65, left: 45, right: wide ? 380 : 45 },
+            maxZoom: 15,
+            duration: 500,
+          });
+        } else {
+          instance.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+        }
+      }
+      return;
+    }
+    if (!driveMarker.current) {
+      const element = document.createElement("div");
+      element.className = "drive-car-marker";
+      element.setAttribute("role", "img");
+      element.setAttribute("aria-label", "Simulated car on the selected route");
+      element.innerHTML = '<svg viewBox="0 0 32 42" aria-hidden="true"><path d="M10 2h12l6 9v20l-6 9H10l-6-9V11z"/><path d="M9 15h14v12H9z"/><path d="M9 7h14M8 33h16"/></svg>';
+      driveMarker.current = new maplibregl.Marker({
+        element,
+        anchor: "center",
+        rotationAlignment: "map",
+        pitchAlignment: "map",
+      }).setLngLat([previewPosition.lng, previewPosition.lat]).addTo(instance);
+    }
+    driveMarker.current.setLngLat([previewPosition.lng, previewPosition.lat]);
+    driveMarker.current.setRotation(previewPosition.bearing);
+    instance.easeTo({
+      center: [previewPosition.lng, previewPosition.lat],
+      zoom: 16.5,
+      pitch: 55,
+      bearing: previewPosition.bearing,
+      duration: 480,
+    });
+  }, [drivePreview.mode, previewPosition, selectedDrivingRoute]);
 
   useEffect(() => {
     const instance = map.current;

@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     # API
     CORS_ORIGINS: str = "http://localhost:5173"
     TOMTOM_API_KEY: SecretStr | None = None
+    PLACE_SEARCH_URL: str = "https://nominatim.openstreetmap.org/search"
 
     @property
     def cors_origins_list(self) -> list[str]:

@@ -14,6 +14,7 @@ from app.api import (
     routes_infra,
     routes_heat,
     routes_exposure,
+    routes_places,
     routes_route,
     routes_scenarios,
     routes_simulate,
@@ -50,6 +51,7 @@ app.add_middleware(
 app.include_router(routes_simulate.router)
 app.include_router(routes_city_flood.router)
 app.include_router(routes_driving.router)
+app.include_router(routes_places.router)
 app.include_router(routes_scenarios.router)
 app.include_router(routes_route.router)
 app.include_router(routes_infra.router)

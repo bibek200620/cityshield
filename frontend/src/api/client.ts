@@ -5,6 +5,19 @@ export interface LatLng {
   lng: number;
 }
 
+export interface PlaceSearchResult extends LatLng {
+  id: string;
+  name: string;
+  category: string;
+}
+
+export interface PlaceSearchResponse {
+  status: "ready";
+  source: string;
+  attribution: string;
+  results: PlaceSearchResult[];
+}
+
 export interface DrivingOption {
   id: string;
   labels: string[];
@@ -127,6 +140,13 @@ export type WeatherAvailabilityResponse =
     recent_through: string;
     upcoming_rain_mm: number;
     forecast_through: string;
+    hourly_forecast: {
+      valid_at: string;
+      air_temperature_c: number;
+      feels_like_c: number;
+      relative_humidity_pct: number;
+      precipitation_mm: number;
+    }[];
   };
 
 export interface HeatCell {
@@ -213,12 +233,14 @@ export const api = {
       body: JSON.stringify({ source, destination }),
       signal,
     }),
+  searchPlaces: (query: string, signal: AbortSignal) =>
+    request<PlaceSearchResponse>(`/api/places/search?query=${encodeURIComponent(query)}`, { signal }),
   getCityFlood: (rainfallMm: number, signal: AbortSignal) =>
     request<CityFloodResponse>(`/api/flood/city?rainfall_mm=${rainfallMm}`, { signal }),
   getScenarios: () => request<ScenarioSummary[]>("/api/scenarios"),
   getScenarioDetail: (scenarioId: string) => request<SimulateResponse>(`/api/scenarios/${scenarioId}`),
   getCriticalInfrastructure: () => request<CriticalInfraItem[]>("/api/critical-infrastructure"),
-  getWeatherNowcast: () => request<WeatherAvailabilityResponse>("/api/weather/nowcast"),
+  getWeatherNowcast: (signal?: AbortSignal) => request<WeatherAvailabilityResponse>("/api/weather/nowcast", { signal }),
   getHeatWorkflow: () => request<HeatWorkflowResponse>("/api/heat"),
   getCombinedExposure: (scenarioId: string) => request<ExposureResponse>(`/api/exposure/${scenarioId}`),
   simulate: (rainfall_intensity_mm_hr: number, duration_min: number) =>

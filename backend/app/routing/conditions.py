@@ -42,14 +42,37 @@ def parse_weather(payload: dict, now: float) -> dict:
     if not -900 <= now - valid_at <= 3600:
         raise ValueError("Current weather is stale or too far in the future")
     hourly = payload["hourly"]
-    if not len(hourly["time"]) == len(hourly["precipitation"]):
-        raise ValueError("Misaligned rainfall series")
+    fields = ("precipitation", "temperature_2m", "apparent_temperature", "relative_humidity_2m")
+    if any(len(hourly["time"]) != len(hourly[key]) for key in fields):
+        raise ValueError("Misaligned hourly weather series")
     hour_end = int(now // 3600) * 3600
-    rain = dict(zip(hourly["time"], hourly["precipitation"]))
-    recent = [float(rain[t]) for t in (hour_end - 3600, hour_end)]
-    future = [float(rain[t]) for t in (hour_end + 3600, hour_end + 7200)]
+    values = {
+        key: dict(zip(hourly["time"], hourly[key]))
+        for key in fields
+    }
+    required_times = (hour_end - 3600, hour_end, hour_end + 3600, hour_end + 7200, hour_end + 10800)
+    if any(timestamp not in values["precipitation"] for timestamp in required_times):
+        raise ValueError("Missing hourly weather values")
+    recent = [float(values["precipitation"][t]) for t in (hour_end - 3600, hour_end)]
+    forecast = []
+    for offset in (3600, 7200, 10800):
+        timestamp = hour_end + offset
+        slot = {
+            "valid_at": iso_utc(timestamp),
+            "air_temperature_c": float(values["temperature_2m"][timestamp]),
+            "feels_like_c": float(values["apparent_temperature"][timestamp]),
+            "relative_humidity_pct": float(values["relative_humidity_2m"][timestamp]),
+            "precipitation_mm": float(values["precipitation"][timestamp]),
+        }
+        if not all(isfinite(slot[key]) for key in ("air_temperature_c", "feels_like_c")):
+            raise ValueError("Invalid forecast temperature")
+        if not 0 <= slot["relative_humidity_pct"] <= 100:
+            raise ValueError("Invalid forecast humidity")
+        if not isfinite(slot["precipitation_mm"]) or slot["precipitation_mm"] < 0:
+            raise ValueError("Invalid forecast rainfall")
+        forecast.append(slot)
     temperatures = [float(current[key]) for key in ("temperature_2m", "apparent_temperature")]
-    if not all(isfinite(value) and value >= 0 for value in (*recent, *future)):
+    if not all(isfinite(value) and value >= 0 for value in recent):
         raise ValueError("Invalid rainfall")
     if not all(isfinite(value) for value in temperatures):
         raise ValueError("Invalid temperature")
@@ -61,8 +84,9 @@ def parse_weather(payload: dict, now: float) -> dict:
         "feels_like_c": temperatures[1],
         "recent_rain_mm": round(sum(recent), 2),
         "recent_through": iso_utc(hour_end),
-        "upcoming_rain_mm": round(sum(future), 2),
-        "forecast_through": iso_utc(hour_end + 7200),
+        "upcoming_rain_mm": round(sum(slot["precipitation_mm"] for slot in forecast), 2),
+        "forecast_through": iso_utc(hour_end + 10800),
+        "hourly_forecast": forecast,
     }
 
 
@@ -71,7 +95,8 @@ def weather_payload(_five_minute_slot: int) -> dict:
     return fetch_json(WEATHER_URL, {
         "latitude": 12.98, "longitude": 77.59,
         "current": "temperature_2m,apparent_temperature",
-        "hourly": "precipitation", "past_hours": 2, "forecast_hours": 4,
+        "hourly": "precipitation,temperature_2m,apparent_temperature,relative_humidity_2m",
+        "past_hours": 2, "forecast_hours": 4,
         "timeformat": "unixtime", "timezone": "UTC",
     })
 

@@ -8,6 +8,7 @@ import MapView, { type CityHeat } from "./components/MapView";
 import PlaceSearch, { type BengaluruPlace } from "./components/PlaceSearch";
 import RouteComparisonPanel from "./components/RouteComparisonPanel";
 import ScenarioSlider from "./components/ScenarioSlider";
+import ThreeHourOutlook from "./components/ThreeHourOutlook";
 import { useFloodStore } from "./store/useFloodStore";
 
 const layers = [
@@ -67,7 +68,7 @@ function Dashboard() {
   const [place, setPlace] = useState<BengaluruPlace | null>(null);
   const [cityHeat, setCityHeat] = useState<CityHeat | null>(null);
   const [cityFlood, setCityFlood] = useState<CityFloodResponse | null>(null);
-  const [panel, setPanel] = useState<"rainfall" | "data" | "drive" | null>(null);
+  const [panel, setPanel] = useState<"rainfall" | "data" | "drive" | "outlook" | null>(null);
   const [picking, setPicking] = useState<Endpoint | null>(null);
   const drive = useDrivingPlanner();
   const panelHeading = useRef<HTMLHeadingElement>(null);
@@ -130,7 +131,7 @@ function Dashboard() {
         </a>
         <PlaceSearch selected={place} onSelect={setPlace} />
         <div className="header-actions">
-          {(["drive", "rainfall", "data"] as const).map((item) => (
+          {(["drive", "outlook", "rainfall", "data"] as const).map((item) => (
             <button type="button" key={item} className="toolbar-button"
               aria-expanded={panel === item} aria-controls={panel === item ? "map-tools" : undefined}
               onClick={(event) => {
@@ -143,8 +144,8 @@ function Dashboard() {
                 }
               }}>
               {item === "drive" ? "Routes" : <>
-                <span className="toolbar-full">{item === "rainfall" ? "Rainfall scenario" : "Data & models"}</span>
-                <span className="toolbar-short" aria-hidden="true">{item === "rainfall" ? "Rainfall" : "Data"}</span>
+                <span className="toolbar-full">{item === "outlook" ? "Next 3 hours" : item === "rainfall" ? "Rainfall scenario" : "Data & models"}</span>
+                <span className="toolbar-short" aria-hidden="true">{item === "outlook" ? "3h" : item === "rainfall" ? "Rainfall" : "Data"}</span>
               </>}
             </button>
           ))}
@@ -158,6 +159,7 @@ function Dashboard() {
             cityFlood={displayedFlood?.status === "ready" ? displayedFlood : null}
             onReset={() => setPlace(null)}
             drivePoints={drive.points} drivingRoutes={drive.result?.routes} selectedDrivingId={drive.selectedId}
+            drivePreview={{ mode: drive.previewMode, progress: drive.previewProgress }}
             onPickPoint={picking ? (point) => {
               drive.setPoint(picking, { ...point, name: `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}` });
               setPicking(null);
@@ -181,13 +183,14 @@ function Dashboard() {
           <aside id="map-tools" hidden={!panel} className="tool-panel" aria-labelledby="map-tools-title">
             <div className="tool-title">
               <h2 id="map-tools-title" ref={panelHeading} tabIndex={-1}>
-                {panel === "drive" ? "Car routes" : panel === "rainfall" ? "Rainfall scenario" : "Data & models"}
+                {panel === "drive" ? "Car routes" : panel === "outlook" ? "Next 3 hours" : panel === "rainfall" ? "Rainfall scenario" : "Data & models"}
               </h2>
               <button type="button" className="close-button" onClick={closePanel} aria-label="Close panel">×</button>
             </div>
             <div className="tool-content" hidden={panel !== "rainfall"}>
               <ScenarioSlider />
             </div>
+            {panel === "outlook" && <div className="tool-content"><ThreeHourOutlook /></div>}
             {panel === "drive" && <div className="tool-content">
               <DrivingPlanner drive={drive} onPick={(endpoint) => {
                 setPicking(endpoint);
