@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability reporting
+    url: https://github.com/bibek200620/cityshield/security/policy
+    about: Read the security policy and report sensitive vulnerabilities privately.
+  - name: Research documentation
+    url: https://github.com/bibek200620/cityshield/tree/main/docs
+    about: Check existing methodology, coverage and limitations before filing an issue.
