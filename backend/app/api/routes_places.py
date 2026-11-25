@@ -17,7 +17,7 @@ from app.core.config import settings
 router = APIRouter()
 _provider_lock = Lock()
 _next_provider_call = 0.0
-_CITY_WEST, _CITY_SOUTH, _CITY_EAST, _CITY_NORTH = 77.44, 12.82, 77.80, 13.16
+_CITY_WEST, _CITY_SOUTH, _CITY_EAST, _CITY_NORTH = 77.44, 12.62, 77.80, 13.16
 
 
 def _limited_provider_get(url: str) -> list[dict]:
@@ -44,7 +44,7 @@ def _search_cached(provider_url: str, query: str) -> tuple[dict, ...]:
         "limit": 5,
         "addressdetails": 1,
         "countrycodes": "in",
-        "viewbox": "77.44,13.16,77.80,12.82",
+        "viewbox": "77.44,13.16,77.80,12.62",
         "bounded": 1,
         "accept-language": "en",
     })

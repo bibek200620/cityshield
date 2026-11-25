@@ -159,7 +159,7 @@ function Dashboard() {
             cityFlood={displayedFlood?.status === "ready" ? displayedFlood : null}
             onReset={() => setPlace(null)}
             drivePoints={drive.points} drivingRoutes={drive.result?.routes} selectedDrivingId={drive.selectedId}
-            drivePreview={{ mode: drive.previewMode, progress: drive.previewProgress }}
+            navigation={{ mode: drive.navigationMode, location: drive.navigationLocation, routeMatch: drive.routeMatch }}
             onPickPoint={picking ? (point) => {
               drive.setPoint(picking, { ...point, name: `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}` });
               setPicking(null);
@@ -167,12 +167,12 @@ function Dashboard() {
             } : undefined} />
 
           <div className={picking ? "map-context route-prompt" : panel ? "map-context panel-open" : "map-context"}>
-            <h1>{picking ? `Pick ${picking}` : place?.name ?? "Greater Bengaluru"}</h1>
+            <h1>{picking ? `Pick ${picking}` : place?.name ?? "Bengaluru"}</h1>
             {picking ? <p role="status">Select a point on the map. <button type="button" onClick={() => {
               setPicking(null);
               setPanel("drive");
             }}>Cancel</button></p>
-              : <p>{place ? `${place.corporation} corporation` : "Municipal area · Research prototype"}</p>}
+              : <p>{place ? `${place.corporation} corporation` : "GBA risk data · map extends south to Anekal"}</p>}
           </div>
 
           {error && <div className="app-error" role="alert">

@@ -66,5 +66,7 @@ def test_full_api_flow(monkeypatch, tmp_path):
         assert "eta_seconds" in route_body
         assert "avoided_flooded_segments" in route_body
 
-        backtest_resp = client.get("/api/backtest/nonexistent")
+        backtest_resp = client.get(
+            "/api/backtest/bengaluru-inundation-reported-2022-09-04-sphere-india"
+        )
         assert backtest_resp.status_code == 501

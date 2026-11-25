@@ -129,10 +129,40 @@ export interface RouteResponse {
 }
 
 export type WeatherAvailabilityResponse =
-  | { status: "unavailable"; message: string; source: string }
+  | {
+    status: "unavailable";
+    message: string;
+    reason: "timeout" | "provider_error" | "stale_data" | "missing_data" | "invalid_data";
+    source: string;
+    checked_at: string;
+  }
   | {
     status: "ready";
     source: string;
+    provenance: {
+      provider: string;
+      api_version: string;
+      endpoint: string;
+      model_selection: string;
+      model_identifier: string | null;
+      model_version: string | null;
+      model_note: string;
+      cell_selection: string;
+      requested_location: { latitude: number; longitude: number };
+      grid_cell_center: { latitude: number; longitude: number; elevation_m: number };
+      spatial_resolution_m: number | null;
+      spatial_resolution_note: string;
+      timezone: string;
+      utc_offset_seconds: number;
+      timestamps_are_unix_utc: boolean;
+      units: {
+        air_temperature: string;
+        apparent_temperature: string;
+        relative_humidity: string;
+        precipitation: string;
+      };
+      retrieved_at: string;
+    };
     valid_at: string;
     air_temperature_c: number;
     feels_like_c: number;

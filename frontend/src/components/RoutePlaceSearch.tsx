@@ -31,7 +31,7 @@ export default function RoutePlaceSearch({
       const response = await api.searchPlaces(value, controller.signal);
       if (controller.signal.aborted) return;
       setResults(response.results);
-      if (!response.results.length) setStatus("No matching place found inside Greater Bengaluru.");
+      if (!response.results.length) setStatus("No matching place found inside the supported Bengaluru map area.");
     } catch (error) {
       if (!controller.signal.aborted) {
         setStatus(error instanceof Error ? error.message : "Place search is unavailable.");

@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Source and event evidence inventory for Bengaluru flood research. Narrative references are not model labels unless evaluation_eligible is true.",
+  "sources": [
+    {
+      "source_id": "sphere-india-bengaluru-sitrep-2022-09-06",
+      "title": "Situation Report 1: Floods in Bengaluru",
+      "publisher": "Sphere India",
+      "published_at": "2022-09-06T13:00:00+05:30",
+      "url": "https://www.sphereindia.org.in/sites/default/files/2023-09/_1.%20SitRep%20-%20Floods%20in%20Bangaluru.pdf",
+      "source_basis": "The report says its Bengaluru situation information was received from SEOC Karnataka and lists IMD, CWC, MHA and news media among its information sources.",
+      "reuse_status": "The report does not state an open data licence. This manifest stores bibliographic metadata and a short factual summary only; do not redistribute the report or treat the source as permission to reuse underlying records."
+    },
+    {
+      "source_id": "opencity-bbmp-common-flooding-locations",
+      "title": "Flooding Locations in Bengaluru Urban",
+      "publisher": "OpenCity dataset catalog; listed under Bruhat Bengaluru Mahanagara Palike",
+      "published_at": null,
+      "url": "https://data.opencity.in/dataset/?groups=bengaluru&organization=bruhat-bengaluru-mahanagara-palike",
+      "source_basis": "Catalog description identifies common flooding points in Bengaluru Urban.",
+      "reuse_status": "Catalog page does not establish event timestamps or an explicit record-level licence in the metadata inspected. Treat as an undated spatial prior only; never use as event ground truth."
+    },
+    {
+      "source_id": "nrsc-ndem-flood-mapping",
+      "title": "Near Real Time Flood Mapping and Monitoring",
+      "publisher": "National Remote Sensing Centre, ISRO",
+      "published_at": null,
+      "url": "https://ndem.nrsc.gov.in/documents/downloads/nrt_technical_note.pdf",
+      "source_basis": "NRSC describes date-stamped satellite flood inundation layers arranged by year, state and date.",
+      "reuse_status": "NDEM portal content states it is intended for authorized users. No Bengaluru-specific downloadable event layer or reuse permission was verified for this work. Do not import portal data without access authorization and source terms."
+    }
+  ],
+  "events": [
+    {
+      "record_id": "bengaluru-inundation-reported-2022-09-04-sphere-india",
+      "event_kind": "reported_urban_inundation",
+      "event_time": {
+        "date": "2022-09-04",
+        "precision": "night; exact local time unavailable in source",
+        "report_published_at": "2022-09-06T13:00:00+05:30"
+      },
+      "location": {
+        "area_names": [
+          "Mahadevapura Zone",
+          "East Zone",
+          "Rajarajeshwari Zone",
+          "Whitefield",
+          "Yemalur",
+          "Rainbow Drive Layout",
+          "Marathahalli",
+          "Sunny Brooks Layout"
+        ],
+        "precision": "zones and localities named in an aggregate situation report; locations are not individually paired with times",
+        "geometry": null,
+        "geometry_crs": null,
+        "geocoding_provenance": "No geometry in source; names are retained as reported and have not been geocoded."
+      },
+      "source_id": "sphere-india-bengaluru-sitrep-2022-09-06",
+      "observation": {
+        "summary": "Situation report describes low-lying-area inundation and waterlogging after widespread rainfall, and names several affected areas. It does not provide per-location event observations.",
+        "rainfall_timeseries_mm_hr": null,
+        "reported_flooded_streets": [],
+        "observed_inundation_geometry": null
+      },
+      "quality_flags": [
+        "secondary_situation_report",
+        "aggregate_event_summary",
+        "approximate_event_time",
+        "coarse_named_localities",
+        "no_verified_coordinates",
+        "no_per_location_observations",
+        "no_event_rainfall_timeseries",
+        "reuse_permission_not_explicit"
+      ],
+      "evaluation_eligible": false,
+      "evaluation_exclusion_reason": "This report is useful as a dated narrative reference only. It lacks precise per-location time and geometry, an observed street/inundation label, and matched event rainfall inputs required by the current backtest."
+    }
+  ]
+}
