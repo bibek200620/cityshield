@@ -12,6 +12,7 @@ The manifest uses schema version `1.0.0` and is validated by `backend/app/ml/flo
 - Each event refers to a known source and includes an event kind, date/time precision, source publication time, named area, location precision, geocoding provenance, an observation object, quality flags and an explicit evaluation-eligibility decision.
 - GeoJSON point coordinates, when present, are longitude then latitude in WGS84 and must be within coordinate bounds. The current narrative record deliberately has `geometry: null`; it has not been geocoded.
 - Evaluation-eligible events require a bounded event time, verified geometry, an observed flood outcome and a non-negative event rainfall series. Records missing any of those remain descriptive evidence and cannot be passed to event scoring.
+- Evaluation-eligible events must also have a documented `storm_group_id`. The deterministic `partition_event_groups` helper assigns complete storm groups to one partition; it rejects ineligible rows and does not score models. Keep storms/events wholly separate between training and evaluation to avoid leakage.
 - Record IDs and same-source/date/location records must be unique. Distinct locations on one date may be separate records only when the source independently supports those observations. Do not create one coordinate event per locality from an aggregate report.
 
 ## Evidence inventory
@@ -20,7 +21,7 @@ The manifest uses schema version `1.0.0` and is validated by `backend/app/ml/flo
 2. **OpenCity “Flooding Locations in Bengaluru Urban.”** The catalog describes common flooding points. No event timestamps are described, so these points are a spatial prior only and are not included as incident labels. Source: [OpenCity Bengaluru dataset catalog](https://data.opencity.in/dataset/?groups=bengaluru&organization=bruhat-bengaluru-mahanagara-palike).
 3. **NRSC/NDEM flood inundation layers.** NRSC describes date-stamped satellite inundation layers. NDEM states that its portal content is intended for authorized users; no public, reusable Bengaluru-specific street event layer was verified for this work. Do not import portal data without authorized access and source terms. Source: [NRSC near-real-time mapping note](https://ndem.nrsc.gov.in/documents/downloads/nrt_technical_note.pdf) and [NDEM portal](https://ndem.nrsc.gov.in/).
 
-The Sphere India report is a secondary narrative, not ground-verified street truth. Its location and time uncertainty make it unsuitable for evaluating predicted road depths or training event labels. The repository does not infer coordinates from locality names and does not treat rain totals or city-level narrative as street-level ground truth.
+The Sphere India report is a secondary narrative, not ground-verified street truth. Its location and time uncertainty make it unsuitable for evaluating predicted road depths or training event labels. The repository does not infer coordinates from locality names and does not treat rain totals or city-level narrative as street-level ground truth. No physics or GNN score against observed flood events can currently be reported. Existing GNN labels come from the simplified physics baseline; agreement with those labels is surrogate agreement, not observed-event predictive performance.
 
 ## Verification
 
@@ -30,4 +31,4 @@ From `backend/` run:
 .venv/bin/python -m pytest tests/test_flood_event_data.py -q
 ```
 
-The tests validate the checked-in manifest, duplicate IDs, WGS84 coordinate bounds and rejection of evaluation eligibility when geometry is absent. They do not establish that a real event data source is complete or licensed for redistribution.
+The tests validate the checked-in manifest, duplicate IDs, WGS84 coordinate bounds, evaluation eligibility fields and deterministic storm-group separation. They do not establish that a real event data source is complete or licensed for redistribution. Until evaluation-ready observations and matched rainfall are obtained, the backtest API remains unavailable (HTTP 501) and real-world validation remains unavailable.

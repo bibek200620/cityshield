@@ -7,9 +7,10 @@ and event rainfall may be marked eligible for model evaluation.
 from __future__ import annotations
 
 import json
+import random
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 
 MANIFEST_PATH = Path(__file__).with_name("flood_event_sources.json")
@@ -107,6 +108,7 @@ def validate_manifest(payload: Any) -> None:
         if event["evaluation_eligible"]:
             if event_date is None or precision not in {"minute", "hour", "day"}:
                 raise FloodEventManifestError(f"event {record_id} needs a bounded event time for evaluation")
+            _required_text(event, "storm_group_id")
             if geometry is None:
                 raise FloodEventManifestError(f"event {record_id} needs verified geometry for evaluation")
             if not observation.get("reported_flooded_streets") and not observation.get("observed_inundation_geometry"):
@@ -118,6 +120,61 @@ def validate_manifest(payload: Any) -> None:
                 raise FloodEventManifestError(f"event {record_id} needs a non-negative event rainfall series")
         elif not _optional_text(event, "evaluation_exclusion_reason"):
             raise FloodEventManifestError(f"event {record_id} must explain why it is not evaluation eligible")
+
+
+def partition_event_groups(
+    events: Sequence[Mapping[str, Any]],
+    *,
+    test_fraction: float = 0.2,
+    seed: int = 42,
+) -> tuple[list[Mapping[str, Any]], list[Mapping[str, Any]]]:
+    """Split eligible records by complete storm groups, with stable ordering.
+
+    The caller must provide evaluation-eligible records only. A storm is the
+    grouping unit because multiple observations from one storm must not appear
+    in both partitions. This utility partitions records; it does not score a
+    flood model or make the records valid ground truth.
+    """
+    if (
+        isinstance(test_fraction, bool)
+        or not isinstance(test_fraction, (int, float))
+        or not 0 < test_fraction < 1
+    ):
+        raise FloodEventManifestError("test_fraction must be between 0 and 1")
+
+    record_ids: set[str] = set()
+    groups: dict[str, list[Mapping[str, Any]]] = {}
+    for event in events:
+        if not isinstance(event, Mapping):
+            raise FloodEventManifestError("each event must be an object")
+        record_id = _required_text(dict(event), "record_id")
+        if record_id in record_ids:
+            raise FloodEventManifestError(f"duplicate record_id: {record_id}")
+        record_ids.add(record_id)
+        if event.get("evaluation_eligible") is not True:
+            raise FloodEventManifestError(f"event {record_id} is not evaluation eligible")
+        storm_group_id = _required_text(dict(event), "storm_group_id")
+        groups.setdefault(storm_group_id, []).append(event)
+
+    group_ids = sorted(groups)
+    if len(group_ids) < 2:
+        raise FloodEventManifestError("at least two eligible storm groups are required for a holdout split")
+
+    test_count = max(1, min(len(group_ids) - 1, round(len(group_ids) * test_fraction)))
+    test_groups = set(random.Random(seed).sample(group_ids, test_count))
+    train = [
+        record
+        for group_id in group_ids
+        if group_id not in test_groups
+        for record in sorted(groups[group_id], key=lambda item: str(item["record_id"]))
+    ]
+    test = [
+        record
+        for group_id in group_ids
+        if group_id in test_groups
+        for record in sorted(groups[group_id], key=lambda item: str(item["record_id"]))
+    ]
+    return train, test
 
 
 def _required_text(payload: dict[str, Any], key: str) -> str:
