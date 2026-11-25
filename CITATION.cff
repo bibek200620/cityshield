@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use CityShield in research, please cite this software and the relevant upstream projects and datasets."
+title: "CityShield: Urban Climate and Geospatial Risk Intelligence"
+type: software
+authors:
+  - name: "CityShield contributors"
+repository-code: "https://github.com/bibek200620/cityshield"
+url: "https://github.com/bibek200620/cityshield"
+license: MIT
+abstract: "Research software for Bengaluru urban runoff screening, simulated pilot flooding, satellite-derived land-surface temperature, combined exposure, weather estimates and road-network analysis. Not an operational disaster warning service."
+keywords:
+  - urban climate
+  - flood simulation
+  - geospatial analysis
+  - remote sensing
+  - Bengaluru
+references:
+  - type: software
+    title: Nimbus
+    authors:
+      - name: "Team Expecto Patronum"
+    repository-code: "https://github.com/SagnickInTheShell/Nimbus"
+  - type: software
+    title: urban-heat-island-bengaluru
+    authors:
+      - family-names: Alampally
+        given-names: Nishanth
+    repository-code: "https://github.com/NishanthAlampally/urban-heat-island-bengaluru"
