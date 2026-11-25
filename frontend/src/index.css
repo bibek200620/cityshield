@@ -260,7 +260,7 @@ button, input, select { font: inherit; }
 .drive-car-marker { display: grid; place-items: center; width: 35px; height: 45px; filter: drop-shadow(0 2px 4px #142c2866); }
 .drive-car-marker svg { width: 30px; height: 40px; fill: #164f46; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .three-hour-outlook, .outlook-hours { display: grid; gap: 10px; }
-.outlook-source, .outlook-limits, .outlook-attribution, .outlook-unavailable p { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.outlook-source, .outlook-provenance, .outlook-limits, .outlook-attribution, .outlook-unavailable p { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .outlook-hours { list-style: none; padding: 0; margin: 0; }
 .outlook-hour { border: 1px solid var(--line); border-radius: 7px; padding: 10px; }
 .outlook-hour-title, .outlook-values { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
