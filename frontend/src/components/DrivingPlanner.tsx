@@ -1,10 +1,14 @@
 import { useState } from "react";
 import RoutePlaceSearch from "./RoutePlaceSearch";
-import type { Endpoint, useDrivingPlanner } from "../map/drivingPlanner";
+import { NAVIGATION_AREA, type Endpoint, useDrivingPlanner } from "../map/drivingPlanner";
 
 const timeInBengaluru = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false,
 });
+
+function distanceText(metres: number): string {
+  return metres >= 1_000 ? `${(metres / 1_000).toFixed(1)} km` : `${Math.max(0, Math.round(metres))} m`;
+}
 
 export default function DrivingPlanner({ drive, onPick }: {
   drive: ReturnType<typeof useDrivingPlanner>;
@@ -21,12 +25,13 @@ export default function DrivingPlanner({ drive, onPick }: {
     setGpsStatus("Requesting your location…");
     navigator.geolocation.getCurrentPosition((position) => {
       const { latitude: lat, longitude: lng } = position.coords;
-      if (!(12.82 <= lat && lat <= 13.16 && 77.44 <= lng && lng <= 77.80)) {
-        setGpsStatus("Your current location is outside the supported Greater Bengaluru route area.");
+      if (!(NAVIGATION_AREA.south <= lat && lat <= NAVIGATION_AREA.north
+        && NAVIGATION_AREA.west <= lng && lng <= NAVIGATION_AREA.east)) {
+        setGpsStatus("Your current location is outside the supported Bengaluru map area.");
         return;
       }
       drive.setPoint("source", { lat, lng, name: "My current location" });
-      setGpsStatus("Current location set as the route start. Use the map location control to keep tracking GPS.");
+      setGpsStatus("Current location set as the route start. Start navigation to follow live GPS.");
     }, (error) => {
       setGpsStatus(error.code === error.PERMISSION_DENIED
         ? "Location access was denied. Allow it in your browser settings and try again."
@@ -64,7 +69,7 @@ export default function DrivingPlanner({ drive, onPick }: {
         onClick={() => void drive.compare()}>{drive.loading ? "Finding routes…" : "Compare car routes"}</button>
       <p className="route-credit">Comparing sends both points to the routing provider. <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">OpenStreetMap fallback data</a>.</p>
       {drive.status && <p className="route-error" role="alert">{drive.status}</p>}
-      {drive.result && <div className="route-options" aria-label="Route options">
+      {drive.result && drive.navigationMode === "idle" && <div className="route-options" aria-label="Route options">
         <div className="route-conditions" aria-label="Trip conditions">
           <strong>Trip conditions</strong>
           <p>{drive.result.traffic.message} · {drive.result.source}</p>
@@ -94,20 +99,36 @@ export default function DrivingPlanner({ drive, onPick }: {
             </span>}
           </button>
         ))}
-        {drive.previewMode === "idle" ? <button type="button" className="primary-button"
-          onClick={drive.startPreview} disabled={!drive.result.routes.some((option) => option.id === drive.selectedId)}>
-          Start driving
-        </button> : <div className="drive-preview-controls" role="status">
-          <p><strong>{drive.previewMode === "complete" ? "Preview complete" : drive.previewMode === "paused" ? "Preview paused" : "3D route preview"}</strong>
-            {drive.previewMode !== "complete" && ` · ${Math.round(drive.previewProgress * 100)}%`}</p>
-          <p>Vehicle movement is simulated along the selected route. This is not live vehicle tracking or turn-by-turn navigation.</p>
-          <div>
-            {drive.previewMode === "running" && <button type="button" className="pick-button" onClick={drive.pausePreview}>Pause</button>}
-            {drive.previewMode === "paused" && <button type="button" className="pick-button" onClick={drive.resumePreview}>Resume</button>}
-            <button type="button" className="pick-button" onClick={drive.endPreview}>End preview</button>
-          </div>
-        </div>}
+        <button type="button" className="primary-button"
+          onClick={drive.startNavigation} disabled={!drive.result.routes.some((option) => option.id === drive.selectedId)}>
+          Start navigation
+        </button>
       </div>}
+      {drive.navigationMode !== "idle" && <section className="live-navigation" aria-label="Live GPS navigation">
+        <div className="live-navigation-heading">
+          <div><strong>{drive.navigationMode === "active" ? "Navigation" : drive.navigationMode === "error" ? "Navigation unavailable" : "Starting navigation"}</strong>
+            <span>{drive.navigationMode === "active" ? "Following live GPS" : drive.navigationMode === "rerouting" ? "Recalculating route" : drive.navigationMode === "routing" ? "Finding route from your location" : drive.navigationMode === "locating" ? "Waiting for GPS" : "Check location permission and retry"}</span>
+          </div>
+          {drive.navigationMode !== "error" && <button type="button" className="pick-button" onClick={drive.stopNavigation}>Stop</button>}
+          {drive.navigationMode === "error" && <button type="button" className="pick-button" onClick={drive.stopNavigation}>Close</button>}
+        </div>
+        {drive.navigationLocation && <div className="live-navigation-metrics">
+          {drive.routeMatch && <div><strong>{distanceText(drive.routeMatch.remaining_m)}</strong><small>remaining</small></div>}
+          {drive.routeMatch && drive.result && (() => {
+            const route = drive.result.routes.find((option) => option.id === drive.selectedId);
+            const remainingRatio = drive.routeMatch.remaining_m / Math.max(1, (route?.distance_km ?? 0) * 1_000);
+            return <div><strong>{Math.max(1, Math.round((route?.eta_seconds ?? 0) * remainingRatio / 60))} min</strong><small>estimated</small></div>;
+          })()}
+          <div><strong>±{Math.round(drive.navigationLocation.accuracy_m)} m</strong><small>GPS accuracy</small></div>
+          {drive.navigationLocation.speed_mps !== null && <div><strong>{Math.round(drive.navigationLocation.speed_mps * 3.6)} km/h</strong><small>GPS speed</small></div>}
+        </div>}
+        {drive.navigationNotice && <p className="navigation-notice" role="status">{drive.navigationNotice}</p>}
+        {drive.offRoute && drive.navigationMode === "active" && <div className="navigation-off-route">
+          <span>You're off the selected route.</span>
+          <button type="button" className="pick-button" onClick={drive.recalculateNavigation}>Recalculate route</button>
+        </div>}
+        <p className="navigation-limits">The map follows your device GPS. Turn-by-turn voice guidance is not available.</p>
+      </section>}
     </div>
   );
 }

@@ -147,6 +147,7 @@ button, input, select { font: inherit; }
 .map-status { position: absolute; z-index: 3; top: 84px; left: 16px; right: 16px; max-width: 410px; background: white; padding: 9px 12px; border-radius: 6px; color: #8f2528; font-size: 13px; }
 .map-legend { z-index: 2; display: flex; flex-wrap: wrap; gap: 6px 16px; border-top: 1px solid var(--line); padding: 7px 16px; background: white; color: #46585e; font-size: 12px; }
 .map-detail { color: #164f46; font-weight: 700; }
+.coverage-note { flex-basis: 100%; color: var(--muted); font-size: 11px; }
 .map-legend > span, .flood-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .flood-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 12px; }
 .map-legend i { display: inline-block; width: 11px; height: 8px; border-radius: 2px; }
@@ -253,14 +254,22 @@ button, input, select { font: inherit; }
 .route-conditions { display: grid; gap: 4px; padding: 8px 10px; background: #f1f6f4; border-radius: 6px; }
 .route-conditions a { text-decoration: underline; }
 .route-detail { font-size: 12px; color: var(--muted); }
-.drive-preview-controls { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: #f5f8f6; }
-.drive-preview-controls p { color: var(--muted); font-size: 12px; line-height: 1.45; }
-.drive-preview-controls p strong { color: var(--accent); }
-.drive-preview-controls > div { display: flex; gap: 12px; }
-.drive-car-marker { display: grid; place-items: center; width: 35px; height: 45px; filter: drop-shadow(0 2px 4px #142c2866); }
-.drive-car-marker svg { width: 30px; height: 40px; fill: #164f46; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.live-navigation { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 7px; background: #f5f8f6; }
+.live-navigation-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.live-navigation-heading > div { display: grid; gap: 3px; }
+.live-navigation-heading strong { color: var(--accent); font-size: 15px; }
+.live-navigation-heading span, .navigation-notice, .navigation-limits { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.live-navigation-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.live-navigation-metrics > div { display: grid; gap: 2px; padding: 8px; background: white; border: 1px solid var(--line); border-radius: 5px; }
+.live-navigation-metrics strong { font-size: 15px; color: #243b41; }
+.live-navigation-metrics small { font-size: 11px; color: var(--muted); }
+.navigation-notice { margin: 0; }
+.navigation-off-route { display: grid; gap: 6px; padding: 9px; border-radius: 5px; background: #fff4e8; color: #744510; font-size: 13px; }
+.navigation-limits { margin: 0; }
+.gps-navigation-marker { display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid white; border-radius: 50%; background: #1769d2; box-shadow: 0 1px 5px #102b4580; }
+.gps-navigation-marker svg { width: 19px; height: 19px; fill: white; }
 .three-hour-outlook, .outlook-hours { display: grid; gap: 10px; }
-.outlook-source, .outlook-limits, .outlook-attribution, .outlook-unavailable p { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.outlook-source, .outlook-provenance, .outlook-limits, .outlook-attribution, .outlook-unavailable p { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .outlook-hours { list-style: none; padding: 0; margin: 0; }
 .outlook-hour { border: 1px solid var(--line); border-radius: 7px; padding: 10px; }
 .outlook-hour-title, .outlook-values { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

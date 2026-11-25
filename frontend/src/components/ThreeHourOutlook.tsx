@@ -37,6 +37,9 @@ export default function ThreeHourOutlook() {
   return (
     <div className="three-hour-outlook">
       <p className="outlook-source">Bengaluru city-point estimate · Open-Meteo · air temperature at 2 m</p>
+      <p className="outlook-provenance">
+        Automatic Best Match model; exact model version and spatial resolution are not returned. Grid cell: {weather.provenance.grid_cell_center.latitude.toFixed(3)}, {weather.provenance.grid_cell_center.longitude.toFixed(3)}. Retrieved {bengaluruTime.format(new Date(weather.provenance.retrieved_at))} IST; valid times are converted from UTC.
+      </p>
       <ol className="outlook-hours" aria-label="Next three hourly weather estimates">
         {weather.hourly_forecast.map((hour, index) => (
           <li className="outlook-hour" key={hour.valid_at}>

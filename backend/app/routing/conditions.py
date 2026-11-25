@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from math import isfinite
 from time import time
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -20,10 +20,25 @@ from app.api.routes_city_flood import load_grid, screen_values
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 INCIDENT_URL = "https://api.tomtom.com/traffic/services/5/incidentDetails"
 SOURCE = "Open-Meteo weather model"
+WEATHER_LOCATION = {"latitude": 12.98, "longitude": 77.59}
+WEATHER_UNITS = {
+    "air_temperature": "°C",
+    "apparent_temperature": "°C",
+    "relative_humidity": "%",
+    "precipitation": "mm",
+}
 RUNOFF_THRESHOLD_MM = 1.0
 INCIDENT_PROXIMITY_M = 35
 PROJECT = Transformer.from_crs("EPSG:4326", "EPSG:32643", always_xy=True).transform
 PROVIDER_ERRORS = (URLError, TimeoutError, KeyError, TypeError, ValueError, IndexError)
+
+
+class WeatherDataError(ValueError):
+    """A provider response that is stale, incomplete or invalid."""
+
+    def __init__(self, reason: str, message: str):
+        super().__init__(message)
+        self.reason = reason
 
 
 def fetch_json(url: str, params: dict) -> dict:
@@ -36,49 +51,135 @@ def iso_utc(timestamp: int) -> str:
     return datetime.fromtimestamp(timestamp, timezone.utc).isoformat()
 
 
-def parse_weather(payload: dict, now: float) -> dict:
-    current = payload["current"]
-    valid_at = int(current["time"])
+def parse_weather(payload: dict, now: float, retrieved_at: str | None = None) -> dict:
+    """Validate Open-Meteo units, timestamps and spatial provenance before use."""
+    if not isinstance(payload, dict):
+        raise WeatherDataError("invalid_data", "Weather response must be an object")
+    current = payload.get("current")
+    hourly = payload.get("hourly")
+    if not isinstance(current, dict) or not isinstance(hourly, dict):
+        raise WeatherDataError("missing_data", "Current and hourly weather values are required")
+
+    try:
+        valid_at = int(current["time"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise WeatherDataError("missing_data", "Current valid time is missing") from exc
     if not -900 <= now - valid_at <= 3600:
-        raise ValueError("Current weather is stale or too far in the future")
-    hourly = payload["hourly"]
-    fields = ("precipitation", "temperature_2m", "apparent_temperature", "relative_humidity_2m")
-    if any(len(hourly["time"]) != len(hourly[key]) for key in fields):
-        raise ValueError("Misaligned hourly weather series")
-    hour_end = int(now // 3600) * 3600
-    values = {
-        key: dict(zip(hourly["time"], hourly[key]))
-        for key in fields
+        raise WeatherDataError("stale_data", "Current weather is stale or too far in the future")
+
+    try:
+        grid_latitude = float(payload["latitude"])
+        grid_longitude = float(payload["longitude"])
+        elevation_m = float(payload["elevation"])
+        timezone_name = payload["timezone"]
+        utc_offset_seconds = int(payload["utc_offset_seconds"])
+        current_units = payload["current_units"]
+        hourly_units = payload["hourly_units"]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise WeatherDataError("missing_data", "Weather provenance or units are missing") from exc
+    if (
+        not all(isfinite(value) for value in (grid_latitude, grid_longitude, elevation_m))
+        or not -90 <= grid_latitude <= 90
+        or not -180 <= grid_longitude <= 180
+        or not isinstance(timezone_name, str)
+        or not timezone_name
+        or not isinstance(current_units, dict)
+        or not isinstance(hourly_units, dict)
+    ):
+        raise WeatherDataError("invalid_data", "Weather location or time-zone metadata is invalid")
+
+    expected_units = {
+        "current": {"temperature_2m": WEATHER_UNITS["air_temperature"], "apparent_temperature": WEATHER_UNITS["apparent_temperature"]},
+        "hourly": {
+            "temperature_2m": WEATHER_UNITS["air_temperature"],
+            "apparent_temperature": WEATHER_UNITS["apparent_temperature"],
+            "relative_humidity_2m": WEATHER_UNITS["relative_humidity"],
+            "precipitation": WEATHER_UNITS["precipitation"],
+        },
     }
+    if any(current_units.get(key) != unit for key, unit in expected_units["current"].items()) or any(
+        hourly_units.get(key) != unit for key, unit in expected_units["hourly"].items()
+    ):
+        raise WeatherDataError("invalid_data", "Provider weather units do not match the requested units")
+
+    fields = ("precipitation", "temperature_2m", "apparent_temperature", "relative_humidity_2m")
+    times = hourly.get("time")
+    if not isinstance(times, list) or any(not isinstance(hourly.get(key), list) for key in fields):
+        raise WeatherDataError("missing_data", "Hourly weather series are missing")
+    if any(len(times) != len(hourly[key]) for key in fields):
+        raise WeatherDataError("missing_data", "Hourly weather series are misaligned")
+    try:
+        indexed_times = [int(timestamp) for timestamp in times]
+        values = {key: dict(zip(indexed_times, hourly[key])) for key in fields}
+    except (TypeError, ValueError) as exc:
+        raise WeatherDataError("invalid_data", "Hourly timestamps are invalid") from exc
+
+    hour_end = int(now // 3600) * 3600
     required_times = (hour_end - 3600, hour_end, hour_end + 3600, hour_end + 7200, hour_end + 10800)
-    if any(timestamp not in values["precipitation"] for timestamp in required_times):
-        raise ValueError("Missing hourly weather values")
-    recent = [float(values["precipitation"][t]) for t in (hour_end - 3600, hour_end)]
-    forecast = []
-    for offset in (3600, 7200, 10800):
-        timestamp = hour_end + offset
-        slot = {
-            "valid_at": iso_utc(timestamp),
-            "air_temperature_c": float(values["temperature_2m"][timestamp]),
-            "feels_like_c": float(values["apparent_temperature"][timestamp]),
-            "relative_humidity_pct": float(values["relative_humidity_2m"][timestamp]),
-            "precipitation_mm": float(values["precipitation"][timestamp]),
-        }
-        if not all(isfinite(slot[key]) for key in ("air_temperature_c", "feels_like_c")):
-            raise ValueError("Invalid forecast temperature")
-        if not 0 <= slot["relative_humidity_pct"] <= 100:
-            raise ValueError("Invalid forecast humidity")
-        if not isfinite(slot["precipitation_mm"]) or slot["precipitation_mm"] < 0:
-            raise ValueError("Invalid forecast rainfall")
-        forecast.append(slot)
-    temperatures = [float(current[key]) for key in ("temperature_2m", "apparent_temperature")]
+    if any(timestamp not in values[key] for timestamp in required_times for key in fields):
+        raise WeatherDataError("missing_data", "Required completed and forecast weather hours are missing")
+    try:
+        recent = [float(values["precipitation"][timestamp]) for timestamp in required_times[:2]]
+        temperatures = [float(current[key]) for key in ("temperature_2m", "apparent_temperature")]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise WeatherDataError("missing_data", "Required weather values are missing") from exc
     if not all(isfinite(value) and value >= 0 for value in recent):
-        raise ValueError("Invalid rainfall")
+        raise WeatherDataError("invalid_data", "Recent rainfall values are invalid")
     if not all(isfinite(value) for value in temperatures):
-        raise ValueError("Invalid temperature")
+        raise WeatherDataError("invalid_data", "Current temperature values are invalid")
+
+    forecast = []
+    for timestamp in required_times[2:]:
+        try:
+            slot = {
+                "valid_at": iso_utc(timestamp),
+                "air_temperature_c": float(values["temperature_2m"][timestamp]),
+                "feels_like_c": float(values["apparent_temperature"][timestamp]),
+                "relative_humidity_pct": float(values["relative_humidity_2m"][timestamp]),
+                "precipitation_mm": float(values["precipitation"][timestamp]),
+            }
+        except (TypeError, ValueError) as exc:
+            raise WeatherDataError("missing_data", "Forecast weather values are missing") from exc
+        if not all(isfinite(slot[key]) for key in ("air_temperature_c", "feels_like_c")):
+            raise WeatherDataError("invalid_data", "Forecast temperature is invalid")
+        if not isfinite(slot["relative_humidity_pct"]) or not 0 <= slot["relative_humidity_pct"] <= 100:
+            raise WeatherDataError("invalid_data", "Forecast humidity is invalid")
+        if not isfinite(slot["precipitation_mm"]) or slot["precipitation_mm"] < 0:
+            raise WeatherDataError("invalid_data", "Forecast rainfall is invalid")
+        forecast.append(slot)
+
+    provenance = {
+        "provider": "Open-Meteo",
+        "api_version": "v1",
+        "endpoint": WEATHER_URL,
+        "model_selection": "provider default Best Match (automatic)",
+        "cell_selection": "land",
+        "model_identifier": None,
+        "model_version": None,
+        "model_note": "The response does not identify the exact model or model run.",
+        "requested_location": WEATHER_LOCATION,
+        "grid_cell_center": {
+            "latitude": grid_latitude,
+            "longitude": grid_longitude,
+            "elevation_m": elevation_m,
+        },
+        "spatial_resolution_m": None,
+        "spatial_resolution_note": "The API response does not provide one resolution for its automatically combined models.",
+        "timezone": timezone_name,
+        "utc_offset_seconds": utc_offset_seconds,
+        "timestamps_are_unix_utc": True,
+        "units": {
+            "air_temperature": current_units["temperature_2m"],
+            "apparent_temperature": current_units["apparent_temperature"],
+            "relative_humidity": hourly_units["relative_humidity_2m"],
+            "precipitation": hourly_units["precipitation"],
+        },
+        "retrieved_at": retrieved_at or iso_utc(int(now)),
+    }
     return {
         "status": "ready",
         "source": SOURCE,
+        "provenance": provenance,
         "valid_at": iso_utc(valid_at),
         "air_temperature_c": temperatures[0],
         "feels_like_c": temperatures[1],
@@ -91,22 +192,57 @@ def parse_weather(payload: dict, now: float) -> dict:
 
 
 @lru_cache(maxsize=2)
-def weather_payload(_five_minute_slot: int) -> dict:
-    return fetch_json(WEATHER_URL, {
-        "latitude": 12.98, "longitude": 77.59,
+def weather_snapshot(_five_minute_slot: int) -> dict:
+    payload = fetch_json(WEATHER_URL, {
+        "latitude": WEATHER_LOCATION["latitude"], "longitude": WEATHER_LOCATION["longitude"],
         "current": "temperature_2m,apparent_temperature",
         "hourly": "precipitation,temperature_2m,apparent_temperature,relative_humidity_2m",
         "past_hours": 2, "forecast_hours": 4,
-        "timeformat": "unixtime", "timezone": "UTC",
+        "temperature_unit": "celsius", "precipitation_unit": "mm",
+        "timeformat": "unixtime", "timezone": "UTC", "cell_selection": "land",
     })
+    return {"payload": payload, "retrieved_at": iso_utc(int(time()))}
+
+
+def _unavailable(reason: str, checked_at: str) -> dict:
+    messages = {
+        "timeout": "The weather provider timed out. Try again later.",
+        "provider_error": "The weather provider could not be reached.",
+        "stale_data": "The latest weather estimate is stale or outside the supported time window.",
+        "missing_data": "The provider did not return all required weather values or metadata.",
+        "invalid_data": "The provider returned invalid weather values or units.",
+    }
+    return {
+        "status": "unavailable",
+        "source": SOURCE,
+        "reason": reason,
+        "checked_at": checked_at,
+        "message": messages[reason],
+    }
 
 
 def get_weather() -> dict:
+    checked_at = iso_utc(int(time()))
     try:
         now = time()
-        return parse_weather(weather_payload(int(now // 300)), now)
-    except PROVIDER_ERRORS:
-        return {"status": "unavailable", "source": SOURCE, "message": "Fresh weather estimates unavailable."}
+        snapshot = weather_snapshot(int(now // 300))
+    except TimeoutError:
+        return _unavailable("timeout", checked_at)
+    except HTTPError as exc:
+        if 400 <= exc.code < 500 and exc.code != 429:
+            return _unavailable("invalid_data", checked_at)
+        return _unavailable("provider_error", checked_at)
+    except URLError as exc:
+        if isinstance(exc.reason, TimeoutError):
+            return _unavailable("timeout", checked_at)
+        return _unavailable("provider_error", checked_at)
+    except json.JSONDecodeError:
+        return _unavailable("invalid_data", checked_at)
+
+    try:
+        return parse_weather(snapshot["payload"], now, snapshot["retrieved_at"])
+    except WeatherDataError as exc:
+        return _unavailable(exc.reason, checked_at)
 
 
 @lru_cache(maxsize=1)

@@ -172,7 +172,7 @@ def compare_options(candidates: list[dict], shortest: dict | None) -> list[dict]
 
 @router.post("/api/drive/routes")
 def drive_routes(req: DrivingRequest) -> dict:
-    if any(not (12.82 <= p.lat <= 13.16 and 77.44 <= p.lng <= 77.80) for p in (req.source, req.destination)):
+    if any(not (12.62 <= p.lat <= 13.16 and 77.44 <= p.lng <= 77.80) for p in (req.source, req.destination)):
         raise HTTPException(422, "Choose a source and destination in the Bengaluru map area.")
     if req.source == req.destination:
         raise HTTPException(422, "Choose a different destination.")

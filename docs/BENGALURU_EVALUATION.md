@@ -2,7 +2,9 @@
 
 ## City boundary and search
 
-The map covers the five Greater Bengaluru Authority corporations. Its outline is a dissolved and 30 m simplified copy of the 2025 corporation polygons. Search indexes 369 notified wards by their English and Kannada names and zooms to the selected ward. Ward IDs use corporation and ward numbers together. Search coverage is limited to the ward index and its spelling aliases. The official map reference is [GBA city corporation maps](https://www.bbmp.gov.in/maps/). Machine-readable geometry is from OpenCity via the [bharatlas layer catalog](https://bharatlas.com/layers#city-wards), where the two layers are marked CC0.
+The risk-data boundary is the five Greater Bengaluru Authority corporations. Its outline is a dissolved and 30 m simplified copy of the 2025 corporation polygons. Search indexes 369 notified wards by their English and Kannada names and zooms to the selected ward. Ward IDs use corporation and ward numbers together. Search coverage is limited to the ward index and its spelling aliases. The official map reference is [GBA city corporation maps](https://www.bbmp.gov.in/maps/). Machine-readable geometry is from OpenCity via the [bharatlas layer catalog](https://bharatlas.com/layers#city-wards), where the two layers are marked CC0.
+
+The map viewport, general place search, and driving route bounds extend south to 12.62°N (and span 77.44–77.80°E), so southern suburbs through Anekal can be seen and used for routing. This is basemap and route coverage only. The 2025 GBA polygon remains the cutoff for city flood and heat risk outputs; no values are extrapolated south of it. The route bounds are a rectangular supported region, not an administrative boundary.
 
 ## City land-surface temperature
 
@@ -18,7 +20,19 @@ Training used 16 acquisitions from February 2023 through December 2025, with 480
 | 2026-04-01 | 3.33 °C | 3.71 °C | 4.31 °C | −2.19 °C |
 | **Pooled** | **4.03 °C** | **4.21 °C** | **4.63 °C** | |
 
-XGBoost had lower pooled error but lost to both baselines on March 8. This is a date holdout against independent satellite acquisitions of the same product family. Predictors come from the acquisition being mapped. The evaluation does not measure advance forecast skill, air temperature or agreement with in-situ thermometers. Training and test months focus on scenes with usable optical observations, so cloudy and monsoon conditions are underrepresented. The Bellandur single-scene spatial holdout is a different evaluation and its error is not directly comparable.
+XGBoost had lower pooled error but lost to both baselines on March 8. This is a date holdout against independent satellite acquisitions from the same Collection 2 product family; the scenes include both Landsat 8 and Landsat 9, with sensor and scene IDs recorded individually. Predictors come from the acquisition being mapped. The evaluation does not measure advance forecast skill, air temperature or agreement with in-situ thermometers. Training and test months focus on scenes with usable optical observations, so cloudy and monsoon conditions are underrepresented. The Bellandur single-scene spatial holdout is a different evaluation and its error is not directly comparable.
+
+### Spatial-block evaluation
+
+The same 16 training acquisitions are also evaluated with a deterministic spatial holdout across dates. Samples are grouped by their projected EPSG:32643 coordinates into fixed 900 m × 900 m blocks (30 Landsat grid pixels per side). Twenty percent of blocks are held out with seed 42; a one-block (900 m) buffer around held-out blocks is excluded from training. This keeps train and evaluation samples at least two block indices apart and groups repeated geographic areas consistently across acquisition dates. The final temporal model is still fit on all 480,000 configured training samples after the spatial evaluation is measured.
+
+| Spatial held-out set | XGBoost RMSE | Linear RMSE | Training-mean RMSE | Pixels |
+|---|---:|---:|---:|---:|
+| Held-out 900 m blocks | 4.13 °C | 4.33 °C | 5.27 °C | 97,872 |
+
+The spatial evaluation trained on 64,858 samples across 138 blocks and tested on 97,872 samples across 197 held-out blocks. These are sampled pixels from the same 16 acquisitions, not independent dates; the large-area buffer removes additional blocks from training. The reported score measures spatial transfer of same-acquisition LST patterns. It does not validate future air temperature, heat stress, or a heatwave warning. The evaluation JSON records exact scene, sensor, date/time, cloud cover, source/window transforms, CRS, resolution, feature schema, QA bits, preprocessing version, seed, parameters and metrics.
+
+The configured XGBoost baseline uses 300 estimators, depth 6, histogram tree construction, four workers and random seed 42. Spatial and date evaluations compare it with a linear-regression baseline and a constant training-mean baseline. The final model is fit on the 480,000 training samples; the spatial evaluation model is fit only on its buffered training blocks.
 
 The browser layer aggregates eligible April 1, 2026 modelled pixels into 300 m cells. Data available from the U.S. Geological Survey, accessed through [Microsoft Planetary Computer Landsat Collection 2](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2).
 
@@ -28,7 +42,7 @@ cd backend
 .venv/bin/python -m app.heat.city_study --export-map
 ```
 
-The study writes its scene manifests, input samples, evaluation JSON and XGBoost model under `backend/data/heat/city-study/`. The export writes the browser asset at `frontend/public/data/bengaluru-heat.json`.
+The study writes versioned scene manifests and sample caches, `evaluation.v2.json`, and `model.v2.json` under `backend/data/heat/city-study/`; the `v2` files preserve older local artifacts. Inputs and outputs are ignored and are not committed. The optional export writes the browser asset at `frontend/public/data/bengaluru-heat.json`.
 
 ## Citywide flood screening
 
@@ -64,8 +78,8 @@ The published Bengaluru study used observed gauge rainfall and stormwater water 
 
 ## Current conditions for route comparisons
 
-Open-Meteo provides a city reference estimate at 12.98° N, 77.59° E. The route comparison uses its valid time and rejects estimates older than an hour. It shows air and apparent temperature and the precipitation amounts for two completed model hours and the following two hourly intervals. The same city rainfall is applied to all candidate routes. The browser continues to label the separate Landsat image by acquisition date. [Open-Meteo model and accumulation documentation](https://open-meteo.com/en/docs).
+Open-Meteo Forecast API v1 provides a single Bengaluru reference estimate at 12.98° N, 77.59° E using automatic Best Match selection. The response carries the provider's returned grid-cell center and elevation, source units, UTC timezone/offset, retrieval time and each value's valid time. The selected model run/version and one fixed spatial resolution are not returned; the grid cell may be kilometres from the requested point. The route comparison rejects current estimates older than an hour, uses two completed hourly precipitation amounts and sums the following three hourly forecast amounts. The same city reference rainfall is applied to all candidate routes. These are forecast-model estimates, not station observations, road-level rainfall, flood predictions, or heatwave forecasts. The separate Landsat layer remains labelled by acquisition date. [Open-Meteo Forecast API documentation](https://open-meteo.com/en/docs).
 
-The route screen measures road length inside 300 m cells with at least 1 mm of modeled runoff on depressions. Its recent screen uses the two completed hour amounts. Its upcoming screen adds the following two amounts as a simple cumulative rainfall scenario. It excludes mapped permanent water and reports the route length inside the screened grid. The cutoff is a display criterion with no calibration to vehicle passability or congestion. Lower exposure can be flagged among well-covered routes when the alternatives differ by at least 100 m.
+The route screen measures road length inside 300 m cells with at least 1 mm of modeled runoff on depressions. Its recent screen uses the two completed hour amounts. Its upcoming screen adds the next three hourly estimates as a simple cumulative rainfall scenario. It excludes mapped permanent water and reports the route length inside the screened grid. The cutoff is a display criterion with no calibration to vehicle passability or congestion. Lower exposure can be flagged among well-covered routes when the alternatives differ by at least 100 m.
 
 The optional TomTom adapter sends traffic-enabled route requests and displays the difference between provider ETA and its comparable no-traffic estimate. It separately checks present reports categorized as flooding within 35 m of the returned road geometry. A zero count represents zero matching reports in that feed. Observed flood-event validation and causal estimates of heat or flood effects on traffic still require paired road sensors, incident data and travel times. [TomTom Routing](https://docs.tomtom.com/routing-api/documentation/tomtom-maps/v1/calculate-route) · [TomTom Incident Details](https://docs.tomtom.com/traffic-api/documentation/tomtom-maps/v1/traffic-incidents/incident-details).
