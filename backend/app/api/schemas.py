@@ -1,0 +1,111 @@
+"""Pydantic v2 request/response models matching the API contract in §7."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict
+
+
+class SimulateRequest(BaseModel):
+    rainfall_intensity_mm_hr: float
+    duration_min: float
+
+
+class NodePrediction(BaseModel):
+    node_id: str
+    lat: float
+    lng: float
+    depth_m_mean: float
+    depth_m_std: float
+
+
+class RoadSegment(BaseModel):
+    edge_id: str
+    state: Literal["clear", "at_risk", "flooded"]
+    geometry: dict[str, Any]
+
+
+class SimulateResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    scenario_id: str
+    node_predictions: list[NodePrediction]
+    road_segments: list[RoadSegment]
+    model_caveat: str
+    is_synthetic_ward: bool
+    model_mode: str
+    model_version: str
+    provenance_class: Literal["simulated"]
+    rainfall_source: str
+    generated_at_utc: datetime
+    input_provenance: list[str]
+    limitations: list[str]
+    # ADDITION beyond the original §7 contract (additive/backward-compatible
+    # only): infra_ids with zero access redundancy under THIS scenario, so
+    # the frontend's map-click demo affordance can target a facility that is
+    # actually vulnerable right now, instead of always the first infra in
+    # the list -- which in real mode (many facilities, no deliberate siting)
+    # is not guaranteed to be one of the at-risk ones.
+    at_risk_infra_ids: list[str] = []
+
+
+class LatLng(BaseModel):
+    lat: float
+    lng: float
+
+
+class RouteOption(BaseModel):
+    id: str
+    name: str
+    tag: str
+    geometry: dict[str, Any]
+    eta_seconds: float
+    eta_minutes: int
+    distance_km: float
+    flooded_segments_count: int
+    avoided_flooded_segments: list[str]
+    is_safe: bool
+    summary: str
+
+
+class RouteRequest(BaseModel):
+    start: LatLng
+    end: LatLng
+    scenario_id: str
+    algorithm: Literal["astar", "dijkstra"] = "astar"
+    vehicle_type: Literal["ambulance", "fire", "rescue", "police"] = "ambulance"
+
+
+class CriticalAccessRiskSchema(BaseModel):
+    infra_id: str
+    infra_type: str
+    infra_name: str
+    access_redundancy_score: int
+    message: str
+
+
+class RouteResponse(BaseModel):
+    route_geometry: dict[str, Any]
+    eta_seconds: float
+    avoided_flooded_segments: list[str]
+    baseline_route_geometry: dict[str, Any]
+    baseline_eta_seconds: float
+    critical_access_risk: CriticalAccessRiskSchema | None = None
+    routes: list[RouteOption] = []
+    active_vehicle: str = "ambulance"
+
+
+class CriticalInfraSchema(BaseModel):
+    infra_id: str
+    infra_type: str
+    name: str
+    lat: float
+    lng: float
+
+
+class ScenarioSummary(BaseModel):
+    scenario_id: str
+    label: str
+    rainfall_intensity_mm_hr: float
+    duration_min: float

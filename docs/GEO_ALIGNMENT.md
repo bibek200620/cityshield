@@ -1,0 +1,9 @@
+# Common-grid hazard alignment
+
+The flood and heat outputs remain independent. `GET /api/exposure/{scenario_id}` is a derived display overlay that places their point outputs into a globally anchored 30 m grid in WGS84 / UTM zone 43N (`EPSG:32643`). Grid indices are `floor(easting / 30)` and `floor(northing / 30)`; the `grid_id` includes CRS, resolution and indices, so each cell is stable across scenarios and repeat calls. The API converts each cell center back to WGS84 for map display.
+
+Flood node coordinates are transformed from WGS84 and snapped to the grid; if more than one node lands in a cell, maximum mean depth is retained. Landsat pixel centers are transformed from the scene CRS and snapped to the same grid; values are averaged within a cell and the heat flag is retained if any assigned pixel is a relative scene hotspot. The independent flood threshold is `depth_m_mean >= 0.15 m`. The heat threshold is the heat API's top decile of valid modelled LST values for its one scene. Missing hazard values remain null and cannot mark a cell as both elevated.
+
+The combined map draws only cells where both flags are true. It reports separate flood depth and LST values and does not create a compound probability. This alignment is for display at a common nominal resolution; it does not make flood-node sampling equivalent to a measured 30 m flood raster and does not support verified street-level depth claims. Flood results remain simulation-derived and heat results remain single-date remotely sensed/modelled LST.
+
+Coordinates within one micrometre of a grid boundary are snapped to that boundary before applying the floor rule. This prevents round-trip WGS84 projection noise from shifting a pixel into the preceding cell. Automated tests cover adjacent boundary pixels, stable grid IDs, independent thresholds, and missing hazards. When the heat scene/model is absent, the API returns `status: unavailable` and an empty cell list.

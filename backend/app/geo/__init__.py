@@ -1,0 +1,1 @@
+"""Shared geospatial overlay helpers."""

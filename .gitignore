@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Backend data/artifacts
+backend/*.db
+backend/data/
+backend/cache/
+data/raw/
+data/processed/
+backend/app/ml/checkpoints/
+/app/ml/checkpoints/
+*.pt
+*.pth
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# Env
+.env
+
+# OS
+.DS_Store
+Thumbs.db
