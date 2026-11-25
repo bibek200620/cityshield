@@ -37,9 +37,24 @@ def test_driving_rejects_points_outside_bengaluru_before_querying_provider(monke
 
     monkeypatch.setattr(routes_driving, "query_valhalla", unexpected_query)
     response = TestClient(app).post(
-        "/api/drive/routes", json={**REQUEST, "destination": {"lat": 18, "lng": 77}},
+        "/api/drive/routes", json={**REQUEST, "destination": {"lat": 12.5, "lng": 77.6}},
     )
     assert response.status_code == 422
+
+
+def test_driving_accepts_southern_suburb_coordinates(monkeypatch):
+    route = {"summary": {"length": 10, "time": 800}, "legs": [{"shape": "??AA"}]}
+    monkeypatch.setattr(routes_driving, "query_valhalla", lambda req, *, shortest: {"trip": route})
+    monkeypatch.setattr(settings, "TOMTOM_API_KEY", None)
+    monkeypatch.setattr(routes_driving, "annotate_conditions", lambda routes, key: {})
+    request = {
+        "source": {"lat": 12.979, "lng": 77.6408},
+        "destination": {"lat": 12.70, "lng": 77.58},
+    }
+
+    response = TestClient(app).post("/api/drive/routes", json=request)
+
+    assert response.status_code == 200
 
 
 def test_configured_traffic_adapter_uses_provider_time_without_hazard_adjustments(monkeypatch):
