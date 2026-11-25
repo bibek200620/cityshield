@@ -18,7 +18,7 @@ def test_versioned_model_card_inventory_has_complete_unique_records():
     inventory, cards = _cards()
 
     assert inventory["schema_version"] == "1.0.0"
-    assert len(cards) == len(inventory["cards"]) == 5
+    assert len(cards) == len(inventory["cards"]) == 6
     required = {
         "version", "name", "workflow", "purpose", "not_intended_for", "output", "data",
         "preprocessing", "spatial", "model_configuration", "evaluation", "reproduction",
@@ -65,3 +65,20 @@ def test_heat_cards_keep_lst_reanalysis_and_observation_claims_separate():
     assert "reanalysis-derived" in reanalysis["evaluation"]["metric_provenance"]
     assert reanalysis["split"]["training_targets"] == 7671
     assert reanalysis["split"]["test_targets"] == 1826
+
+
+def test_station_baseline_reports_same_site_metrics_without_city_forecast_claim():
+    _, cards = _cards()
+    station = cards["heat-ghcnh-hal-next-day-tmax"]
+
+    assert station["data"]["provenance_class"] == ["observed_station_data", "derived_relative_humidity"]
+    assert station["data"]["station_id"] == "INM00043296"
+    assert station["data"]["raw_file_sha256"] == "f54169d47017e2be68df7f1c461503e8cadec97f6afc13dfc2e59161f8b15a6c"
+    assert station["split"]["strategy"] == "chronological target-date holdout"
+    assert station["split"]["training_targets"] == 3250
+    assert station["split"]["test_targets"] == 997
+    assert station["evaluation"]["metrics"]["xgboost"]["sample_count"] == 997
+    assert station["evaluation"]["metrics"]["previous_day_persistence"]["sample_count"] == 997
+    assert station["evaluation"]["metrics"]["xgboost"]["mae_c"] > station["evaluation"]["metrics"]["previous_day_persistence"]["mae_c"]
+    assert station["evaluation"]["observed_validation"]["status"] == "unavailable"
+    assert "Bengaluru-wide forecast" in station["not_intended_for"]
