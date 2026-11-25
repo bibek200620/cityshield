@@ -18,7 +18,19 @@ Training used 16 acquisitions from February 2023 through December 2025, with 480
 | 2026-04-01 | 3.33 °C | 3.71 °C | 4.31 °C | −2.19 °C |
 | **Pooled** | **4.03 °C** | **4.21 °C** | **4.63 °C** | |
 
-XGBoost had lower pooled error but lost to both baselines on March 8. This is a date holdout against independent satellite acquisitions of the same product family. Predictors come from the acquisition being mapped. The evaluation does not measure advance forecast skill, air temperature or agreement with in-situ thermometers. Training and test months focus on scenes with usable optical observations, so cloudy and monsoon conditions are underrepresented. The Bellandur single-scene spatial holdout is a different evaluation and its error is not directly comparable.
+XGBoost had lower pooled error but lost to both baselines on March 8. This is a date holdout against independent satellite acquisitions from the same Collection 2 product family; the scenes include both Landsat 8 and Landsat 9, with sensor and scene IDs recorded individually. Predictors come from the acquisition being mapped. The evaluation does not measure advance forecast skill, air temperature or agreement with in-situ thermometers. Training and test months focus on scenes with usable optical observations, so cloudy and monsoon conditions are underrepresented. The Bellandur single-scene spatial holdout is a different evaluation and its error is not directly comparable.
+
+### Spatial-block evaluation
+
+The same 16 training acquisitions are also evaluated with a deterministic spatial holdout across dates. Samples are grouped by their projected EPSG:32643 coordinates into fixed 900 m × 900 m blocks (30 Landsat grid pixels per side). Twenty percent of blocks are held out with seed 42; a one-block (900 m) buffer around held-out blocks is excluded from training. This keeps train and evaluation samples at least two block indices apart and groups repeated geographic areas consistently across acquisition dates. The final temporal model is still fit on all 480,000 configured training samples after the spatial evaluation is measured.
+
+| Spatial held-out set | XGBoost RMSE | Linear RMSE | Training-mean RMSE | Pixels |
+|---|---:|---:|---:|---:|
+| Held-out 900 m blocks | 4.13 °C | 4.33 °C | 5.27 °C | 97,872 |
+
+The spatial evaluation trained on 64,858 samples across 138 blocks and tested on 97,872 samples across 197 held-out blocks. These are sampled pixels from the same 16 acquisitions, not independent dates; the large-area buffer removes additional blocks from training. The reported score measures spatial transfer of same-acquisition LST patterns. It does not validate future air temperature, heat stress, or a heatwave warning. The evaluation JSON records exact scene, sensor, date/time, cloud cover, source/window transforms, CRS, resolution, feature schema, QA bits, preprocessing version, seed, parameters and metrics.
+
+The configured XGBoost baseline uses 300 estimators, depth 6, histogram tree construction, four workers and random seed 42. Spatial and date evaluations compare it with a linear-regression baseline and a constant training-mean baseline. The final model is fit on the 480,000 training samples; the spatial evaluation model is fit only on its buffered training blocks.
 
 The browser layer aggregates eligible April 1, 2026 modelled pixels into 300 m cells. Data available from the U.S. Geological Survey, accessed through [Microsoft Planetary Computer Landsat Collection 2](https://planetarycomputer.microsoft.com/dataset/landsat-c2-l2).
 
@@ -28,7 +40,7 @@ cd backend
 .venv/bin/python -m app.heat.city_study --export-map
 ```
 
-The study writes its scene manifests, input samples, evaluation JSON and XGBoost model under `backend/data/heat/city-study/`. The export writes the browser asset at `frontend/public/data/bengaluru-heat.json`.
+The study writes versioned scene manifests and sample caches, `evaluation.v2.json`, and `model.v2.json` under `backend/data/heat/city-study/`; the `v2` files preserve older local artifacts. Inputs and outputs are ignored and are not committed. The optional export writes the browser asset at `frontend/public/data/bengaluru-heat.json`.
 
 ## Citywide flood screening
 
