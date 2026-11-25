@@ -1,6 +1,6 @@
 # Landsat heat workflow
 
-This workflow prepares a single Landsat 8/9 Collection 2 Level-2 scene and trains an XGBoost model to estimate that scene's land-surface temperature (LST). It produces a spatial pattern for research. It does not estimate air temperature or forecast a heatwave.
+This page documents the Bellandur single-scene workflow and the separate Bengaluru multi-date study. Both estimate Landsat land-surface temperature (LST), not air temperature or a heatwave forecast.
 
 ## Required inputs
 
@@ -39,7 +39,8 @@ XGBoost 3.1.2 trained on 5,273 pixels and evaluated on 2,694 pixels from separat
 - Feature ordering is fixed: `NDVI`, `NDBI`, `EMIS`, `MNDWI`, `norm_row`, `norm_col`, `ALBEDO`, `BSI`.
 - XGBoost parameters and random seed are in the saved metadata and `app/heat/model.py`.
 - A single scene's ST_B10 values provide the target. Spatial holdout metrics therefore measure within-scene spatial generalisation only; they do not establish independent sensor, date, city-wide, air-temperature, or heatwave forecast accuracy.
-- The reference project describes multi-date work as planned; this MVP rejects mixed acquisitions and processes one scene at a time.
+- `app.heat.train` intentionally binds one model to one scene. The reusable city study in `app.heat.city_study` separately processes Landsat 8/9 Collection 2 Level-2 acquisitions with consistent feature order, QA, units, EPSG:32643 resolution and a shared 30 m pixel lattice. See [`BENGALURU_EVALUATION.md`](BENGALURU_EVALUATION.md) for its spatial and date holdouts.
+- The multi-date model is not operational forecasting. It maps same-acquisition LST from that acquisition's spectral features, and the spatial/date holdouts measure only generalisation of this remote-sensing target.
 - The dataset license and exact USGS product metadata must be retained by the person supplying scene files. Do not commit licensed scene files or credentials.
 - The configured output is unavailable until real, compatible scene and model files have been provided and training has completed.
 
