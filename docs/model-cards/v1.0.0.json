@@ -455,7 +455,7 @@
           "train_pixels": 64858,
           "test_pixels": 97872
         },
-        "temporal": "Entire later acquisitions are held out from training; four dates in Jan\u2013Apr 2026."
+        "temporal": "Entire later acquisitions are held out from training; four dates in Jan–Apr 2026."
       },
       "evaluation": {
         "status": "computed_remote_sensing_holdouts",
@@ -631,6 +631,137 @@
       ],
       "licence_and_attribution": [
         "Open-Meteo data attribution and CC BY 4.0 terms are documented in docs/HEATWAVE_REANALYSIS.md."
+      ]
+    },
+    {
+      "id": "heat-ghcnh-hal-next-day-tmax",
+      "version": "1.0.0",
+      "name": "NOAA GHCNh HAL station next-day Tmax research baseline",
+      "workflow": "offline one-day station-observation baseline",
+      "purpose": "Evaluate whether prior-day station temperature and derived relative humidity predict the next local day maximum air temperature at one airport station.",
+      "not_intended_for": [
+        "Bengaluru-wide forecast",
+        "neighborhood forecast",
+        "official heatwave warning",
+        "human heat-stress advisory",
+        "validated independent-site forecast"
+      ],
+      "output": {
+    "target": "Maximum QC-accepted station-reported air temperature on the next eligible local date",
+        "units": "degrees Celsius",
+        "horizon": "one local calendar day"
+      },
+      "data": {
+        "provenance_class": [
+          "observed_station_data",
+          "derived_relative_humidity"
+        ],
+        "source": "NOAA NCEI Global Historical Climatology Network hourly (GHCNh)",
+        "doi": "https://doi.org/10.25921/jp3d-3v19",
+        "station_id": "INM00043296",
+        "station_name": "BANGALORE/HINDUSTAN AIRPORT",
+        "source_station_id": "ICAO-VOBG",
+        "coordinates": {
+          "latitude": 12.95,
+          "longitude": 77.6333,
+          "elevation_m": 888
+        },
+        "raw_period": "1954-01-01 through 2026-11-21; discontinuous source archive",
+        "paired_observation_period": "2005-05-07 through 2026-03-26",
+        "raw_rows": 183179,
+        "eligible_local_days": 4497,
+        "consecutive_examples": 4332,
+        "raw_file_sha256": "f54169d47017e2be68df7f1c461503e8cadec97f6afc13dfc2e59161f8b15a6c",
+        "temperature_filter": "Source code 223, source station ICAO-VOBG, temperature QC 1.",
+        "humidity_filter": "Source code 223, source station ICAO-VOBG, derived measurement code D; exclude RH QC flags f/o."
+      },
+      "preprocessing": {
+        "timezone": "UTC source timestamps converted to Asia/Kolkata before daily aggregation",
+        "daily_input_requirement": "At least 8 paired quality-accepted temperature/RH reports spanning 18 or more hours per local date; both previous and target date must pass.",
+        "missing_data": "No interpolation, gap filling, cross-station pooling, or bridge across missing/ineligible dates.",
+        "features": [
+          "previous_tmax_c",
+          "previous_tmean_c",
+          "previous_tmin_c",
+          "previous_rh_mean_pct",
+          "previous_rh_max_pct",
+          "previous_rh_min_pct",
+          "target_doy_sin",
+          "target_doy_cos"
+        ]
+      },
+      "spatial": {
+        "resolution": "One station point; not representative of city/neighborhood variation",
+        "coordinates": "12.9500 N, 77.6333 E",
+        "neighborhood_resolution_claim": false
+      },
+      "model_configuration": {
+        "type": "XGBRegressor",
+        "xgboost_version": "3.1.2",
+        "hyperparameters": {
+          "n_estimators": 250,
+          "max_depth": 3,
+          "learning_rate": 0.04,
+          "subsample": 0.8,
+          "colsample_bytree": 0.9,
+          "reg_lambda": 1.0,
+          "objective": "reg:squarederror",
+          "random_state": 42,
+          "n_jobs": 1,
+          "tree_method": "hist"
+        }
+      },
+      "split": {
+        "strategy": "chronological target-date holdout",
+        "training_period": "2005-05-19 through 2022-12-31",
+        "training_targets": 3250,
+        "test_period": "2023-01-01 through 2025-12-31",
+        "test_targets": 997,
+        "seed": 42
+      },
+      "evaluation": {
+        "status": "computed_same_station_chronological_holdout",
+        "metric_provenance": "Predictions compared with later held-out GHCNh reports from the same HAL airport station; no independent-station or city-level validation.",
+        "metrics": {
+          "xgboost": {
+            "mae_c": 1.1697685287613329,
+            "rmse_c": 1.4790126529318073,
+            "bias_c": -0.5587379417304648,
+            "sample_count": 997
+          },
+          "previous_day_persistence": {
+            "mae_c": 1.0501504513540623,
+            "rmse_c": 1.4510398167000609,
+            "bias_c": 0.0,
+            "sample_count": 997
+          },
+          "training_only_seasonal_climatology_15_day": {
+            "mae_c": 1.6564767235707656,
+            "rmse_c": 2.064191380757188,
+            "bias_c": -0.7620837174265396,
+            "sample_count": 997
+          }
+        },
+        "interpretation": "XGBoost did not outperform the previous-day Tmax persistence baseline on this holdout.",
+        "observed_validation": {
+          "status": "unavailable",
+          "reason": "No independent station/site or city-level held-out validation; reported holdout rows come from the same airport site."
+        }
+      },
+      "reproduction": {
+        "command": "cd backend && .venv/bin/python -m app.heat.train_station_observations --input data/heat/ghcnh-hal/GHCNh_INM00043296_por.psv --output-dir data/heat/ghcnh-hal/model",
+        "inputs_required": "NOAA GHCNh HAL station archive; verify the SHA-256 and inspect provider terms before reuse."
+      },
+      "artifact_status": "Raw archive, trained artifact, and evaluation report are local/ignored; exact input content SHA-256 and computed metrics are recorded here.",
+      "limitations": [
+        "Single airport station; not city/neighborhood coverage.",
+        "The archive has substantial missing periods; eligible-day filtering cannot recover missing seasons or years.",
+        "Relative humidity is derived from temperature/dew-point observations.",
+        "XGBoost underperformed persistence on the reported chronological holdout.",
+        "This regression target is not a heatwave event label or public warning."
+      ],
+      "licence_and_attribution": [
+        "NOAA NCEI GHCNh source and DOI are cited in docs/HEATWAVE_STATION_BASELINE.md and docs/DATA_SOURCES.md; confirm current provider terms before redistribution."
       ]
     }
   ]

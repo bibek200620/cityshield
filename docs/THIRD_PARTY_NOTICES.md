@@ -16,6 +16,7 @@
 
 ## External data specifications
 
+- NOAA NCEI GHCNh hourly station data and the HAL archive are cited by dataset DOI and direct source URL in [`DATA_SOURCES.md`](DATA_SOURCES.md) and [`HEATWAVE_STATION_BASELINE.md`](HEATWAVE_STATION_BASELINE.md). The repository records a retrieval hash and attribution; it does not assert redistribution rights beyond provider terms.
 - USGS Landsat Collection 2 scaling and QA documentation is linked in [`DATA_SOURCES.md`](DATA_SOURCES.md). Landsat input files remain user-supplied; no scene is bundled.
 - OpenStreetMap data queried in optional real mode are licensed under ODbL and require attribution. The interactive CARTO basemap includes visible OpenStreetMap/CARTO attribution through MapLibre's attribution control; see [`DATA_SOURCES.md`](DATA_SOURCES.md) for links and usage notes.
 - Optional AWS Terrain Tiles use a mixture of underlying sources; follow the per-source terms listed by the AWS Open Data Registry and Tilezen's attribution file. The default synthetic mode does not fetch terrain tiles.
