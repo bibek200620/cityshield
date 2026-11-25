@@ -25,7 +25,7 @@ The verified local run uses the 2025-04-14 Landsat 8 acquisition documented in [
 
 ## Source and licensing references
 
-- [Open-Meteo API documentation](https://open-meteo.com/en/docs): hourly weather variables and endpoint behavior. Open-Meteo is the source of model estimates, not verified street observations.
+- [Open-Meteo Forecast API documentation](https://open-meteo.com/en/docs): model selection, grid-cell coordinates, UTC offsets, valid times and variable units. Open-Meteo API data are offered under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), with attribution. The free public API is for non-commercial use, rate-limited and carries no uptime guarantee; see [Open-Meteo terms and pricing](https://open-meteo.com/en/pricing). Confirm service terms before commercial use.
 - [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/): applies to the default place-search provider. The implementation avoids autocomplete and throttles/cache searches; configure another compatible provider through `PLACE_SEARCH_URL` if required.
 - [OpenStreetMap copyright and license](https://www.openstreetmap.org/copyright): OSM data are under ODbL and require attribution. The interactive map keeps the CARTO/OSM attribution control visible; if OSM-derived data are exported or redistributed, review the ODbL obligations for that use.
 - [AWS Open Data Registry — Terrain Tiles](https://registry.opendata.aws/terrain-tiles/): AWS lists the source-specific attribution/terms at the [Tilezen attribution file](https://github.com/tilezen/joerd/blob/master/docs/attribution.md). Retain that source list with any exported DEM-derived result.
