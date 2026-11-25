@@ -22,6 +22,8 @@ backend/app/ml/checkpoints/
 node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/test-results/
+frontend/playwright-report/
 *.tsbuildinfo
 
 # Env
