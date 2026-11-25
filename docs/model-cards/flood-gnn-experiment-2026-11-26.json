@@ -1,0 +1,171 @@
+{
+  "data": {
+    "dataset_sha256": "e3ce142109590b2fbc5baab7477f53c2331ed55f98190a4c671fd91d87d70eba",
+    "duration_min": [
+      30,
+      60,
+      90,
+      120
+    ],
+    "edge_count": 74,
+    "input_provenance_class": "synthetic",
+    "label_provenance_class": "simulated",
+    "label_source": "Simplified SCS-CN runoff and graph drainage physics baseline",
+    "node_count": 58,
+    "provider_class": "SyntheticWardProvider",
+    "provider_configuration": {
+      "anchor_lat": 12.928,
+      "anchor_lng": 77.668,
+      "grid_resolution_m": 20,
+      "grid_size_cells": 100,
+      "seed": 42
+    },
+    "rainfall_intensity_mm_hr": [
+      10,
+      20,
+      30,
+      40,
+      60,
+      80,
+      100,
+      120
+    ],
+    "scenario_count": 32,
+    "scenario_ids": [
+      "rain-10mmhr-30min",
+      "rain-10mmhr-60min",
+      "rain-10mmhr-90min",
+      "rain-10mmhr-120min",
+      "rain-20mmhr-30min",
+      "rain-20mmhr-60min",
+      "rain-20mmhr-90min",
+      "rain-20mmhr-120min",
+      "rain-30mmhr-30min",
+      "rain-30mmhr-60min",
+      "rain-30mmhr-90min",
+      "rain-30mmhr-120min",
+      "rain-40mmhr-30min",
+      "rain-40mmhr-60min",
+      "rain-40mmhr-90min",
+      "rain-40mmhr-120min",
+      "rain-60mmhr-30min",
+      "rain-60mmhr-60min",
+      "rain-60mmhr-90min",
+      "rain-60mmhr-120min",
+      "rain-80mmhr-30min",
+      "rain-80mmhr-60min",
+      "rain-80mmhr-90min",
+      "rain-80mmhr-120min",
+      "rain-100mmhr-30min",
+      "rain-100mmhr-60min",
+      "rain-100mmhr-90min",
+      "rain-100mmhr-120min",
+      "rain-120mmhr-30min",
+      "rain-120mmhr-60min",
+      "rain-120mmhr-90min",
+      "rain-120mmhr-120min"
+    ],
+    "scs_cn_initial_abstraction_coefficient": 0.2
+  },
+  "experiment_id": "flood-gnn-physics-surrogate",
+  "limitations": [
+    "Surrogate agreement with the simplified physics baseline only; not validated against observed real-world flooding.",
+    "Physics-generated training and validation labels are not observed flood events.",
+    "Real-world depth, extent and road-impact accuracy are unavailable."
+  ],
+  "metrics": {
+    "best_validation_loss": 0.0039914943731024066,
+    "mae_m": 0.02598010114845967,
+    "metric_kind": "surrogate_agreement",
+    "metric_scope": "validation scenarios compared with simplified physics-generated labels",
+    "observed_event_validation": "unavailable; no evaluation-grade observed flood events are configured",
+    "rmse_m": 0.04457568026127762
+  },
+  "model": {
+    "architecture": "3-layer Graph Convolutional Network (GCNConv), ReLU, dropout, nonnegative depth output",
+    "dropout_probability": 0.2,
+    "edge_weight": "normalized estimated drainage capacity",
+    "hidden_dimension": 64,
+    "node_features": [
+      {
+        "name": "elevation_norm",
+        "units": "normalized [0,1]"
+      },
+      {
+        "name": "curve_number_over_100",
+        "units": "unitless"
+      },
+      {
+        "name": "slope_pct",
+        "units": "percent"
+      },
+      {
+        "name": "flow_accumulation_norm",
+        "units": "normalized [0,1]"
+      },
+      {
+        "name": "local_inflow_peak",
+        "units": "m^3/s"
+      }
+    ],
+    "target": "peak node depth from simplified physics simulation",
+    "target_units": "m"
+  },
+  "reproduction": "cd backend && .venv/bin/python -m app.ml.train",
+  "schema_version": "1.0.0",
+  "split": {
+    "seed": 42,
+    "strategy": "random scenario-level holdout; all nodes from a scenario stay in one partition",
+    "training_scenario_count": 25,
+    "training_scenarios": [
+      "rain-120mmhr-60min",
+      "rain-40mmhr-120min",
+      "rain-100mmhr-30min",
+      "rain-60mmhr-60min",
+      "rain-30mmhr-30min",
+      "rain-30mmhr-60min",
+      "rain-120mmhr-90min",
+      "rain-100mmhr-60min",
+      "rain-40mmhr-30min",
+      "rain-10mmhr-30min",
+      "rain-20mmhr-30min",
+      "rain-60mmhr-30min",
+      "rain-20mmhr-60min",
+      "rain-40mmhr-60min",
+      "rain-30mmhr-120min",
+      "rain-80mmhr-120min",
+      "rain-10mmhr-60min",
+      "rain-10mmhr-90min",
+      "rain-100mmhr-90min",
+      "rain-10mmhr-120min",
+      "rain-80mmhr-60min",
+      "rain-100mmhr-120min",
+      "rain-80mmhr-90min",
+      "rain-60mmhr-90min",
+      "rain-120mmhr-120min"
+    ],
+    "validation_scenario_count": 7,
+    "validation_scenarios": [
+      "rain-80mmhr-30min",
+      "rain-20mmhr-120min",
+      "rain-30mmhr-90min",
+      "rain-40mmhr-90min",
+      "rain-120mmhr-30min",
+      "rain-60mmhr-120min",
+      "rain-20mmhr-90min"
+    ]
+  },
+  "training": {
+    "early_stopping_patience": 15,
+    "epochs_max": 200,
+    "framework_versions": {
+      "numpy": "1.26.4",
+      "python": "3.11.15",
+      "torch": "2.4.1",
+      "torch_geometric": "2.6.1"
+    },
+    "learning_rate": 0.001,
+    "loss": "mean((1 + 10 * target_depth_m) * (prediction - target)^2)",
+    "optimizer": "Adam"
+  }
+}

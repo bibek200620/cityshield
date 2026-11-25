@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -255,3 +256,11 @@ def test_spatial_holdout_is_stable_and_disjoint_across_dates():
 def test_spatial_holdout_rejects_invalid_coordinates():
     with pytest.raises(LandsatSceneError, match="finite"):
         spatial_holdout_indices(np.array([1.0, np.nan]), np.array([2.0, 3.0]))
+
+
+def test_model_card_hyperparameters_match_city_study_configuration():
+    card_path = Path(__file__).resolve().parents[2] / "docs/model-cards/v1.0.0.json"
+    inventory = json.loads(card_path.read_text())
+    card = next(card for card in inventory["cards"] if card["id"] == "heat-bengaluru-multidate-lst")
+
+    assert card["model_configuration"]["hyperparameters"] == city_study.MODEL_PARAMETERS

@@ -96,6 +96,7 @@ Vite may report a bundle size advisory for the map libraries.
 - [Data sources and provenance](docs/DATA_SOURCES.md)
 - [Third-party notices](docs/THIRD_PARTY_NOTICES.md)
 - [Bengaluru coverage and model evaluation](docs/BENGALURU_EVALUATION.md)
+- [Versioned model cards and experiment provenance](docs/MODEL_CARDS.md)
 
 ## License
 

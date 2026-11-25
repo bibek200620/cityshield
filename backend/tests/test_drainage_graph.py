@@ -28,3 +28,11 @@ def test_all_edges_positive_capacity():
 def test_outlet_is_set():
     g = _graph()
     assert g.graph["outlet_node"] in g.nodes
+
+
+def test_graph_node_and_edge_order_is_stable_for_training_tensors():
+    first = _graph()
+    second = _graph()
+
+    assert list(first.nodes) == list(second.nodes) == sorted(first.nodes)
+    assert list(first.edges) == list(second.edges)
