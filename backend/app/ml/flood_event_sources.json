@@ -28,6 +28,19 @@
       "url": "https://ndem.nrsc.gov.in/documents/downloads/nrt_technical_note.pdf",
       "source_basis": "NRSC describes date-stamped satellite flood inundation layers arranged by year, state and date.",
       "reuse_status": "NDEM portal content states it is intended for authorized users. No Bengaluru-specific downloadable event layer or reuse permission was verified for this work. Do not import portal data without access authorization and source terms."
+    },
+    {
+      "source_id": "ifi-impacts-v3-bengaluru-urban",
+      "title": "India Flood Inventory-Impacts (IFI-Impacts), version 3, 1967–2023",
+      "publisher": "HydroSense Lab, IIT Delhi; inventory events attributed to IMD",
+      "published_at": null,
+      "url": "https://zenodo.org/records/11275211",
+      "source_basis": "The source file is the published India_Flood_Inventory_v3.csv from Zenodo record 10.5281/zenodo.11275211. Its MD5 (fea75a9ff9eba8fb328eaddfacd21d67) matches the supplied source. The derived CSV selects rows whose Districts field explicitly contains Bengaluru Urban and normalizes calendar dates without treating source midnight placeholders as event times.",
+      "reuse_status": "The exact v3 Zenodo record declares CC BY 4.0. The derived subset is attributed to HydroSense Lab/IIT Delhi and IMD, with the source DOI, checksum, transformation and license documented in backend/data/flood_events/README.md. The later v4 record reports different terms; this project uses the exact checksum-matched v3 record only.",
+      "derived_file": "backend/data/flood_events/ifi_bengaluru_urban.csv",
+      "derived_record_count": 53,
+      "source_file_md5": "fea75a9ff9eba8fb328eaddfacd21d67",
+      "license": "CC BY 4.0"
     }
   ],
   "events": [
