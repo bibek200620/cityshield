@@ -44,6 +44,14 @@ function segmentDistance(a: [number, number], b: [number, number]): number {
   return 6_371_000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
+export function routeVertexDistances(coordinates: [number, number][]): number[] {
+  const distances = [0];
+  for (let index = 1; index < coordinates.length; index++) {
+    distances.push(distances[index - 1] + segmentDistance(coordinates[index - 1], coordinates[index]));
+  }
+  return distances;
+}
+
 function segmentBearing(a: [number, number], b: [number, number]): number {
   const radians = (degrees: number) => degrees * Math.PI / 180;
   const y = Math.sin(radians(b[0] - a[0])) * Math.cos(radians(b[1]));
@@ -323,6 +331,7 @@ export function useDrivingPlanner() {
       const firstRoute = response.routes[0];
       setSelectedId(firstRoute?.id ?? "0");
       currentSelectedId.current = firstRoute?.id ?? "0";
+      return response;
     } catch (error) {
       if (!controller.signal.aborted) setStatus((error as Error).message);
     } finally {

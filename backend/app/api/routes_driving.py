@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from math import isfinite
 from threading import Lock
-from time import monotonic, sleep
+from time import monotonic, sleep, time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
-from app.routing.conditions import PROVIDER_ERRORS, annotate_conditions, fetch_json
+from app.routing.conditions import PROVIDER_ERRORS, annotate_conditions, fetch_json, iso_utc
 
 router = APIRouter()
 VALHALLA_URL = "https://valhalla1.openstreetmap.de/route"
@@ -117,13 +117,46 @@ def valhalla_options(req: DrivingRequest) -> tuple[list[dict], dict | None]:
     return candidates, shortest
 
 
+def traffic_segments(route: dict, coordinate_count: int) -> list[dict] | None:
+    """Map TomTom point-index ranges to disjoint, drawable traffic spans."""
+    sections = route.get("sections")
+    if not isinstance(sections, list):
+        return [{"start_index": 0, "end_index": coordinate_count - 1, "level": "clear"}] if route["summary"].get("trafficDelayInSeconds") == 0 else None
+    severity = {"clear": 0, "unknown": 1, "slow": 2, "heavy": 3}
+    levels = ["clear"] * (coordinate_count - 1)
+    for section in sections:
+        if not isinstance(section, dict) or section.get("sectionType") != "TRAFFIC":
+            continue
+        start, end = section.get("startPointIndex"), section.get("endPointIndex")
+        if type(start) is not int or type(end) is not int or not 0 <= start < end < coordinate_count:
+            return None
+        magnitude = section.get("magnitudeOfDelay")
+        speed = section.get("effectiveSpeedInKmh")
+        if section.get("simpleCategory") == "ROAD_CLOSURE" or magnitude in (3, 4) or speed == 0:
+            level = "heavy"
+        elif magnitude in (1, 2):
+            level = "slow"
+        else:
+            level = "unknown"
+        for index in range(start, end):
+            if severity[level] > severity[levels[index]]:
+                levels[index] = level
+    spans = []
+    start = 0
+    for end in range(1, len(levels) + 1):
+        if end == len(levels) or levels[end] != levels[start]:
+            spans.append({"start_index": start, "end_index": end, "level": levels[start]})
+            start = end
+    return spans
+
+
 def tomtom_options(req: DrivingRequest, key: str, *, shortest: bool) -> list[dict]:
     locations = ":".join(f"{p.lat:.6f},{p.lng:.6f}" for p in (req.source, req.destination))
     payload = fetch_json(f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json", {
         "key": key, "traffic": "true", "travelMode": "car",
         "routeType": "shortest" if shortest else "fastest",
         "maxAlternatives": 0 if shortest else 2, "computeTravelTimeFor": "all",
-        "routeRepresentation": "polyline",
+        "routeRepresentation": "polyline", "sectionType": "traffic",
     })
     options = []
     for route in payload["routes"]:
@@ -143,6 +176,7 @@ def tomtom_options(req: DrivingRequest, key: str, *, shortest: bool) -> list[dic
             "eta_seconds": seconds,
             "coordinates": coords,
             "traffic_time_delta_seconds": round(seconds - free_flow) if isinstance(free_flow, (int, float)) else None,
+            "traffic_segments": traffic_segments(route, len(coords)),
         })
     if not options:
         raise ValueError("No traffic routes returned")
@@ -154,20 +188,33 @@ def compare_options(candidates: list[dict], shortest: dict | None) -> list[dict]
         candidates.append({**shortest, "labels": ["Alternative"]})
     candidates.sort(key=lambda option: option["eta_seconds"])
     fastest = candidates[0]
-    fastest["labels"] = ["Best estimated time"]
+    fastest["labels"] = ["Best estimated time", *[label for label in fastest["labels"] if label != "Alternative"]]
     options = [fastest]
     if shortest is not None:
-        distance_option = min([shortest, *candidates], key=lambda option: option["distance_km"])
+        distance_option = min(candidates, key=lambda option: option["distance_km"])
         if distance_option["coordinates"] == fastest["coordinates"]:
             fastest["labels"].append("Shortest distance")
         else:
-            options.append({**distance_option, "labels": ["Shortest distance"]})
+            distance_option["labels"] = ["Shortest distance", *[label for label in distance_option["labels"] if label not in ("Alternative", "Shortest distance")]]
+            options.append(distance_option)
     for candidate in candidates:
         if len(options) == 3:
             break
         if not any(candidate["coordinates"] == known["coordinates"] for known in options):
             options.append(candidate)
     return options
+
+
+def recommend_route(candidates: list[dict]) -> dict:
+    """Use comparable hazards first and preserve the provider ETA as the tie-breaker."""
+    comparable = candidates
+    if all("nearby_flood_reports" in option for option in comparable):
+        fewest = min(option["nearby_flood_reports"] for option in comparable)
+        comparable = [option for option in comparable if option["nearby_flood_reports"] == fewest]
+    if all(option.get("runoff_comparable", False) for option in comparable):
+        lowest = min(option["runoff"]["forecast_km"] for option in comparable)
+        comparable = [option for option in comparable if round(option["runoff"]["forecast_km"] - lowest, 2) < 0.1]
+    return min(comparable, key=lambda option: option["eta_seconds"])
 
 
 @router.post("/api/drive/routes")
@@ -185,7 +232,7 @@ def drive_routes(req: DrivingRequest) -> dict:
     if key:
         try:
             candidates = tomtom_options(req, key, shortest=False)
-            traffic = {"status": "ready", "message": "TomTom traffic-aware travel times."}
+            traffic = {"status": "ready", "message": "TomTom traffic-aware travel times.", "checked_at": iso_utc(int(time()))}
             source = "TomTom Routing"
             try:
                 shortest = tomtom_options(req, key, shortest=True)[0]
@@ -196,8 +243,17 @@ def drive_routes(req: DrivingRequest) -> dict:
     if not candidates:
         candidates, shortest = valhalla_options(req)
 
-    options = compare_options(candidates, shortest)
-    conditions = annotate_conditions(options, key or None)
+    distinct = []
+    for option in [*candidates, *([shortest] if shortest else [])]:
+        if not any(existing["coordinates"] == option["coordinates"] for existing in distinct):
+            distinct.append(option)
+    conditions = annotate_conditions(distinct, key or None)
+    recommended = recommend_route(distinct)
+    options = compare_options(distinct, shortest)
+    if recommended is not options[0]:
+        recommended["labels"] = [label for label in recommended["labels"] if label != "Alternative"]
+        recommended["labels"].insert(0, "Recommended for lower flood exposure")
+        options = [recommended, *(option for option in options if option is not recommended)][:3]
     return {
         "routes": [{"id": str(i), **option} for i, option in enumerate(options)],
         "shortest_available": shortest is not None,

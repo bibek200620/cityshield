@@ -1,6 +1,7 @@
 import { useState } from "react";
 import RoutePlaceSearch from "./RoutePlaceSearch";
 import { NAVIGATION_AREA, type Endpoint, useDrivingPlanner } from "../map/drivingPlanner";
+import Icon from "./Icon";
 
 const timeInBengaluru = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false,
@@ -60,14 +61,16 @@ export default function DrivingPlanner({ drive, onPick }: {
             </button>
             {point && <div className="chosen-point">
               <span>{point.name}</span>
-              <button type="button" onClick={() => drive.setPoint(endpoint, null)} aria-label={`Clear ${endpoint}`}>×</button>
+              <button type="button" onClick={() => drive.setPoint(endpoint, null)} aria-label={`Clear ${endpoint}`}>
+                <Icon name="close" />
+              </button>
             </div>}
           </section>
         );
       })}
       <button type="button" className="primary-button" disabled={!drive.points.source || !drive.points.destination || drive.loading}
         onClick={() => void drive.compare()}>{drive.loading ? "Finding routes…" : "Compare car routes"}</button>
-      <p className="route-credit">Comparing sends both points to the routing provider. <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">OpenStreetMap fallback data</a>.</p>
+      <p className="route-credit">Place suggestions use <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>. Comparing sends both points to the routing provider.</p>
       {drive.status && <p className="route-error" role="alert">{drive.status}</p>}
       {drive.result && drive.navigationMode === "idle" && <div className="route-options" aria-label="Route options">
         <div className="route-conditions" aria-label="Trip conditions">
@@ -79,7 +82,7 @@ export default function DrivingPlanner({ drive, onPick }: {
             <p>City weather estimate by <a href="https://open-meteo.com/">Open-Meteo</a>.</p>
           </> : <p>{weather?.message ?? "Weather data unavailable."}</p>}
           {drive.result.flood_reports.status === "unavailable" && <p>Current road flood reports unavailable.</p>}
-          <p>Runoff is a model screen. Travel time estimates cover provider traffic inputs. Heat and modeled runoff are shown separately from travel times.</p>
+          <p>CityShield favors candidate routes with fewer nearby flood reports and materially less modeled runoff where coverage is comparable. Provider traffic estimates determine travel times when available.</p>
         </div>
         {!drive.result.shortest_available && <p role="status">Distance-based comparison is temporarily unavailable.</p>}
         {drive.result.routes.map((option) => (
@@ -127,7 +130,7 @@ export default function DrivingPlanner({ drive, onPick }: {
           <span>You're off the selected route.</span>
           <button type="button" className="pick-button" onClick={drive.recalculateNavigation}>Recalculate route</button>
         </div>}
-        <p className="navigation-limits">The map follows your device GPS. Turn-by-turn voice guidance is not available.</p>
+        <p className="navigation-limits">The map follows your device GPS. Flood-aware route selection uses available reports and modeled exposure. Follow official closures and warnings.</p>
       </section>}
     </div>
   );

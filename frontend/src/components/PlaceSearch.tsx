@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import Icon from "./Icon";
 
 export interface BengaluruPlace {
   id: string;
@@ -26,6 +27,7 @@ export default function PlaceSearch({
   selected, onSelect, label = "Find an area", placeholder = "Search Bengaluru wards",
 }: PlaceSearchProps) {
   const inputId = useId();
+  const resultsId = useId();
   const [places, setPlaces] = useState<BengaluruPlace[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState(false);
@@ -51,10 +53,13 @@ export default function PlaceSearch({
   ).slice(0, 7) : [];
 
   return (
-    <section className="place-search">
+    <div className="place-search" role="search" onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setQuery("");
+    }}>
       <label className="sr-only" htmlFor={inputId}>{label}</label>
-      <span className="search-glyph" aria-hidden="true" />
+      <span className="search-glyph"><Icon name="search" /></span>
       <input id={inputId} type="search" placeholder={selected?.name ?? placeholder} value={query}
+        aria-controls={error || match.length >= 2 ? resultsId : undefined}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter" && results.length === 1) {
@@ -68,7 +73,7 @@ export default function PlaceSearch({
         }}
         autoComplete="off" />
       {(error || match.length >= 2) && (
-        <div className="search-results">
+        <div className="search-results" id={resultsId}>
           {results.length > 0 ? <ul aria-label="Matching areas">
             {results.map((place) => <li key={place.id}>
               <button type="button" onClick={() => { onSelect(place); setQuery(""); }}>
@@ -79,6 +84,6 @@ export default function PlaceSearch({
             places.length ? "No matching ward. Try a nearby area name." : "Loading ward index…"}</p>}
         </div>
       )}
-    </section>
+    </div>
   );
 }

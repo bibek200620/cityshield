@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./index.css";
+import "./weather.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

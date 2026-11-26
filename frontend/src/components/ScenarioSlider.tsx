@@ -8,29 +8,35 @@ export default function ScenarioSlider() {
   const runScenario = useFloodStore((s) => s.runScenario);
   const runCustomRainfall = useFloodStore((s) => s.runCustomRainfall);
   const loading = useFloodStore((s) => s.loading);
-  const [draft, setDraft] = useState<{ intensity: string; duration: string; preset: string } | null>(null);
+  const active = useFloodStore((s) => s.simulationActive);
+  const stopSimulation = useFloodStore((s) => s.stopSimulation);
+  const heatOffset = useFloodStore((s) => s.heatOffsetC);
+  const showRoads = useFloodStore((s) => s.layerVisibility.cityRoads);
+  const toggleLayer = useFloodStore((s) => s.toggleLayer);
+  const [draft, setDraft] = useState<{ intensity: string; duration: string; preset: string; temperature: string } | null>(null);
   const selectedPresetId = useFloodStore((s) => s.selectedPresetId);
-  const values = draft ?? { intensity: String(current.intensity), duration: String(current.duration), preset: selectedPresetId ?? "" };
+  const values = draft ?? { intensity: String(current.intensity), duration: String(current.duration), preset: selectedPresetId ?? "", temperature: String(heatOffset) };
   const flooded = result?.road_segments.filter((segment) => segment.state === "flooded").length;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (values.preset) {
-      void runScenario(values.preset);
+      void runScenario(values.preset, Number(values.temperature));
     } else {
-      void runCustomRainfall(Number(values.intensity), Number(values.duration));
+      void runCustomRainfall(Number(values.intensity), Number(values.duration), Number(values.temperature));
     }
   }
 
   return (
     <section aria-label="Rainfall inputs">
-      <p className="scenario-result">Updates city flood screening and the Bellandur simulation.</p>
+      <p className="scenario-result">Test rainfall against the city grid and mapped roads. Simulated depths are available in the Bellandur pilot.</p>
       <form className="scenario-form" onSubmit={submit}>
         <label>
           Preset
           <select value={values.preset} onChange={(event) => {
             const preset = scenarios.find((s) => s.scenario_id === event.target.value);
             setDraft(preset ? {
+              ...values,
               preset: preset.scenario_id,
               intensity: String(preset.rainfall_intensity_mm_hr),
               duration: String(preset.duration_min),
@@ -52,10 +58,24 @@ export default function ScenarioSlider() {
               onChange={(event) => setDraft({ ...values, duration: event.target.value, preset: "" })} />
           </label>
         </div>
+        <label>
+          Surface temperature offset (°C)
+          <input type="number" min="-20" max="20" step="0.1" required value={values.temperature}
+            aria-describedby="temperature-offset-help"
+            onChange={(event) => setDraft({ ...values, temperature: event.target.value })} />
+        </label>
+        <p id="temperature-offset-help" className="scenario-result">Adds or subtracts from the Landsat surface-temperature layer for this scenario. Live weather and routing use their own data.</p>
         <button className="primary-button" disabled={loading}>
           {loading ? "Running…" : "Run flood simulation"}
         </button>
       </form>
+      <div className="scenario-actions">
+        {(active || loading) && <button type="button" className="pick-button" onClick={stopSimulation}>Stop simulation</button>}
+        {active ? <label className="pilot-layer-option">
+          <input type="checkbox" checked={showRoads} onChange={() => toggleLayer("cityRoads")} />
+          Show Bengaluru road runoff
+        </label> : <p className="scenario-result" role="status">Simulation stopped. Run a scenario to show its layers again.</p>}
+      </div>
       {result && (
         <p className="scenario-result" aria-live="polite">
           Bellandur pilot: <strong>{flooded} of {result.road_segments.length}</strong> simulated road segments flooded at {current.intensity} mm/hr for {current.duration} min.

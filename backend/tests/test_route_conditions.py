@@ -33,6 +33,19 @@ def make_weather_payload():
     }
 
 
+def make_two_day_weather_payload():
+    payload = make_weather_payload()
+    times = list(range(3600, 180001, 3600))
+    payload["hourly"] = {
+        "time": times,
+        "precipitation": [float(index % 5) for index in range(len(times))],
+        "temperature_2m": [25.0 + index / 10 for index in range(len(times))],
+        "apparent_temperature": [26.0 + index / 10 for index in range(len(times))],
+        "relative_humidity_2m": [60.0 + index % 30 for index in range(len(times))],
+    }
+    return payload
+
+
 def test_weather_uses_completed_hours_and_rejects_stale_readings():
     payload = make_weather_payload()
     summary = conditions.parse_weather(payload, 7500, "1970-01-01T02:03:00+00:00")
@@ -67,6 +80,63 @@ def test_weather_rejects_misaligned_or_missing_forecast_hours():
     payload["hourly"]["temperature_2m"].pop()
     with pytest.raises(ValueError, match="misaligned"):
         conditions.parse_weather(payload, 7500)
+
+
+def test_weather_conditions_follow_timestamps_and_allow_missing_optional_fields():
+    payload = make_weather_payload()
+    payload["current"].update(weather_code=3, is_day=1)
+    payload["hourly"]["weather_code"] = [3, 3, 61, 71, None]
+    payload["hourly"]["is_day"] = [1, 1, 1, 0, False]
+
+    result = conditions.parse_weather(payload, 7500)
+
+    assert (result["weather_code"], result["is_day"]) == (3, 1)
+    assert [hour["weather_code"] for hour in result["hourly_forecast"]] == [61, 71, None]
+    assert [hour["is_day"] for hour in result["hourly_forecast"]] == [1, 0, None]
+
+    payload["hourly"]["weather_code"].pop()
+    result = conditions.parse_weather(payload, 7500)
+    assert result["status"] == "ready"
+    assert all(hour["weather_code"] is None for hour in result["hourly_forecast"])
+
+
+def test_two_day_forecast_returns_only_complete_next_48_provider_hours():
+    payload = make_two_day_weather_payload()
+    result = conditions.parse_two_day_forecast(payload, 7500, "1970-01-01T02:03:00+00:00")
+
+    assert result["status"] == "ready"
+    assert result["forecast_hours"] == 48
+    assert result["forecast_from"] == conditions.iso_utc(10800)
+    assert result["forecast_through"] == conditions.iso_utc(180000)
+    assert len(result["hourly_forecast"]) == 48
+    assert result["hourly_forecast"][0]["air_temperature_c"] == 25.2
+    assert result["provenance"]["provider"] == "Open-Meteo"
+    assert result["provenance"]["retrieved_at"] == "1970-01-01T02:03:00+00:00"
+
+
+def test_two_day_forecast_rejects_missing_late_hour_and_invalid_late_values():
+    payload = make_two_day_weather_payload()
+    for key in ("time", "precipitation", "temperature_2m", "apparent_temperature", "relative_humidity_2m"):
+        payload["hourly"][key].pop()
+    with pytest.raises(ValueError, match="complete 48-hour"):
+        conditions.parse_two_day_forecast(payload, 7500)
+
+    payload = make_two_day_weather_payload()
+    payload["hourly"]["relative_humidity_2m"][-1] = 120
+    with pytest.raises(ValueError, match="humidity"):
+        conditions.parse_two_day_forecast(payload, 7500)
+
+
+def test_two_day_weather_api_returns_unavailable_without_provider_data(monkeypatch):
+    monkeypatch.setattr(conditions, "time", lambda: 7500)
+    monkeypatch.setattr(conditions, "weather_report_snapshot", lambda _slot: (_ for _ in ()).throw(TimeoutError()))
+
+    with TestClient(app) as client:
+        response = client.get("/api/weather/report")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "unavailable"
+    assert response.json()["reason"] == "timeout"
 
     payload = make_weather_payload()
     payload["hourly"]["time"].pop()

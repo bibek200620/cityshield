@@ -25,19 +25,44 @@ export interface DrivingOption {
   eta_seconds: number;
   coordinates: [number, number][];
   traffic_time_delta_seconds?: number | null;
+  traffic_segments?: { start_index: number; end_index: number; level: TrafficLevel }[] | null;
   nearby_flood_reports?: number;
   runoff?: { covered_km: number; current_km: number; forecast_km: number };
+  forecast_runoff_spans?: { start: number; end: number }[];
 }
+
+export type TrafficLevel = "clear" | "slow" | "heavy" | "unknown";
 
 export interface DrivingResponse {
   routes: DrivingOption[];
   shortest_available: boolean;
   source: string;
   weather: WeatherAvailabilityResponse;
-  traffic: { status: "ready" | "unavailable"; message: string };
+  traffic: { status: "ready" | "unavailable"; message: string; checked_at?: string };
   runoff_available: boolean;
   flood_reports: { status: "ready" | "unavailable"; source: string; checked_at?: string };
 }
+
+export type AssistantAlertKind = "city_flood" | "route_rain" | "traffic";
+
+export type AssistantOutlook = { status: "unavailable" } | {
+  status: "ready";
+  checked_at: string;
+  forecast_through: string;
+  alert: { valid_at: string; cells: number } | null;
+};
+
+export interface AssistantPhrasing {
+  source: "preset" | "gemini";
+  styles: Record<AssistantAlertKind, "direct" | "gentle">;
+}
+
+export type AssistantRouteContext = { status: "unavailable" } | {
+  status: "ready";
+  weather: WeatherAvailabilityResponse;
+  traffic: { checked_at: string; segments: NonNullable<DrivingOption["traffic_segments"]> } | null;
+  forecast_runoff_spans: NonNullable<DrivingOption["forecast_runoff_spans"]>;
+};
 
 export interface CityFloodCell {
   id: string;
@@ -166,9 +191,31 @@ export type WeatherAvailabilityResponse =
     valid_at: string;
     air_temperature_c: number;
     feels_like_c: number;
+    weather_code?: number | null;
+    is_day?: number | null;
     recent_rain_mm: number;
     recent_through: string;
     upcoming_rain_mm: number;
+    forecast_through: string;
+    hourly_forecast: {
+      valid_at: string;
+      air_temperature_c: number;
+      feels_like_c: number;
+      relative_humidity_pct: number;
+      precipitation_mm: number;
+      weather_code?: number | null;
+      is_day?: number | null;
+    }[];
+  };
+
+export type TwoDayWeatherReportResponse =
+  | Extract<WeatherAvailabilityResponse, { status: "unavailable" }>
+  | {
+    status: "ready";
+    source: string;
+    provenance: Extract<WeatherAvailabilityResponse, { status: "ready" }> ["provenance"];
+    forecast_hours: 48;
+    forecast_from: string;
     forecast_through: string;
     hourly_forecast: {
       valid_at: string;
@@ -268,15 +315,23 @@ export const api = {
   getCityFlood: (rainfallMm: number, signal: AbortSignal) =>
     request<CityFloodResponse>(`/api/flood/city?rainfall_mm=${rainfallMm}`, { signal }),
   getScenarios: () => request<ScenarioSummary[]>("/api/scenarios"),
-  getScenarioDetail: (scenarioId: string) => request<SimulateResponse>(`/api/scenarios/${scenarioId}`),
+  getScenarioDetail: (scenarioId: string, signal?: AbortSignal) => request<SimulateResponse>(`/api/scenarios/${scenarioId}`, { signal }),
   getCriticalInfrastructure: () => request<CriticalInfraItem[]>("/api/critical-infrastructure"),
   getWeatherNowcast: (signal?: AbortSignal) => request<WeatherAvailabilityResponse>("/api/weather/nowcast", { signal }),
+  getWeatherReport: (signal?: AbortSignal) => request<TwoDayWeatherReportResponse>("/api/weather/report", { signal }),
+  getAssistantOutlook: (signal: AbortSignal) => request<AssistantOutlook>("/api/assistant/outlook", { signal }),
+  getAssistantPhrasing: (signal: AbortSignal) => request<AssistantPhrasing>("/api/assistant/phrasing", { signal }),
+  refreshAssistantRoute: (coordinates: DrivingOption["coordinates"], tomtom: boolean, signal: AbortSignal) =>
+    request<AssistantRouteContext>("/api/assistant/route-context", {
+      method: "POST", body: JSON.stringify({ coordinates, tomtom }), signal,
+    }),
   getHeatWorkflow: () => request<HeatWorkflowResponse>("/api/heat"),
-  getCombinedExposure: (scenarioId: string) => request<ExposureResponse>(`/api/exposure/${scenarioId}`),
-  simulate: (rainfall_intensity_mm_hr: number, duration_min: number) =>
+  getCombinedExposure: (scenarioId: string, signal?: AbortSignal) => request<ExposureResponse>(`/api/exposure/${scenarioId}`, { signal }),
+  simulate: (rainfall_intensity_mm_hr: number, duration_min: number, signal?: AbortSignal) =>
     request<SimulateResponse>("/api/simulate", {
       method: "POST",
       body: JSON.stringify({ rainfall_intensity_mm_hr, duration_min }),
+      signal,
     }),
   route: (
     start: LatLng,

@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Layer } from "@deck.gl/core";
 import { PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import maplibregl from "maplibre-gl";
 import type { FillExtrusionLayerSpecification } from "maplibre-gl";
-import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, HeatCell, LatLng, NodePrediction, RoadSegment } from "../api/client";
-import { getMapDetail, summarizeHexes, type HexGrids, type HexSummary, type MapDetail } from "../map/hexGrid";
+import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, LatLng, NodePrediction, RoadSegment, TrafficLevel } from "../api/client";
+import { getMapDetail, summarizeHexes, summarizeHexPoints, type HexGrids, type HexSummary, type MapDetail } from "../map/hexGrid";
+import { createRoadRunoffScreen, ROAD_SCREEN_MIN_ZOOM, type RoadRunoff } from "../map/roadRunoff";
 import { useFloodStore } from "../store/useFloodStore";
 import type { BengaluruPlace } from "./PlaceSearch";
 import type { LiveLocation, NavigationMode, RouteMatch, Waypoints } from "../map/drivingPlanner";
+import Icon from "./Icon";
 
 export interface CityHeat {
   scene_id: string;
@@ -20,8 +22,7 @@ export interface CityHeat {
 }
 
 const BASEMAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-const DEFAULT_BBOX = [77.655, 12.915, 77.680, 12.940];
-const PILOT_VIEW = { padding: 48, maxZoom: 14.2 };
+const AREA_VIEW = { padding: 48, maxZoom: 14.2 };
 const CITY_BOUNDS: maplibregl.LngLatBoundsLike = [[77.44, 12.62], [77.80, 13.16]];
 const CITY_VIEW = { padding: 30, duration: 0 };
 const ROAD_COLORS = {
@@ -29,6 +30,16 @@ const ROAD_COLORS = {
   at_risk: [177, 103, 32],
   flooded: [175, 45, 48],
 } satisfies Record<RoadSegment["state"], [number, number, number]>;
+const RUNOFF_COLORS: [number, number, number][] = [[119, 66, 179], [145, 28, 145], [97, 18, 85]];
+const TRAFFIC_COLORS = {
+  clear: [34, 106, 217],
+  slow: [239, 178, 20],
+  heavy: [208, 42, 42],
+  unknown: [97, 111, 135],
+} satisfies Record<TrafficLevel, [number, number, number]>;
+const TRAFFIC_LABELS: Record<TrafficLevel, string> = {
+  clear: "No delay reported", slow: "Slow traffic", heavy: "Heavy delay or closure", unknown: "Traffic unavailable",
+};
 
 const FLOOD_LEGEND = [
   { label: "0 mm", color: [210, 231, 242] },
@@ -43,20 +54,9 @@ function floodScreenColor(score: number | null): [number, number, number, number
   return [...FLOOD_LEGEND[index].color, index === 0 ? 110 : 175];
 }
 
-function pilotBounds(): [[number, number], [number, number]] {
-  const configured = import.meta.env.VITE_PILOT_BBOX?.split(",").map(Number);
-  const [west, south, east, north] =
-    configured?.length === 4 && configured.every(Number.isFinite) ? configured : DEFAULT_BBOX;
-  return [[west, south], [east, north]];
-}
-
 function depthColor(depth: number): [number, number, number, number] {
   const color = depth > 0.30 ? ROAD_COLORS.flooded : depth >= 0.15 ? ROAD_COLORS.at_risk : ROAD_COLORS.clear;
   return [...color, 235];
-}
-
-function heatColor(cell: HeatCell): [number, number, number, number] {
-  return temperatureColor(cell.temperature_c);
 }
 
 function temperatureColor(temperature: number): [number, number, number, number] {
@@ -66,7 +66,7 @@ function temperatureColor(temperature: number): [number, number, number, number]
 
 export default function MapView({
   place, cityHeat, cityFlood, onReset, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
-  navigation,
+  navigation, assistant,
 }: {
   place: BengaluruPlace | null;
   cityHeat: CityHeat | null;
@@ -77,6 +77,7 @@ export default function MapView({
   selectedDrivingId: string;
   onPickPoint?: (point: LatLng) => void;
   navigation: { mode: NavigationMode; location: LiveLocation | null; routeMatch: RouteMatch | null };
+  assistant: ReactNode;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -85,15 +86,25 @@ export default function MapView({
   const [mapError, setMapError] = useState(false);
   const [detail, setDetail] = useState<MapDetail>("city");
   const [hexGrids, setHexGrids] = useState<HexGrids | null>(null);
+  const [roadScreen, setRoadScreen] = useState<{
+    source: typeof cityFlood; segments: RoadRunoff[]; status: "ready" | "zoom" | "unavailable";
+  } | null>(null);
   const result = useFloodStore((s) => s.simulateResult);
   const heat = useFloodStore((s) => s.heatData);
   const exposure = useFloodStore((s) => s.combinedExposure);
   const route = useFloodStore((s) => s.route);
   const selectedRoute = useFloodStore((s) => s.selectedRouteId);
   const visibility = useFloodStore((s) => s.layerVisibility);
-  const mesh = detail === "cells" ? null : hexGrids?.[detail];
+  const heatOffset = useFloodStore((s) => s.heatOffsetC);
+  const currentHeatOffset = useRef(heatOffset);
+  currentHeatOffset.current = heatOffset;
+  // Use the finest bundled hex mesh at close zoom; switching to source points
+  // here made the heat layer change from hexagons to circles while zooming.
+  const mesh = hexGrids?.[detail === "cells" ? "district" : detail];
   const selectedDrivingRoute = drivingRoutes?.find((option) => option.id === selectedDrivingId) ?? null;
   const navigationActive = navigation.mode !== "idle" && navigation.mode !== "error";
+  const currentRoadScreen = visibility.cityRoads && roadScreen?.source === cityFlood ? roadScreen : null;
+  const roadSegments = currentRoadScreen?.segments;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -116,20 +127,28 @@ export default function MapView({
   }, [cityFlood, mesh, visibility.floodDepth]);
 
   const heatHexes = useMemo(() => {
-    if (!mesh || !visibility.heat || !cityHeat) return [];
+    if (!mesh || !visibility.heat) return [];
+    if (!cityHeat && heat?.status === "ready") {
+      return summarizeHexPoints(mesh, heat.cells.map((cell) => ({
+        lng: cell.lng,
+        lat: cell.lat,
+        value: cell.temperature_c,
+      })));
+    }
+    if (!cityHeat) return [];
     const values = new Map<string, number>();
     for (const [, , temperature, key] of cityHeat.cells) {
       if (key) values.set(key, temperature);
     }
     return summarizeHexes(mesh, values);
-  }, [cityHeat, mesh, visibility.heat]);
+  }, [cityHeat, heat, mesh, visibility.heat]);
 
-  const hasCityOverlay = Boolean((visibility.floodDepth && cityFlood) || (visibility.heat && cityHeat));
+  const hasCityOverlay = Boolean((visibility.floodDepth && cityFlood)
+    || (visibility.heat && (cityHeat || heat?.status === "ready")));
   const hasHexes = floodHexes.length > 0 || heatHexes.length > 0;
 
   useEffect(() => {
     if (!container.current) return;
-    const bounds = pilotBounds();
     let instance: maplibregl.Map;
     try {
       instance = new maplibregl.Map({
@@ -153,6 +172,7 @@ export default function MapView({
       setDetail(next);
     });
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+    instance.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     instance.addControl(new maplibregl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true, timeout: 10_000 },
       trackUserLocation: true,
@@ -168,12 +188,16 @@ export default function MapView({
             return `Simulated depth: ${(object.depth_m_mean * 100).toFixed(1)} cm\nModel spread: ±${(object.depth_m_std * 100).toFixed(1)} cm`;
           case "flood-roads":
             return `Simulated road class: ${String(object.state).replace("_", " ")}`;
+          case "city-road-runoff":
+            return `${object.name}\nCell runoff screen: ${object.runoffMm.toFixed(1)} mm\nScenario exposure on a 300 m grid`;
+          case "driving-traffic":
+            return TRAFFIC_LABELS[object.level as TrafficLevel];
           case "landsat-pixels":
-            return `Surface temperature: ${object.temperature_c.toFixed(1)} °C`;
+            return `Surface temperature: ${(object.temperature_c + currentHeatOffset.current).toFixed(1)} °C`;
           case "city-heat":
-            return `Modelled mean surface temperature: ${object[2].toFixed(1)} °C`;
+            return `Modelled mean surface temperature: ${(object[2] + currentHeatOffset.current).toFixed(1)} °C`;
           case "city-heat-hexes":
-            return `Mean surface temperature: ${object.value.toFixed(1)} °C\n${object.count} source cells`;
+            return `Mean surface temperature: ${(object.value + currentHeatOffset.current).toFixed(1)} °C\n${object.count} source cells`;
           case "city-flood":
             return object.screen_mm === null
               ? "Mapped permanent water. Excluded from land screening."
@@ -183,7 +207,7 @@ export default function MapView({
               ? "Only mapped permanent water in the available cells."
               : `Mean runoff on terrain depressions: ${object.value.toFixed(1)} mm\n${object.count} source cells`;
           case "both-elevated":
-            return `Simulated depth: ${(object.flood_depth_m * 100).toFixed(1)} cm\nSurface temperature: ${object.lst_c.toFixed(1)} °C`;
+            return `Simulated depth: ${(object.flood_depth_m * 100).toFixed(1)} cm\nSurface temperature: ${(object.lst_c + currentHeatOffset.current).toFixed(1)} °C`;
           default:
             return null;
         }
@@ -196,35 +220,6 @@ export default function MapView({
     });
     instance.once("load", () => {
       setMapError(false);
-      instance.addSource("city-boundary", {
-        type: "geojson",
-        data: "/data/bengaluru-boundary.geojson",
-        attribution: "GBA delimitation via OpenCity and bharatlas",
-      });
-      instance.addLayer({
-        id: "city-boundary",
-        type: "line",
-        source: "city-boundary",
-        paint: { "line-color": "#164f46", "line-width": 2 },
-      });
-      const [[west, south], [east, north]] = bounds;
-      instance.addSource("pilot-area", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "Polygon",
-            coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
-          },
-        },
-      });
-      instance.addLayer({
-        id: "pilot-area-boundary",
-        type: "line",
-        source: "pilot-area",
-        paint: { "line-color": "#354852", "line-width": 1.5, "line-dasharray": [3, 2] },
-      });
     });
 
     return () => {
@@ -259,7 +254,7 @@ export default function MapView({
         "source-layer": "buildings",
         minzoom: 14,
         paint: {
-          "fill-extrusion-color": "#c9d8d1",
+          "fill-extrusion-color": "#c9dce9",
           "fill-extrusion-height": ["max", 4, ["to-number", ["get", "height"], 8]],
           "fill-extrusion-base": ["max", 0, ["to-number", ["get", "min_height"], 0]],
           "fill-extrusion-opacity": 0.82,
@@ -287,9 +282,8 @@ export default function MapView({
         const bounds = new maplibregl.LngLatBounds();
         for (const coordinate of selectedDrivingRoute?.coordinates ?? []) bounds.extend(coordinate);
         if (!bounds.isEmpty()) {
-          const wide = instance.getContainer().clientWidth > 750;
           instance.fitBounds(bounds, {
-            padding: { top: 85, bottom: 65, left: 45, right: wide ? 380 : 45 },
+            padding: 50,
             maxZoom: 15,
             duration: 500,
           });
@@ -330,7 +324,7 @@ export default function MapView({
     if (!instance) return;
     if (place) {
       const [west, south, east, north] = place.bounds;
-      instance.fitBounds([[west, south], [east, north]], { ...PILOT_VIEW, duration: 0 });
+      instance.fitBounds([[west, south], [east, north]], { ...AREA_VIEW, duration: 0 });
       const dot = document.createElement("div");
       dot.className = "place-marker";
       dot.setAttribute("aria-hidden", "true");
@@ -381,14 +375,37 @@ export default function MapView({
       for (const coordinate of option.coordinates) bounds.extend(coordinate);
     }
     if (!bounds.isEmpty()) {
-      const wide = instance.getContainer().clientWidth > 750;
       instance.fitBounds(bounds, {
-        padding: { top: 85, bottom: 65, left: 45, right: wide ? 380 : 45 },
+        padding: 50,
         maxZoom: 15,
         duration: 0,
       });
     }
   }, [drivingRoutes, navigationActive]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !visibility.cityRoads || !cityFlood) return;
+    const screen = createRoadRunoffScreen(cityFlood.cells);
+    let lastView = "";
+    function updateScreen() {
+      if (!instance || !instance.isStyleLoaded() || !instance.areTilesLoaded() || instance.isMoving()) return;
+      const view = [instance.getBounds().toArray(), instance.getZoom(), instance.getPitch(), instance.getBearing()].join("|");
+      if (view === lastView) return;
+      lastView = view;
+      const roadLayers = (instance.getStyle().layers ?? []).filter((layer) =>
+        layer.type === "line" && "source-layer" in layer && (
+          (layer["source-layer"] === "roads" && /^road_.*_case/.test(layer.id)) ||
+          layer["source-layer"] === "transportation"
+        )).map((layer) => layer.id);
+      const status = instance.getZoom() < ROAD_SCREEN_MIN_ZOOM ? "zoom" : roadLayers.length ? "ready" : "unavailable";
+      const segments = status === "ready" ? screen(instance.queryRenderedFeatures({ layers: roadLayers })) : [];
+      setRoadScreen({ source: cityFlood, segments, status });
+    }
+    updateScreen();
+    instance.on("idle", updateScreen);
+    return () => { instance.off("idle", updateScreen); };
+  }, [cityFlood, visibility.cityRoads]);
 
   useEffect(() => {
     const layers: Layer[] = [];
@@ -397,30 +414,11 @@ export default function MapView({
         id: "city-heat-hexes",
         data: heatHexes,
         getPolygon: (cell) => cell.rings,
-        getFillColor: (cell) => temperatureColor(cell.value ?? 0),
+        getFillColor: (cell) => temperatureColor((cell.value ?? 0) + heatOffset),
         getLineColor: [255, 255, 255, 215],
         lineWidthMinPixels: 1,
         pickable: true,
-      }));
-    } else if (visibility.heat && cityHeat) {
-      layers.push(new ScatterplotLayer<CityHeat["cells"][number]>({
-        id: "city-heat",
-        data: cityHeat.cells,
-        getPosition: (cell) => [cell[0], cell[1]],
-        getRadius: cityHeat.resolution_m * 0.57,
-        radiusUnits: "meters",
-        getFillColor: (cell) => temperatureColor(cell[2]),
-        pickable: true,
-      }));
-    } else if (visibility.heat && heat?.status === "ready") {
-      layers.push(new ScatterplotLayer<HeatCell>({
-        id: "landsat-pixels",
-        data: heat.cells,
-        getPosition: (cell) => [cell.lng, cell.lat],
-        getRadius: (heat.pixel_resolution_m ?? 30) * 0.57,
-        radiusUnits: "meters",
-        getFillColor: heatColor,
-        pickable: true,
+        updateTriggers: { getFillColor: heatOffset },
       }));
     }
     if (floodHexes.length) {
@@ -440,6 +438,17 @@ export default function MapView({
         getPolygon: (cell) => cell.rings,
         getFillColor: (cell) => floodScreenColor(cell.screen_mm),
         stroked: false,
+        pickable: true,
+      }));
+    }
+    if (roadSegments?.length) {
+      layers.push(new PathLayer<RoadRunoff>({
+        id: "city-road-runoff",
+        data: roadSegments,
+        getPath: (segment) => segment.path,
+        getColor: (segment) => RUNOFF_COLORS[segment.runoffMm > 20 ? 2 : segment.runoffMm > 5 ? 1 : 0],
+        getWidth: 3,
+        widthUnits: "pixels",
         pickable: true,
       }));
     }
@@ -480,7 +489,7 @@ export default function MapView({
     if (route && !drivingRoutes?.length) {
       const routes = [
         { id: "shortest", path: route.baseline_route_geometry?.coordinates, color: [92, 105, 120] as const },
-        { id: "recommended", path: route.route_geometry?.coordinates, color: [19, 112, 76] as const },
+        { id: "recommended", path: route.route_geometry?.coordinates, color: [36, 119, 168] as const },
       ];
       const alternate = route.routes?.find((option) => option.id === selectedRoute);
       if (alternate && !routes.some((option) => option.id === alternate.id)) {
@@ -513,47 +522,82 @@ export default function MapView({
         id: "driving-route-options",
         data: paths,
         getPath: (option) => option.coordinates,
-        getColor: (option) => option.id === selectedDrivingId ? [13, 111, 98, 255] : [87, 104, 140, 160],
+        getColor: (option) => option.id === selectedDrivingId ? TRAFFIC_COLORS.unknown : [87, 104, 140, 140],
         getWidth: (option) => option.id === selectedDrivingId ? 7 : 4,
         widthUnits: "pixels",
         capRounded: true,
         jointRounded: true,
         updateTriggers: { getColor: selectedDrivingId, getWidth: selectedDrivingId },
       }));
+      if (selected?.traffic_segments?.length) {
+        layers.push(new PathLayer<{ level: TrafficLevel; coordinates: DrivingOption["coordinates"] }>({
+          id: "driving-traffic",
+          data: selected.traffic_segments.map((span) => ({
+            level: span.level,
+            coordinates: selected.coordinates.slice(span.start_index, span.end_index + 1),
+          })),
+          getPath: (span) => span.coordinates,
+          getColor: (span) => TRAFFIC_COLORS[span.level],
+          getWidth: 7,
+          widthUnits: "pixels",
+          pickable: true,
+          jointRounded: true,
+        }));
+      }
     }
     overlay.current?.setProps({ layers });
-  }, [cityFlood, cityHeat, heatHexes, floodHexes, heat, exposure, result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId]);
+  }, [cityFlood, heatHexes, floodHexes, exposure, result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments]);
 
   return (
     <>
       <div className="map-frame">
         <div ref={container} className="map-canvas" aria-label="Interactive Bengaluru map" />
         {mapError && <p className="map-status" role="status">Basemap unavailable. Check your connection or browser graphics support.</p>}
-        <button className="map-reset" type="button"
+        <button className="map-reset" type="button" aria-label="View whole city" title="View whole city"
           onClick={() => { onReset(); map.current?.fitBounds(CITY_BOUNDS, CITY_VIEW); }}>
-          View whole city
+          <Icon name="extent" /><span>View whole city</span>
         </button>
       </div>
-      <div className="map-legend" aria-label="Map legend">
-        {hasCityOverlay && <strong className="map-detail" role="status">
-          {hasHexes ? (detail === "city" ? "City hexagons · averages" : "District hexagons · averages") : "300 m cells"}
-        </strong>}
-        <span><i style={{ background: "#164f46" }} /> 2025 GBA risk-data boundary</span>
-        <span className="coverage-note">Southern suburbs are visible for basemap and routing; current flood and heat risk data stop at this boundary.</span>
-        {(visibility.pilotFlood || visibility.combined) && <span><i className="pilot-line" /> Bellandur pilot boundary</span>}
-        {visibility.floodDepth && cityFlood && <div className="flood-legend">
-          <strong>Runoff on terrain depressions</strong>
-          {FLOOD_LEGEND.map(({ label, color }) => (
-            <span key={label}><i style={{ background: `rgb(${color.join(",")})` }} /> {label}</span>
-          ))}
-        </div>}
-        {visibility.pilotFlood && <>
-          <span><i style={{ background: "#507cb3" }} /> Depth &lt;15 cm</span>
-          <span><i style={{ background: "#b16720" }} /> 15–30 cm</span>
-          <span><i style={{ background: "#af2d30" }} /> &gt;30 cm</span>
-        </>}
-        {visibility.heat && <span><i className="heat-scale" /> Surface temperature · 25–45 °C</span>}
-        {visibility.combined && <span><i style={{ background: "#814eb4" }} /> Depth ≥15 cm + heat top 10%</span>}
+      <div className="map-footer">
+        {assistant}
+        <section className="map-legend" aria-labelledby="legend-title">
+          <div className="legend-heading">
+            <h3 id="legend-title">Map legend</h3>
+            {hasCityOverlay && <strong className="map-detail" role="status">
+              {hasHexes ? (detail === "city" ? "City hexagons · averages" : "District hexagons · averages") : "300 m cells"}
+            </strong>}
+          </div>
+          {visibility.floodDepth && cityFlood && <div className="flood-legend">
+            <strong>Runoff on terrain depressions</strong>
+            {FLOOD_LEGEND.map(({ label, color }) => (
+              <span key={label}><i style={{ background: `rgb(${color.join(",")})` }} /> {label}</span>
+            ))}
+          </div>}
+          {visibility.pilotFlood && <>
+            <span><i className="road-segment-swatch" /> Simulated road segments · risk-colored</span>
+            <span><i style={{ background: "#507cb3" }} /> Depth &lt;15 cm</span>
+            <span><i style={{ background: "#b16720" }} /> 15–30 cm</span>
+            <span><i style={{ background: "#af2d30" }} /> &gt;30 cm</span>
+          </>}
+          {visibility.cityRoads && <div className="flood-legend">
+            <strong>Mapped roads in screened cells</strong>
+            {roadSegments?.length ? RUNOFF_COLORS.map((color, index) => <span key={index}>
+              <i style={{ background: `rgb(${color.join(",")})` }} />{["1–5 mm", ">5–20 mm", ">20 mm"][index]}
+            </span>) : <span>{mapError || currentRoadScreen?.status === "unavailable" ? "Road geometry unavailable."
+              : currentRoadScreen?.status === "zoom" ? "Zoom in to see road screening."
+                : currentRoadScreen?.status === "ready" ? "No mapped road crossings above the screening threshold in this view."
+                  : cityFlood ? "Screening visible roads…" : "Waiting for city runoff data…"}</span>}
+          </div>}
+          {selectedDrivingRoute && <div className="flood-legend">
+            <strong>Selected route traffic</strong>
+            {(selectedDrivingRoute.traffic_segments?.length ? ["clear", "slow", "heavy", "unknown"] as const : ["unknown"] as const)
+              .map((level) => <span key={level}><i style={{ background: `rgb(${TRAFFIC_COLORS[level].join(",")})` }} />{TRAFFIC_LABELS[level]}</span>)}
+          </div>}
+          {visibility.heat && <span><i className="heat-scale" /> Surface temperature · 25–45 °C{heatOffset !== 0 &&
+            ` · ${heatOffset > 0 ? "+" : ""}${heatOffset} °C scenario offset`}</span>}
+          {visibility.combined && <span><i style={{ background: "#814eb4" }} /> Depth ≥15 cm + heat top 10%</span>}
+          <p className="coverage-note">Flood and heat layers cover the 2025 GBA boundary. Beyond it, the map and routing remain available.</p>
+        </section>
       </div>
     </>
   );
