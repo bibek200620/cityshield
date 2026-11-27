@@ -77,12 +77,19 @@ class SyntheticWardProvider(WardDataProvider):
         self.seed = settings.SYNTHETIC_SEED
         self.n = settings.GRID_SIZE_CELLS
         self.resolution_m = settings.GRID_RESOLUTION_M
+        # Synthetic geography is authored against a 100x100 reference
+        # raster. Scale its coordinates and feature widths together when a
+        # deployment selects a smaller raster.
+        self.grid_scale = (self.n - 1) / 99.0
         self.anchor_lat = settings.ANCHOR_LAT
         self.anchor_lng = settings.ANCHOR_LNG
         # Depression centreline: roughly NE -> SW through the middle,
         # in (row, col) grid-cell space. row 0 = north edge, col 0 = west edge.
-        self.depression_p0 = (12.0, 88.0)  # near NE
-        self.depression_p1 = (88.0, 12.0)  # near SW
+        self.depression_p0 = self._scale_reference_point(12.0, 88.0)  # near NE
+        self.depression_p1 = self._scale_reference_point(88.0, 12.0)  # near SW
+
+    def _scale_reference_point(self, row: float, col: float) -> tuple[float, float]:
+        return row * self.grid_scale, col * self.grid_scale
 
     # ---- geometry -----------------------------------------------------
 
@@ -108,7 +115,7 @@ class SyntheticWardProvider(WardDataProvider):
             rows.astype(float), cols.astype(float),
             self.depression_p0, self.depression_p1,
         )
-        sigma = 4.0  # cells (~80m) half-width of the carved channel
+        sigma = 4.0 * self.grid_scale  # ~80m half-width at the reference 20m resolution
         # ASSUMPTION (tuned, not from the original build spec's -2m figure):
         # with a 5m base-slope drop across the ward, a -2m channel carve
         # left the SE grid corner (pure slope, ~40m, nothing to do with the
@@ -141,7 +148,7 @@ class SyntheticWardProvider(WardDataProvider):
         # Two diagonal arterials -> commercial/paved corridor (CN=90)
         arterial_a = _point_segment_distance(rows_f, cols_f, (0, 0), (n - 1, n - 1))
         arterial_b = _point_segment_distance(rows_f, cols_f, (0, n - 1), (n - 1, 0))
-        near_arterial = (arterial_a < 3.0) | (arterial_b < 3.0)
+        near_arterial = (arterial_a < 3.0 * self.grid_scale) | (arterial_b < 3.0 * self.grid_scale)
         cn[near_arterial] = 90.0
 
         # Land use near the drainage depression: a narrow riparian green
@@ -164,8 +171,10 @@ class SyntheticWardProvider(WardDataProvider):
         # minimally-permeable floodplain settlement draining toward a
         # single nullah is, if anything, an optimistic (not exaggerated)
         # picture of many real low-lying informal settlements.
-        near_depression_dense = (dist_to_depression >= 2.0) & (dist_to_depression < 10.0)
-        near_depression_buffer = dist_to_depression < 2.0
+        dense_inner = 2.0 * self.grid_scale
+        dense_outer = 10.0 * self.grid_scale
+        near_depression_dense = (dist_to_depression >= dense_inner) & (dist_to_depression < dense_outer)
+        near_depression_buffer = dist_to_depression < dense_inner
         cn[near_depression_dense] = 92.0
         cn[near_depression_buffer] = 55.0
 
@@ -268,6 +277,7 @@ class SyntheticWardProvider(WardDataProvider):
         # guidance sites shelters on safer ground, away from a single
         # chokepoint, and this ward models that contrast deliberately too.
         def add_access_spur(spur_id: str, spur_row: float, spur_col: float, chokepoint: str) -> None:
+            spur_row, spur_col = self._scale_reference_point(spur_row, spur_col)
             lat, lng = self.cell_to_latlng(spur_row, spur_col)
             g.add_node(spur_id, lat=lat, lng=lng, grid_row=spur_row, grid_col=spur_col,
                        is_major_junction=False)
@@ -275,7 +285,8 @@ class SyntheticWardProvider(WardDataProvider):
                        is_arterial=False, has_drain=True, edge_id=f"r_{spur_id}_{chokepoint}")
 
             lane_id = f"{spur_id}_service_lane"
-            lane_row, lane_col = spur_row + 0.6, spur_col + 0.6
+            lane_offset = 0.6 * self.grid_scale
+            lane_row, lane_col = spur_row + lane_offset, spur_col + lane_offset
             lane_lat, lane_lng = self.cell_to_latlng(lane_row, lane_col)
             g.add_node(lane_id, lat=lane_lat, lng=lane_lng, grid_row=lane_row, grid_col=lane_col,
                        is_major_junction=False)
@@ -304,7 +315,8 @@ class SyntheticWardProvider(WardDataProvider):
         road_graph = self._road_graph()
         hospital = road_graph.nodes["hospital_access"]
         fire_station = road_graph.nodes["fire_station_access"]
-        shelter_lat, shelter_lng = self.cell_to_latlng(85, 20)
+        shelter_row, shelter_col = self._scale_reference_point(85, 20)
+        shelter_lat, shelter_lng = self.cell_to_latlng(shelter_row, shelter_col)
 
         points = [
             ("hospital_01", "hospital", "Ward Alpha General Hospital", hospital["lat"], hospital["lng"]),
