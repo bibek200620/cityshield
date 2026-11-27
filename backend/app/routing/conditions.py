@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from functools import lru_cache
 from math import isfinite
@@ -36,6 +37,7 @@ RUNOFF_THRESHOLD_MM = 1.0
 INCIDENT_PROXIMITY_M = 35
 PROJECT = Transformer.from_crs("EPSG:4326", "EPSG:32643", always_xy=True).transform
 PROVIDER_ERRORS = (URLError, TimeoutError, KeyError, TypeError, ValueError, IndexError)
+logger = logging.getLogger("uvicorn.error")
 
 
 class WeatherDataError(ValueError):
@@ -224,15 +226,30 @@ def weather_parameters() -> dict:
     }
 
 
+def fetch_weather(params: dict):
+    try:
+        return fetch_json(WEATHER_URL, params)
+    except HTTPError as exc:
+        logger.warning("Open-Meteo forecast request failed (HTTP %s)", exc.code)
+        raise
+    except URLError as exc:
+        reason = exc.reason
+        logger.warning(
+            "Open-Meteo forecast connection failed (%s, errno=%s, certificate=%s)",
+            type(reason).__name__, getattr(reason, "errno", None), getattr(reason, "verify_code", None),
+        )
+        raise
+
+
 @lru_cache(maxsize=2)
 def weather_snapshot(_five_minute_slot: int) -> dict:
-    payload = fetch_json(WEATHER_URL, {**weather_parameters(), **WEATHER_LOCATION})
+    payload = fetch_weather({**weather_parameters(), **WEATHER_LOCATION})
     return {"payload": payload, "retrieved_at": iso_utc(int(time()))}
 
 
 @lru_cache(maxsize=2)
 def city_watch_snapshot(_five_minute_slot: int) -> tuple[list, str]:
-    payload = fetch_json(WEATHER_URL, {
+    payload = fetch_weather({
         **weather_parameters(),
         **{key: ",".join(str(location[key]) for location in WATCH_LOCATIONS) for key in ("latitude", "longitude")},
     })
@@ -254,7 +271,7 @@ def get_alert_weather() -> list[dict]:
 @lru_cache(maxsize=2)
 def weather_report_snapshot(_five_minute_slot: int) -> dict:
     """Fetch enough hourly provider output for the next 48 complete forecast hours."""
-    payload = fetch_json(WEATHER_URL, {
+    payload = fetch_weather({
         "latitude": WEATHER_LOCATION["latitude"], "longitude": WEATHER_LOCATION["longitude"],
         "current": "temperature_2m,apparent_temperature",
         "hourly": "precipitation,temperature_2m,apparent_temperature,relative_humidity_2m",
