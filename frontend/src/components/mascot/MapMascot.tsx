@@ -1,61 +1,32 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { api, type AssistantOutlook, type AssistantPhrasing, type AssistantRouteContext, type DrivingOption } from "../../api/client";
-import { collectMascotAlerts, type MascotAlert } from "../../map/assistantAlerts";
+import { api, type AssistantOutlook, type AssistantPhrasing, type AssistantRouteContext, type CityFloodResponse, type DrivingOption } from "../../api/client";
+import { collectMascotAlerts, scenarioRouteAlert, type MascotAlert } from "../../map/assistantAlerts";
+import { assistantRefreshMs } from "../../map/assistantOutlook";
 import { routeVertexDistances, type useDrivingPlanner } from "../../map/drivingPlanner";
 import Icon from "../Icon";
 import { expressions } from "./faces";
 import ForecastBrief from "./ForecastBrief";
 import TrafficBrief from "./TrafficBrief";
+import { useCXVoice } from "./cxVoice";
 import "./mascot.css";
 
 const MascotModel = lazy(() => import("./MascotModel"));
-const outlookInterval = 5 * 60_000;
 const voiceCooldown = 10 * 60_000;
 type MascotPanel = "home" | "report" | "traffic";
 
-function useMascotOutlook() {
-  const [outlook, setOutlook] = useState<AssistantOutlook | null>(null);
-  useEffect(() => {
-    let request: AbortController | undefined;
-    function refresh() {
-      request?.abort();
-      const controller = new AbortController();
-      request = controller;
-      void api.getAssistantOutlook(controller.signal).then((value) => {
-        if (!controller.signal.aborted) setOutlook(value);
-      }).catch(() => {
-        if (!controller.signal.aborted) setOutlook({ status: "unavailable" });
-      });
-    }
-    refresh();
-    const timer = window.setInterval(refresh, outlookInterval);
-    return () => {
-      window.clearInterval(timer);
-      request?.abort();
-    };
-  }, []);
-  return outlook;
-}
-
-function say(text: string) {
-  const speech = window.speechSynthesis;
-  if (!speech || typeof SpeechSynthesisUtterance === "undefined") return;
-  const utterance = new SpeechSynthesisUtterance(text);
-  const voices = speech.getVoices().filter((voice) => voice.localService && /^en(?:-|_)/i.test(voice.lang));
-  utterance.voice = voices.find((voice) => /^en[-_]IN$/i.test(voice.lang)) ?? voices[0] ?? null;
-  utterance.lang = utterance.voice?.lang ?? "en-IN";
-  utterance.pitch = 1.12;
-  utterance.rate = .94;
-  speech.cancel();
-  speech.speak(utterance);
-}
-
 function alertText(alert: MascotAlert, phrasing: AssistantPhrasing | null) {
-  return phrasing?.styles[alert.kind] === "gentle" ? `A quick heads-up. ${alert.message}` : alert.message;
+  const style = alert.kind === "city_flood" || alert.kind === "route_rain" || alert.kind === "traffic"
+    ? phrasing?.styles[alert.kind] : undefined;
+  return style === "gentle" ? `A quick heads-up. ${alert.message}` : alert.message;
 }
 
-export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivingPlanner> }) {
-  const outlook = useMascotOutlook();
+function alertKey(alert: MascotAlert) {
+  return alert.key ?? `${alert.kind}:${alert.face}`;
+}
+
+export default function MapMascot({ drive, outlook, cityFlood }: {
+  drive: ReturnType<typeof useDrivingPlanner>; outlook: AssistantOutlook | null; cityFlood: CityFloodResponse | null;
+}) {
   const [phrasing, setPhrasing] = useState<AssistantPhrasing | null>(null);
   const [now, setNow] = useState(Date.now);
   const [voiceOn, setVoiceOn] = useState(false);
@@ -69,9 +40,8 @@ export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivi
   const trigger = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLElement>(null);
   const spoken = useRef(new Map<string, number>());
-  const voiceSupported = typeof window.speechSynthesis !== "undefined" && typeof SpeechSynthesisUtterance !== "undefined";
-  const read = voiceSupported ? say : undefined;
-  const { result, routeMatch, navigationLocation, navigationMode, selectedId } = drive;
+  const { read, voices, voiceId, setVoiceId } = useCXVoice();
+  const { result, routeMatch, navigationLocation, navigationMode, selectedId, scenario, scenarioRoutes, liveTrafficSegments, trafficFlowCheckedAt } = drive;
   const route = result?.routes.find((option) => option.id === selectedId);
   const useTomTom = result?.source === "TomTom Routing";
   const distances = useMemo(() => route ? routeVertexDistances(route.coordinates) : [], [route]);
@@ -104,32 +74,53 @@ export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivi
           }));
         }
       }).catch(() => {});
-    }, outlookInterval);
+    }, assistantRefreshMs);
     return () => {
       window.clearInterval(timer);
       pending?.abort();
     };
   }, [route, useTomTom, navigationMode]);
 
+  const scenarioAlert = useMemo<MascotAlert | null>(() => {
+    if (!scenario) return null;
+    const { rainfallMm, floodDemo, revision } = scenario;
+    const count = cityFlood?.status === "ready" ? new Set(cityFlood.cells.filter((cell) => (cell.screen_mm ?? 0) >= 5)
+      .map((cell) => cell.id.replace(/:[^:]+$/, ""))).size : null;
+    const label = floodDemo ? "Flood demo" : "Rainfall simulation";
+    return {
+      kind: "scenario_flood", face: floodDemo || (count ?? 0) > 0 ? "flood" : "rain", key: `scenario:${revision}`,
+      title: `${label} active`,
+      message: `${label} is running with ${Number(rainfallMm.toFixed(1))} millimetres of simulated rain. ${cityFlood?.status === "unavailable"
+        ? "City runoff screening is unavailable." : count === null ? "I'm checking the city runoff grid."
+          : count === 0 ? "No city cells reach five millimetres of screened runoff."
+            : `${count.toLocaleString("en-IN")} city grid cells reach at least five millimetres of modeled runoff.`}`,
+    };
+  }, [scenario, cityFlood]);
+
   const alerts = useMemo(() => {
     const refreshed = refreshResult?.route === route ? refreshResult?.value : null;
-    const trip = navigationMode === "active" && result && route && routeMatch && navigationLocation
+    const trip = (navigationMode === "active" || navigationMode === "simulating") && result && route && routeMatch && navigationLocation
       ? {
-        response: refreshed ? {
-          ...result, weather: refreshed.weather,
-          traffic: refreshed.traffic ? { ...result.traffic, status: "ready" as const, checked_at: refreshed.traffic.checked_at } : result.traffic,
-        } : result,
+        response: {
+          ...result, weather: refreshed?.weather ?? result.weather,
+          traffic: { ...result.traffic, checked_at: refreshed?.traffic?.checked_at ?? trafficFlowCheckedAt ?? result.traffic.checked_at },
+        },
         route: refreshed ? {
           ...route, forecast_runoff_spans: refreshed.forecast_runoff_spans,
-          traffic_segments: refreshed.traffic?.segments ?? route.traffic_segments,
-        } : route,
+          traffic_segments: refreshed.traffic?.segments ?? liveTrafficSegments ?? route.traffic_segments,
+        } : { ...route, traffic_segments: liveTrafficSegments ?? route.traffic_segments },
         distances, match: routeMatch, location: navigationLocation,
       }
       : undefined;
-    return collectMascotAlerts(outlook, Math.max(now, Date.now()), trip);
-  }, [outlook, now, navigationMode, result, routeMatch, navigationLocation, route, distances, refreshResult]);
+    const live = collectMascotAlerts(outlook, Math.max(now, Date.now()), trip);
+    const exposure = scenarioRoutes.find((entry) => entry.id === selectedId);
+    const demo = scenario && exposure && routeMatch && navigationMode === "simulating"
+      ? scenarioRouteAlert(exposure.spans, routeMatch, scenario.revision) : null;
+    return [...(demo ? [demo] : []), ...(scenarioAlert ? [scenarioAlert] : []), ...live];
+  }, [outlook, now, navigationMode, result, routeMatch, navigationLocation, route, distances, refreshResult, liveTrafficSegments,
+    scenario, scenarioRoutes, selectedId, scenarioAlert, trafficFlowCheckedAt]);
 
-  const kinds = alerts.map((alert) => `${alert.kind}:${alert.face}`).join("|");
+  const kinds = alerts.map(alertKey).join("|");
   const automaticBubble = kinds !== "" && kinds !== dismissed;
   const bubbleOpen = manualOpen || automaticBubble;
   const face = alerts[0]?.face ?? (outlook?.status === "ready" ? "happy" : "watchful");
@@ -147,11 +138,11 @@ export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivi
   useEffect(() => {
     if (!voiceOn) return;
     const time = Date.now();
-    const fresh = alerts.filter((alert) => time - (spoken.current.get(`${alert.kind}:${alert.face}`) ?? 0) > voiceCooldown);
+    const fresh = alerts.filter((alert) => time - (spoken.current.get(alertKey(alert)) ?? 0) > voiceCooldown);
     if (!fresh.length) return;
-    fresh.forEach((alert) => spoken.current.set(`${alert.kind}:${alert.face}`, time));
-    say(fresh.map((alert) => alertText(alert, phrasing)).join(" "));
-  }, [alerts, voiceOn, phrasing]);
+    fresh.forEach((alert) => spoken.current.set(alertKey(alert), time));
+    read?.(fresh.map((alert) => alertText(alert, phrasing)).join(" "));
+  }, [alerts, voiceOn, phrasing, read]);
 
   function toggleVoice() {
     if (voiceOn) {
@@ -160,13 +151,13 @@ export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivi
       return;
     }
     const time = Date.now();
-    alerts.forEach((alert) => spoken.current.set(`${alert.kind}:${alert.face}`, time));
-    say(alerts.length ? alerts.map((alert) => alertText(alert, phrasing)).join(" ") : "Hi, I’m C X. Voice alerts are on.");
+    alerts.forEach((alert) => spoken.current.set(alertKey(alert), time));
+    read?.(alerts.length ? alerts.map((alert) => alertText(alert, phrasing)).join(" ") : "Hi, I’m C X. Voice alerts are on.");
     setVoiceOn(true);
   }
 
   const status = outlook === null ? "Checking the three-hour forecast…"
-    : outlook.status === "ready" ? "I’m watching the next three hours for modeled flood risk."
+    : outlook.status === "ready" ? "I’m watching the next three hours for modeled flood and heat conditions."
       : "The city outlook is unavailable right now.";
 
   function closeBubble() {
@@ -184,7 +175,8 @@ export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivi
       }
     }}>
       <div className="sr-only" aria-live="polite">{alerts.map((alert) => alert.title).join(". ")}</div>
-      {bubbleOpen && <div id="mascot-bubble" className="mascot-bubble" data-alert={alerts.length > 0} data-panel={panel}>
+      {bubbleOpen && <div id="mascot-bubble" className="mascot-bubble" data-alert={alerts.length > 0} data-panel={panel}
+        data-compact={automaticBubble && !manualOpen && panel === "home"}>
         <div className="mascot-bubble-heading">
           {panel !== "home" && <button className="mascot-close" type="button" aria-label="Back to CX menu"
             onClick={() => setPanel("home")}><Icon name="back" /></button>}
@@ -207,10 +199,22 @@ export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivi
           <button type="button" onClick={() => setPanel("report")}><Icon name="calendar" />Forecast report</button>
           <button type="button" onClick={() => setPanel("traffic")}><Icon name="route" />Traffic</button>
         </div>
+        {!manualOpen && <button type="button" className="mascot-voice mascot-expand" onClick={() => setManualOpen(true)}>CX options</button>}
         <div className="mascot-actions">
-          {voiceSupported && <button className="mascot-voice" type="button" aria-pressed={voiceOn} onClick={toggleVoice}>
+          {read && <button className="mascot-voice" type="button" aria-pressed={voiceOn} onClick={toggleVoice}>
             <Icon name={voiceOn ? "volume" : "mute"} />{voiceOn ? "Voice on" : "Enable voice"}
           </button>}
+          {read && alerts.length > 0 && <button className="mascot-voice" type="button"
+            onClick={() => read(alerts.map((alert) => alertText(alert, phrasing)).join(" "))}>Read alerts</button>}
+          {read && voices.length > 0 && <details className="mascot-expressions mascot-voice-settings">
+            <summary>Choose voice</summary>
+            <label className="sr-only" htmlFor="mascot-voice-choice">CX voice</label>
+            <select id="mascot-voice-choice" value={voiceId} onChange={(event) => setVoiceId(event.target.value)}>
+              <option value="">Automatic · {voices[0].name}</option>
+              {voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}</option>)}
+            </select>
+            <button type="button" className="mascot-voice" onClick={() => read("Hi, I’m C X. I’ll keep you updated on rain and traffic.")}>Preview voice</button>
+          </details>}
           {!alerts.length && <details className="mascot-expressions">
             <summary>Expressions</summary>
             <label className="sr-only" htmlFor="mascot-expression">Preview a face expression</label>
@@ -225,7 +229,8 @@ export default function MapMascot({ drive }: { drive: ReturnType<typeof useDrivi
       <button ref={trigger} className="mascot-trigger" type="button" aria-label="CX assistant"
         aria-controls={bubbleOpen ? "mascot-bubble" : undefined} aria-expanded={bubbleOpen}
         data-expression={pose.label} onClick={() => {
-          if (bubbleOpen) closeBubble();
+          if (automaticBubble && !manualOpen && panel === "home") setManualOpen(true);
+          else if (bubbleOpen) closeBubble();
           else {
             setManualOpen(true);
             setPanel("home");

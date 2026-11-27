@@ -32,6 +32,21 @@ export interface DrivingOption {
 }
 
 export type TrafficLevel = "clear" | "slow" | "heavy" | "unknown";
+export type TrafficFlowResponse = { status: "unavailable" } | {
+  status: "ready"; checked_at: string; segments: NonNullable<DrivingOption["traffic_segments"]>;
+};
+
+export interface ScenarioRouteExposure {
+  covered_km: number;
+  route_km: number;
+  exposed_km: number;
+  high_km: number;
+  spans: { start: number; end: number }[];
+  high_spans: { start: number; end: number }[];
+}
+
+export type ScenarioRouteResponse = { status: "ready"; routes: ScenarioRouteExposure[] }
+  | { status: "unavailable"; message: string };
 
 export interface DrivingResponse {
   routes: DrivingOption[];
@@ -50,6 +65,9 @@ export type AssistantOutlook = { status: "unavailable" } | {
   checked_at: string;
   forecast_through: string;
   alert: { valid_at: string; cells: number } | null;
+  forecast_points?: number;
+  heat?: { valid_at: string; feels_like_c: number } | null;
+  flood_screen_available?: boolean;
 };
 
 export interface AssistantPhrasing {
@@ -309,6 +327,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ source, destination }),
       signal,
+    }),
+  screenDrivingScenario: (rainfallMm: number, routes: DrivingOption["coordinates"][], signal: AbortSignal) =>
+    request<ScenarioRouteResponse>("/api/drive/scenario", {
+      method: "POST", body: JSON.stringify({ rainfall_mm: rainfallMm, routes }), signal,
+    }),
+  sampleTraffic: (coordinates: DrivingOption["coordinates"], signal: AbortSignal) =>
+    request<TrafficFlowResponse>("/api/drive/traffic-flow", {
+      method: "POST", body: JSON.stringify({ coordinates }), signal,
     }),
   searchPlaces: (query: string, signal: AbortSignal) =>
     request<PlaceSearchResponse>(`/api/places/search?query=${encodeURIComponent(query)}`, { signal }),

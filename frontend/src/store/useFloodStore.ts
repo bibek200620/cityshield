@@ -23,6 +23,14 @@ export interface LayerVisibility {
 }
 
 export type VehicleType = "ambulance" | "fire" | "rescue" | "police";
+export const floodDemoPreset = { id: "flood-demo", intensity: 100, duration: 120 } as const;
+
+export interface AppliedRainfallScenario {
+  revision: number;
+  rainfallMm: number;
+  durationMin: number;
+  floodDemo: boolean;
+}
 
 interface FloodStore {
   scenarios: ScenarioSummary[];
@@ -35,6 +43,7 @@ interface FloodStore {
   vehicleType: VehicleType;
   selectedNodeId: string | null;
   simulationActive: boolean;
+  appliedRainfall: AppliedRainfallScenario | null;
   heatOffsetC: number;
   currentRainfall: { intensity: number; duration: number };
   heatData: HeatWorkflowResponse | null;
@@ -51,7 +60,7 @@ interface FloodStore {
   loadInitial: () => Promise<void>;
   loadHeat: () => Promise<void>;
   runScenario: (scenarioId: string, heatOffsetC?: number) => Promise<void>;
-  runCustomRainfall: (intensity: number, duration: number, heatOffsetC: number) => Promise<void>;
+  runCustomRainfall: (intensity: number, duration: number, heatOffsetC: number, floodDemo?: boolean) => Promise<void>;
   stopSimulation: () => void;
   computeRoute: (start: LatLng, end: LatLng, vehicle?: VehicleType) => Promise<void>;
   setVehicleType: (vt: VehicleType) => void;
@@ -64,6 +73,7 @@ interface FloodStore {
 
 export const useFloodStore = create<FloodStore>((set, get) => {
   let scenarioRequest: AbortController | null = null;
+  let revision = 0;
 
   async function runRainfall(
     intensity: number, duration: number, presetId: string | null, heatOffsetC: number | undefined,
@@ -76,8 +86,13 @@ export const useFloodStore = create<FloodStore>((set, get) => {
     try {
       const result = await load(request.signal);
       if (request.signal.aborted) return;
+      const floodDemo = presetId === floodDemoPreset.id;
+      const appliedRainfall = heatOffsetC === undefined ? null : {
+        revision: ++revision, rainfallMm: intensity * duration / 60, durationMin: duration, floodDemo,
+      };
       set((state) => ({
         simulationActive: true,
+        appliedRainfall,
         simulateResult: result,
         activeScenarioId: result.scenario_id,
         route: null,
@@ -88,6 +103,7 @@ export const useFloodStore = create<FloodStore>((set, get) => {
         combinedExposureError: null,
         layerVisibility: heatOffsetC === undefined ? state.layerVisibility : {
           ...state.layerVisibility, floodDepth: true, cityRoads: true,
+          pilotFlood: floodDemo || state.layerVisibility.pilotFlood,
           heat: heatOffsetC !== 0 || state.layerVisibility.heat,
         },
       }));
@@ -118,6 +134,7 @@ export const useFloodStore = create<FloodStore>((set, get) => {
     vehicleType: "ambulance",
     selectedNodeId: null,
     simulationActive: true,
+    appliedRainfall: null,
     heatOffsetC: 0,
     currentRainfall: { intensity: 60, duration: 90 },
     heatData: null,
@@ -179,7 +196,8 @@ export const useFloodStore = create<FloodStore>((set, get) => {
         (signal) => api.getScenarioDetail(scenarioId, signal));
     },
 
-    runCustomRainfall: (intensity, duration, heatOffsetC) => runRainfall(intensity, duration, null, heatOffsetC,
+    runCustomRainfall: (intensity, duration, heatOffsetC, floodDemo = false) => runRainfall(
+      intensity, duration, floodDemo ? floodDemoPreset.id : null, heatOffsetC,
       (signal) => api.simulate(intensity, duration, signal)),
 
     stopSimulation: () => {
@@ -187,6 +205,7 @@ export const useFloodStore = create<FloodStore>((set, get) => {
       scenarioRequest = null;
       set((state) => ({
         simulationActive: false,
+        appliedRainfall: null,
         heatOffsetC: 0,
         simulateResult: null,
         activeScenarioId: null,

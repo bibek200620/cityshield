@@ -5,15 +5,19 @@ import json
 from math import isfinite
 from threading import Lock
 from time import monotonic, sleep, time
+from typing import Annotated
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from shapely.geometry import LineString
+from shapely.ops import transform
 
 from app.core.config import settings
-from app.routing.conditions import PROVIDER_ERRORS, annotate_conditions, fetch_json, iso_utc
+from app.routing.conditions import PROJECT, PROVIDER_ERRORS, annotate_conditions, fetch_json, iso_utc, scenario_route_exposure
+from app.routing.traffic_flow import sample_route_flow, spans_for_levels
 
 router = APIRouter()
 VALHALLA_URL = "https://valhalla1.openstreetmap.de/route"
@@ -29,6 +33,46 @@ class DrivingPoint(BaseModel):
 class DrivingRequest(BaseModel):
     source: DrivingPoint
     destination: DrivingPoint
+
+
+RoadGeometry = Annotated[list[tuple[float, float]], Field(min_length=2, max_length=10_000)]
+
+
+class ScenarioRoutesRequest(BaseModel):
+    rainfall_mm: float = Field(ge=0, le=500)
+    routes: list[RoadGeometry] = Field(min_length=1, max_length=3)
+
+
+class TrafficFlowRequest(BaseModel):
+    coordinates: RoadGeometry
+
+
+def checked_road_line(coordinates: RoadGeometry) -> LineString:
+    if not all(77.30 <= lng <= 77.95 and 12.49 <= lat <= 13.29 for lng, lat in coordinates):
+        raise HTTPException(422, "Provide valid route geometry in the Bengaluru region.")
+    line = LineString(coordinates)
+    if line.length <= 0:
+        raise HTTPException(422, "Provide a route with nonzero length.")
+    return line
+
+
+@router.post("/api/drive/scenario")
+def drive_scenario(req: ScenarioRoutesRequest) -> dict:
+    lines = [transform(PROJECT, checked_road_line(route)) for route in req.routes]
+    try:
+        return {"status": "ready", "routes": scenario_route_exposure(lines, req.rainfall_mm)}
+    except FileNotFoundError:
+        return {"status": "unavailable", "message": "City runoff screening is unavailable."}
+
+
+@router.post("/api/drive/traffic-flow")
+def drive_traffic_flow(req: TrafficFlowRequest) -> dict:
+    checked_road_line(req.coordinates)
+    now = int(time())
+    segments = sample_route_flow(req.coordinates, now // 300)
+    if not segments or all(span["level"] == "unknown" for span in segments):
+        return {"status": "unavailable"}
+    return {"status": "ready", "segments": segments, "checked_at": iso_utc(now)}
 
 
 def decode_polyline6(shape: str) -> list[list[float]]:
@@ -120,34 +164,28 @@ def valhalla_options(req: DrivingRequest) -> tuple[list[dict], dict | None]:
 def traffic_segments(route: dict, coordinate_count: int) -> list[dict] | None:
     """Map TomTom point-index ranges to disjoint, drawable traffic spans."""
     sections = route.get("sections")
-    if not isinstance(sections, list):
-        return [{"start_index": 0, "end_index": coordinate_count - 1, "level": "clear"}] if route["summary"].get("trafficDelayInSeconds") == 0 else None
+    sections = [section for section in sections if isinstance(section, dict) and section.get("sectionType") == "TRAFFIC"] if isinstance(sections, list) else []
     severity = {"clear": 0, "unknown": 1, "slow": 2, "heavy": 3}
-    levels = ["clear"] * (coordinate_count - 1)
+    # Aggregate delay has no location. Leave the gaps unclassified unless the provider reports zero delay.
+    summary = route.get("summary", {})
+    clear = summary.get("trafficDelayInSeconds") == 0 and summary.get("travelTimeInSeconds", 0) <= summary.get("noTrafficTravelTimeInSeconds", float("inf"))
+    levels = ["clear" if clear else "unknown"] * (coordinate_count - 1)
     for section in sections:
-        if not isinstance(section, dict) or section.get("sectionType") != "TRAFFIC":
-            continue
         start, end = section.get("startPointIndex"), section.get("endPointIndex")
         if type(start) is not int or type(end) is not int or not 0 <= start < end < coordinate_count:
-            return None
+            continue
         magnitude = section.get("magnitudeOfDelay")
         speed = section.get("effectiveSpeedInKmh")
         if section.get("simpleCategory") == "ROAD_CLOSURE" or magnitude in (3, 4) or speed == 0:
             level = "heavy"
-        elif magnitude in (1, 2):
+        elif magnitude in (1, 2) or (isinstance(section.get("delayInSeconds"), (int, float)) and section["delayInSeconds"] > 0):
             level = "slow"
         else:
             level = "unknown"
         for index in range(start, end):
             if severity[level] > severity[levels[index]]:
                 levels[index] = level
-    spans = []
-    start = 0
-    for end in range(1, len(levels) + 1):
-        if end == len(levels) or levels[end] != levels[start]:
-            spans.append({"start_index": start, "end_index": end, "level": levels[start]})
-            start = end
-    return spans
+    return spans_for_levels(levels) if any(level != "unknown" for level in levels) else None
 
 
 def tomtom_options(req: DrivingRequest, key: str, *, shortest: bool) -> list[dict]:

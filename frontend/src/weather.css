@@ -134,6 +134,8 @@
 }
 .weather-dialog[open][data-sky="snow"] .weather-scene span:nth-child(2) { --scene-animation: falling-snow 6.8s linear infinite; }
 .weather-dialog[data-paused="true"] { --scene-play-state: paused; }
+#weather-two-day { border-radius: 12px; background: var(--surface); color: var(--ink); padding: 14px; }
+#weather-two-day a { color: var(--accent); text-decoration: underline; }
 @keyframes cloud-drift { from { transform: translate3d(-3%, -2%, 0); } to { transform: translate3d(5%, 3%, 0); } }
 @keyframes falling-rain { to { transform: translate3d(-16px, 60px, 0); } }
 @keyframes falling-snow { to { transform: translate3d(53px, 67px, 0); } }

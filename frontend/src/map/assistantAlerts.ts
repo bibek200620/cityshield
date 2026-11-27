@@ -4,10 +4,11 @@ import type { LiveLocation, RouteMatch } from "./drivingPlanner";
 export type FaceFamily = "happy" | "bright" | "watchful" | "rain" | "flood" | "traffic" | "urgent";
 
 export interface MascotAlert {
-  kind: AssistantAlertKind;
+  kind: AssistantAlertKind | "scenario_flood" | "scenario_route" | "heat";
   face: FaceFamily;
   title: string;
   message: string;
+  key?: string;
 }
 
 const minute = 60_000;
@@ -78,8 +79,27 @@ export function collectMascotAlerts(
       kind: "city_flood",
       face: "flood",
       title: "Flood risk in the next 3 hours",
-      message: "There is a modeled flood risk in parts of Greater Bengaluru over the next three hours. Check official alerts.",
+      message: `The forecast triggers the CityShield flood screen in ${outlook.alert.cells} Bengaluru grid cells. Check official alerts.`,
+    });
+  }
+  if (outlook?.status === "ready" && outlook.heat && isAhead(outlook.forecast_through, now)
+      && isRecent(outlook.checked_at, now, 12 * minute)) {
+    alerts.push({
+      kind: "heat", face: "watchful", title: "Elevated feels-like heat",
+      message: `The Bengaluru model reaches ${Math.round(outlook.heat.feels_like_c)} degrees feels like, above the CityShield heat screening threshold. Check the local heat advisory.`,
     });
   }
   return alerts;
+}
+
+export function scenarioRouteAlert(spans: { start: number; end: number }[], match: RouteMatch, revision: number): MascotAlert | null {
+  const total = match.progress_m + match.remaining_m;
+  const span = spans.find(({ start, end }) => end > match.progress && start * total - match.progress_m <= 1400);
+  if (!span) return null;
+  const distance = Math.max(0, span.start * total - match.progress_m);
+  return {
+    kind: "scenario_route", face: "rain", key: `scenario-route:${revision}`,
+    title: "Simulated flood exposure ahead",
+    message: `In this demo, the route crosses a runoff area ${distanceLabel(distance)}. Check the other routes for lower scenario exposure.`,
+  };
 }

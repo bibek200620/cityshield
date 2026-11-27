@@ -11,13 +11,13 @@ from urllib.request import Request, urlopen
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Polygon
 from shapely.ops import transform
 
 from app.api.routes_city_flood import load_grid, screen_values
 from app.api.routes_driving import traffic_segments
 from app.core.config import settings
-from app.routing.conditions import PROJECT, PROVIDER_ERRORS, annotate_runoff, fetch_json, get_weather, iso_utc
+from app.routing.conditions import PROJECT, PROVIDER_ERRORS, annotate_runoff, fetch_json, get_alert_weather, get_weather, iso_utc
 
 router = APIRouter(prefix="/api/assistant")
 ALERT_KINDS = ("city_flood", "route_rain", "traffic")
@@ -25,6 +25,7 @@ PHRASINGS = ("direct", "gentle")
 DEFAULT_STYLE = dict.fromkeys(ALERT_KINDS, "direct")
 CITY_RUNOFF_MM = 5
 CITY_MIN_CELLS = 10
+HEAT_FEELS_LIKE_C = 40
 _phrasing_lock = Lock()
 _refresh_slots = BoundedSemaphore(3)
 
@@ -77,34 +78,59 @@ def assistant_route_context(request: RouteContextRequest) -> dict:
 
 @router.get("/outlook")
 def assistant_outlook() -> dict:
-    weather = get_weather()
-    if weather["status"] != "ready":
+    forecasts = get_alert_weather()
+    if not forecasts:
         return {"status": "unavailable"}
     alert = None
-    if weather["upcoming_rain_mm"] > 0:
+    flood_screen_available = True
+    locations = tuple((item["longitude"], item["latitude"]) for forecast in forecasts
+                      if (item := forecast.get("provenance", {}).get("grid_cell_center")))
+    if any(weather["upcoming_rain_mm"] > 0 for weather in forecasts):
         try:
             grid = load_grid()
         except FileNotFoundError:
-            return {"status": "unavailable"}
-        rainfall = weather["recent_rain_mm"]
-        for hour in weather["hourly_forecast"]:
-            rainfall += hour["precipitation_mm"]
-            if rainfall == weather["recent_rain_mm"]:
-                continue
-            scores = screen_values(grid, rainfall)
-            affected = {
-                cell_id.rsplit(":", 1)[0] for (cell_id, *_), score in zip(grid["cells"], scores)
-                if score is not None and score >= CITY_RUNOFF_MM
-            }
-            if len(affected) >= CITY_MIN_CELLS:
-                alert = {"valid_at": hour["valid_at"], "cells": len(affected)}
-                break
+            flood_screen_available = False
+        else:
+            zones = _nearest_forecast_points(locations) if len(locations) > 1 else (0,) * len(grid["cells"])
+            rainfall = [weather["recent_rain_mm"] for weather in forecasts]
+            for hours in zip(*(weather["hourly_forecast"] for weather in forecasts)):
+                if not any(hour["precipitation_mm"] for hour in hours):
+                    continue
+                rainfall = [total + hour["precipitation_mm"] for total, hour in zip(rainfall, hours)]
+                scores = {total: screen_values(grid, total) for total in set(rainfall)}
+                affected = {
+                    cell_id.rsplit(":", 1)[0] for index, ((cell_id, *_), zone) in enumerate(zip(grid["cells"], zones))
+                    if (score := scores[rainfall[zone]][index]) is not None and score >= CITY_RUNOFF_MM
+                }
+                if len(affected) >= CITY_MIN_CELLS:
+                    alert = {"valid_at": hours[0]["valid_at"], "cells": len(affected)}
+                    break
+    heat_candidates = [
+        {"valid_at": hour["valid_at"], "feels_like_c": hour["feels_like_c"]}
+        for weather in forecasts for hour in [weather, *weather["hourly_forecast"]]
+        if hour.get("feels_like_c", float("-inf")) >= HEAT_FEELS_LIKE_C
+    ]
+    heat = min(heat_candidates, key=lambda item: (item["valid_at"], -item["feels_like_c"])) if heat_candidates else None
     return {
         "status": "ready",
         "checked_at": iso_utc(int(time())),
-        "forecast_through": weather["forecast_through"],
+        "forecast_through": forecasts[0]["forecast_through"],
+        "forecast_points": len(set(locations)) or 1,
         "alert": alert,
+        "flood_screen_available": flood_screen_available,
+        "heat": heat,
     }
+
+
+@lru_cache(maxsize=8)
+def _nearest_forecast_points(locations: tuple[tuple[float, float], ...]) -> tuple[int, ...]:
+    projected = [PROJECT(*location) for location in locations]
+    zones = []
+    for _, rings, *_ in load_grid()["cells"]:
+        centroid = Polygon(rings[0], rings[1:]).centroid
+        x, y = PROJECT(centroid.x, centroid.y)
+        zones.append(min(range(len(projected)), key=lambda i: (projected[i][0] - x) ** 2 + (projected[i][1] - y) ** 2))
+    return tuple(zones)
 
 
 @lru_cache(maxsize=1)

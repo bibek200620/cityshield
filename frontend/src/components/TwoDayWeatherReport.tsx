@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type TwoDayWeatherReportResponse } from "../api/client";
+import { api, type AssistantOutlook, type TwoDayWeatherReportResponse } from "../api/client";
 import { summarizeHourly } from "../map/weatherReport";
+import Icon from "./Icon";
 
 const bengaluruTime = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -11,6 +12,8 @@ const bengaluruTime = new Intl.DateTimeFormat("en-IN", {
   minute: "2-digit",
   hour12: true,
 });
+const localHour = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
+const formatTime = (value: string) => bengaluruTime.format(new Date(value));
 
 function downloadForecast(report: Extract<TwoDayWeatherReportResponse, { status: "ready" }>) {
   const { grid_cell_center: grid, retrieved_at: retrievedAt } = report.provenance;
@@ -31,7 +34,7 @@ function downloadForecast(report: Extract<TwoDayWeatherReportResponse, { status:
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
-export default function TwoDayWeatherReport() {
+export default function TwoDayWeatherReport({ outlook }: { outlook: AssistantOutlook | null }) {
   const [report, setReport] = useState<TwoDayWeatherReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,13 +60,18 @@ export default function TwoDayWeatherReport() {
   return (
     <div className="weather-report-section">
       <div className="weather-report-heading">
-        <p>48 hourly estimates for Bengaluru</p>
-        <button type="button" className="pick-button" disabled={refreshing} onClick={() => void loadReport()}>
-          {refreshing ? "Updating…" : "Refresh report"}
-        </button>
+        <div>
+          <h3>Greater Bengaluru</h3>
+          <p>48-hour forecast · India Standard Time</p>
+        </div>
+        <div className="weather-report-actions">
+          <button type="button" className="pick-button" disabled={refreshing} onClick={() => void loadReport()}>
+            {refreshing ? "Updating…" : "Refresh report"}
+          </button>
+          {report?.status === "ready" && <button type="button" className="secondary-button"
+            disabled={refreshing} onClick={() => downloadForecast(report)}>Export CSV</button>}
+        </div>
       </div>
-      {report?.status === "ready" && <button type="button" className="secondary-button weather-export"
-        disabled={refreshing} onClick={() => downloadForecast(report)}>Export CSV</button>}
 
       {refreshing && !report && <p role="status">Loading the next 48 forecast hours…</p>}
       {error && <p className="route-error" role="alert">{error}</p>}
@@ -72,17 +80,29 @@ export default function TwoDayWeatherReport() {
         <p>{report.message}</p>
       </div>}
       {report?.status === "ready" && <>
-        <p className="weather-report-provenance">
-          {report.source} · 2 m air temperature · hourly precipitation · Bengaluru grid cell {report.provenance.grid_cell_center.latitude.toFixed(3)}, {report.provenance.grid_cell_center.longitude.toFixed(3)}. Retrieved {bengaluruTime.format(new Date(report.provenance.retrieved_at))} IST.
-        </p>
+        <section className="weather-report-watch" aria-label="Three-hour flood and heat screening">
+          <h3>Next 3 hours</h3>
+          <div data-warning={outlook?.status === "ready" && Boolean(outlook.alert)}>
+            <Icon name="flood" /><span><strong>Flood screening</strong>
+              {outlook?.status === "ready" && outlook.alert ? `${outlook.alert.cells} modeled cells reach the runoff threshold by ${localHour.format(new Date(outlook.alert.valid_at))}.`
+                : outlook?.status === "ready" && outlook.flood_screen_available !== false ? "The forecast stays below the city watch threshold." : "City runoff screening unavailable."}</span>
+          </div>
+          <div data-warning={outlook?.status === "ready" && Boolean(outlook.heat)}>
+            <Icon name="heat" /><span><strong>Heat screening</strong>
+              {outlook?.status === "ready" && outlook.heat ? `${outlook.heat.feels_like_c.toFixed(1)} °C feels like at ${localHour.format(new Date(outlook.heat.valid_at))}.`
+                : outlook?.status === "ready" ? "The forecast stays below the 40 °C feels-like threshold." : "Heat screening unavailable."}</span>
+          </div>
+        </section>
+        <RainTimeline hours={report.hourly_forecast} />
         <div className="weather-report-days">
           {[report.hourly_forecast.slice(0, 24), report.hourly_forecast.slice(24, 48)].map((hours, index) => {
             const summary = summarizeHourly(hours);
             return <article className="weather-report-day" key={index}>
               <h3>{index === 0 ? "Next 24 hours" : "24–48 hours"}</h3>
-              <p>{bengaluruTime.format(new Date(hours[0].valid_at))} – {bengaluruTime.format(new Date(hours[hours.length - 1].valid_at))} IST</p>
+              <p>{formatTime(hours[0].valid_at)} – {formatTime(hours[hours.length - 1].valid_at)}</p>
               <dl>
                 <div><dt>Air temperature</dt><dd>{summary.low.toFixed(1)}–{summary.high.toFixed(1)} °C</dd></div>
+                <div><dt>Peak feels like</dt><dd>{summary.feelsHigh.toFixed(1)} °C</dd></div>
                 <div><dt>Rain total</dt><dd>{summary.rain.toFixed(1)} mm</dd></div>
                 <div><dt>Mean humidity</dt><dd>{Math.round(summary.humidity)}%</dd></div>
               </dl>
@@ -99,11 +119,34 @@ export default function TwoDayWeatherReport() {
             </li>)}
           </ol>
         </details>
-        <p className="weather-report-limits">
-          This is a third-party forecast for a coarse Bengaluru grid point, not street-level observation, a CityShield-trained forecast, or an official warning. It does not forecast flood depths. Landsat surface temperature is not an air-temperature or heatwave forecast.
-        </p>
-        <p className="outlook-attribution">Provider: <a href="https://open-meteo.com/">Open-Meteo</a></p>
+        <footer className="weather-report-source">
+          <p><a href="https://open-meteo.com/">Open-Meteo</a> · Model grid at {report.provenance.grid_cell_center.latitude.toFixed(3)}° N, {report.provenance.grid_cell_center.longitude.toFixed(3)}° E. Retrieved {formatTime(report.provenance.retrieved_at)} IST.</p>
+          {outlook?.status === "ready" && <p>City screening uses {outlook.forecast_points ?? 1} weather-model grid {(outlook.forecast_points ?? 1) === 1 ? "point" : "points"}.</p>}
+          <p>For official weather warnings, see <a href="https://mausam.imd.gov.in/bengaluru/">IMD Met Centre Bengaluru</a>.</p>
+        </footer>
       </>}
     </div>
   );
+}
+
+function RainTimeline({ hours }: { hours: Extract<TwoDayWeatherReportResponse, { status: "ready" }>["hourly_forecast"] }) {
+  const { rain, firstWet, peak } = summarizeHourly(hours);
+  const maximum = Math.max(1, Math.ceil(peak?.precipitation_mm ?? 0));
+  return <section className="rain-timeline" aria-label="Hourly rain outlook">
+    <div className="rain-timeline-heading">
+      <div><h3>Rain outlook</h3><p>{rain > 0 && peak && firstWet
+        ? `Rain from ${formatTime(firstWet.valid_at)}. Peak ${peak.precipitation_mm.toFixed(1)} mm at ${formatTime(peak.valid_at)}.`
+        : "The model shows no measurable rain in this window."}</p></div>
+      <div className="rain-total"><strong>{rain.toFixed(1)} <small>mm</small></strong><span>48-hour total</span></div>
+    </div>
+    <div className="rain-chart" aria-hidden="true">
+      <div className="rain-chart-scale"><span>{maximum} mm</span><span>0</span></div>
+      <div className="rain-chart-bars">
+        {hours.map((hour, index) => <span key={hour.valid_at} data-later={index >= 24}
+          title={`${formatTime(hour.valid_at)} · ${hour.precipitation_mm.toFixed(1)} mm`}
+          style={{ height: `${100 * hour.precipitation_mm / maximum}%` }} />)}
+      </div>
+    </div>
+    <div className="rain-chart-labels"><span>{formatTime(hours[0].valid_at)}</span><span>+24 hr</span><span>+48 hr</span></div>
+  </section>;
 }

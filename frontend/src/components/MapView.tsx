@@ -4,12 +4,12 @@ import { PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import maplibregl from "maplibre-gl";
 import type { FillExtrusionLayerSpecification } from "maplibre-gl";
-import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, LatLng, NodePrediction, RoadSegment, TrafficLevel } from "../api/client";
+import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, LatLng, NodePrediction, RoadSegment, ScenarioRouteExposure, TrafficLevel } from "../api/client";
 import { getMapDetail, summarizeHexes, summarizeHexPoints, type HexGrids, type HexSummary, type MapDetail } from "../map/hexGrid";
 import { createRoadRunoffScreen, ROAD_SCREEN_MIN_ZOOM, type RoadRunoff } from "../map/roadRunoff";
 import { useFloodStore } from "../store/useFloodStore";
 import type { BengaluruPlace } from "./PlaceSearch";
-import type { LiveLocation, NavigationMode, RouteMatch, Waypoints } from "../map/drivingPlanner";
+import { pathForFraction, routeVertexDistances, type LiveLocation, type NavigationMode, type RouteMatch, type Waypoints } from "../map/drivingPlanner";
 import Icon from "./Icon";
 
 export interface CityHeat {
@@ -38,7 +38,7 @@ const TRAFFIC_COLORS = {
   unknown: [97, 111, 135],
 } satisfies Record<TrafficLevel, [number, number, number]>;
 const TRAFFIC_LABELS: Record<TrafficLevel, string> = {
-  clear: "No delay reported", slow: "Slow traffic", heavy: "Heavy delay or closure", unknown: "Traffic unavailable",
+  clear: "No delay reported", slow: "Slow traffic", heavy: "Heavy delay or closure", unknown: "No segment detail",
 };
 
 const FLOOD_LEGEND = [
@@ -66,7 +66,7 @@ function temperatureColor(temperature: number): [number, number, number, number]
 
 export default function MapView({
   place, cityHeat, cityFlood, onReset, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
-  navigation, assistant,
+  navigation, assistant, scenarioRoute, trafficSegments,
 }: {
   place: BengaluruPlace | null;
   cityHeat: CityHeat | null;
@@ -78,6 +78,8 @@ export default function MapView({
   onPickPoint?: (point: LatLng) => void;
   navigation: { mode: NavigationMode; location: LiveLocation | null; routeMatch: RouteMatch | null };
   assistant: ReactNode;
+  scenarioRoute?: ScenarioRouteExposure;
+  trafficSegments?: DrivingOption["traffic_segments"];
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -103,6 +105,7 @@ export default function MapView({
   const mesh = hexGrids?.[detail === "cells" ? "district" : detail];
   const selectedDrivingRoute = drivingRoutes?.find((option) => option.id === selectedDrivingId) ?? null;
   const navigationActive = navigation.mode !== "idle" && navigation.mode !== "error";
+  const simulatedDrive = navigation.mode === "simulating" || navigation.mode === "arrived";
   const currentRoadScreen = visibility.cityRoads && roadScreen?.source === cityFlood ? roadScreen : null;
   const roadSegments = currentRoadScreen?.segments;
 
@@ -192,6 +195,8 @@ export default function MapView({
             return `${object.name}\nCell runoff screen: ${object.runoffMm.toFixed(1)} mm\nScenario exposure on a 300 m grid`;
           case "driving-traffic":
             return TRAFFIC_LABELS[object.level as TrafficLevel];
+          case "driving-scenario":
+            return object.high ? "Scenario runoff above 20 mm in this cell band" : "Road crossing a screened runoff area in the rainfall scenario";
           case "landsat-pixels":
             return `Surface temperature: ${(object.temperature_c + currentHeatOffset.current).toFixed(1)} °C`;
           case "city-heat":
@@ -305,19 +310,20 @@ export default function MapView({
         rotationAlignment: "map",
         pitchAlignment: "map",
       }).setLngLat([location.lng, location.lat]).addTo(instance);
-      driveMarker.current.getElement().setAttribute("aria-label", "Your current GPS location");
     }
+    driveMarker.current.getElement().setAttribute("aria-label", simulatedDrive ? "Simulated car location" : "Your current GPS location");
     const bearing = location.heading_deg ?? navigation.routeMatch?.bearing ?? 0;
     driveMarker.current.setLngLat([location.lng, location.lat]);
+    if (navigation.mode === "arrived") return;
     driveMarker.current.setRotation(bearing);
     instance.easeTo({
       center: [location.lng, location.lat],
       zoom: 16.5,
       pitch: 55,
       bearing,
-      duration: 250,
+      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200,
     });
-  }, [navigationActive, navigation.location, navigation.mode, navigation.routeMatch?.bearing, selectedDrivingRoute]);
+  }, [navigationActive, navigation.location, navigation.mode, navigation.routeMatch?.bearing, selectedDrivingRoute, simulatedDrive]);
 
   useEffect(() => {
     const instance = map.current;
@@ -529,10 +535,31 @@ export default function MapView({
         jointRounded: true,
         updateTriggers: { getColor: selectedDrivingId, getWidth: selectedDrivingId },
       }));
-      if (selected?.traffic_segments?.length) {
+      if (selected && scenarioRoute?.spans.length) {
+        const distances = routeVertexDistances(selected.coordinates);
+        const paths = (spans: ScenarioRouteExposure["spans"], high: boolean) => spans.map(({ start, end }) => ({
+          high, coordinates: pathForFraction(selected.coordinates, distances, start, end),
+        }));
+        layers.push(new PathLayer<{ high: boolean; coordinates: DrivingOption["coordinates"] }>({
+          id: "driving-scenario",
+          data: [...paths(scenarioRoute.spans, false), ...paths(scenarioRoute.high_spans, true)],
+          getPath: (span) => span.coordinates,
+          getColor: (span) => [...RUNOFF_COLORS[span.high ? 2 : 0], 220],
+          getWidth: 15,
+          widthUnits: "pixels",
+          pickable: true,
+          jointRounded: true,
+        }));
+        layers.push(new PathLayer<DrivingOption>({
+          id: "scenario-route-centerline", data: [selected], getPath: (option) => option.coordinates,
+          getColor: TRAFFIC_COLORS.unknown, getWidth: 7, widthUnits: "pixels", jointRounded: true,
+        }));
+      }
+      const traffic = trafficSegments ?? selected?.traffic_segments;
+      if (selected && traffic?.length) {
         layers.push(new PathLayer<{ level: TrafficLevel; coordinates: DrivingOption["coordinates"] }>({
           id: "driving-traffic",
-          data: selected.traffic_segments.map((span) => ({
+          data: traffic.map((span) => ({
             level: span.level,
             coordinates: selected.coordinates.slice(span.start_index, span.end_index + 1),
           })),
@@ -546,7 +573,7 @@ export default function MapView({
       }
     }
     overlay.current?.setProps({ layers });
-  }, [cityFlood, heatHexes, floodHexes, exposure, result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments]);
+  }, [cityFlood, heatHexes, floodHexes, exposure, result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments, scenarioRoute, trafficSegments]);
 
   return (
     <>
@@ -590,8 +617,8 @@ export default function MapView({
           </div>}
           {selectedDrivingRoute && <div className="flood-legend">
             <strong>Selected route traffic</strong>
-            {(selectedDrivingRoute.traffic_segments?.length ? ["clear", "slow", "heavy", "unknown"] as const : ["unknown"] as const)
-              .map((level) => <span key={level}><i style={{ background: `rgb(${TRAFFIC_COLORS[level].join(",")})` }} />{TRAFFIC_LABELS[level]}</span>)}
+            {(["clear", "slow", "heavy", "unknown"] as const).map((level) => <span key={level}><i style={{ background: `rgb(${TRAFFIC_COLORS[level].join(",")})` }} />{TRAFFIC_LABELS[level]}</span>)}
+            {scenarioRoute && <span><i style={{ background: `rgb(${RUNOFF_COLORS[0].join(",")})` }} />Scenario runoff along route</span>}
           </div>}
           {visibility.heat && <span><i className="heat-scale" /> Surface temperature · 25–45 °C{heatOffset !== 0 &&
             ` · ${heatOffset > 0 ? "+" : ""}${heatOffset} °C scenario offset`}</span>}

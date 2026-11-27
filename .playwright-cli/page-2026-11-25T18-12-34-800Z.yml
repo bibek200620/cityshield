@@ -1,0 +1,123 @@
+- generic [ref=f3e3]:
+  - banner [ref=f3e4]:
+    - link "CityShield home" [ref=f3e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=f3e10]:
+      - generic [ref=f3e11]: Find an area
+      - searchbox "Find an area" [ref=f3e12]
+    - generic [ref=f3e13]:
+      - button "Routes" [expanded] [ref=f3e14] [cursor=pointer]
+      - button "Next 3 hours" [ref=f3e15] [cursor=pointer]
+      - button "Rainfall scenario" [ref=f3e16] [cursor=pointer]
+      - button "Data & models" [ref=f3e17] [cursor=pointer]
+  - main "Bengaluru map" [ref=f3e18]:
+    - region "Map layers" [ref=f3e19]:
+      - generic [ref=f3e20]:
+        - generic [ref=f3e21] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=f3e22]
+          - generic [ref=f3e24]: Flood
+        - generic [ref=f3e25] [cursor=pointer]:
+          - checkbox "Heat" [ref=f3e26]
+          - generic [ref=f3e28]: Heat
+        - generic [ref=f3e29] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=f3e30]
+          - generic [ref=f3e32]: Combined exposure
+      - paragraph [ref=f3e34]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=f3e35]:
+      - generic [ref=f3e36]:
+        - generic "Interactive Bengaluru map" [ref=f3e37]:
+          - region "Map" [ref=f3e38]
+          - generic:
+            - generic:
+              - button "Find my location" [ref=f3e40] [cursor=pointer]
+              - generic [ref=f3e42]:
+                - button "Zoom in" [ref=f3e43] [cursor=pointer]
+                - button "Zoom out" [ref=f3e45] [cursor=pointer]
+              - group [ref=f3e52]:
+                - generic "Toggle attribution" [ref=f3e53] [cursor=pointer]
+                - generic [ref=f3e54]:
+                  - text: GBA delimitation via OpenCity and bharatlas | ©
+                  - link "OpenStreetMap" [ref=f3e55] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=f3e56] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - button "View whole city" [ref=f3e47] [cursor=pointer]
+      - generic "Map legend" [ref=f3e48]:
+        - status [ref=f3e57]: City hexagons · averages
+        - generic [ref=f3e49]: 2025 GBA risk-data boundary
+        - generic [ref=f3e51]: Southern suburbs are visible for basemap and routing; current flood and heat risk data stop at this boundary.
+        - generic [ref=f3e58]:
+          - strong [ref=f3e59]: Runoff on terrain depressions
+          - generic [ref=f3e60]: 0 mm
+          - generic [ref=f3e62]: ">0–5 mm"
+          - generic [ref=f3e64]: ">5–20 mm"
+          - generic [ref=f3e66]: ">20 mm"
+          - generic [ref=f3e68]: Permanent water
+      - generic:
+        - heading "Bengaluru" [level=1]
+        - paragraph: GBA risk data · map extends south to Anekal
+      - complementary "Car routes" [ref=f3e70]:
+        - generic [ref=f3e71]:
+          - heading "Car routes" [level=2] [ref=f3e72]
+          - button "Close panel" [ref=f3e73] [cursor=pointer]: ×
+        - generic [ref=f3e75]:
+          - region "Source" [ref=f3e76]:
+            - heading "Source" [level=3] [ref=f3e77]:
+              - generic [aria-hidden] [ref=f3e78]: A
+              - text: Source
+            - generic [ref=f3e79]:
+              - generic [ref=f3e80]:
+                - generic [ref=f3e81]: Search source by place name
+                - searchbox "Search source by place name" [ref=f3e82]: Anekal
+                - button "Search" [ref=f3e83] [cursor=pointer]
+              - list "Matching source locations" [ref=f3e102]:
+                - listitem [ref=f3e103]:
+                  - button "Nova Granites (India) Ltd, 25A, Krishnasagara, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India industrial" [ref=f3e104] [cursor=pointer]:
+                    - generic [ref=f3e105]: Nova Granites (India) Ltd, 25A, Krishnasagara, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India
+                    - generic [ref=f3e106]: industrial
+                - listitem [ref=f3e107]:
+                  - button "Buhler (India) Ltd, 13DP, Balegaranahalli, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India industrial" [ref=f3e108] [cursor=pointer]:
+                    - generic [ref=f3e109]: Buhler (India) Ltd, 13DP, Balegaranahalli, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India
+                    - generic [ref=f3e110]: industrial
+                - listitem [ref=f3e111]:
+                  - button "Elva Induction India Ltd, 16C&D, Icchanguru, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India industrial" [ref=f3e112] [cursor=pointer]:
+                    - generic [ref=f3e113]: Elva Induction India Ltd, 16C&D, Icchanguru, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India
+                    - generic [ref=f3e114]: industrial
+                - listitem [ref=f3e115]:
+                  - button "Jallan Polypack India Pvt.Ltd, 8C, Icchanguru, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India industrial" [ref=f3e116] [cursor=pointer]:
+                    - generic [ref=f3e117]: Jallan Polypack India Pvt.Ltd, 8C, Icchanguru, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India
+                    - generic [ref=f3e118]: industrial
+                - listitem [ref=f3e119]:
+                  - button "Michell Bearings (India) Pvt Ltd, 8D, Icchanguru, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India industrial" [ref=f3e120] [cursor=pointer]:
+                    - generic [ref=f3e121]: Michell Bearings (India) Pvt Ltd, 8D, Icchanguru, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India
+                    - generic [ref=f3e122]: industrial
+              - paragraph [ref=f3e84]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=f3e85] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Use my current location" [ref=f3e86] [cursor=pointer]
+            - button "Pick source on map" [ref=f3e87] [cursor=pointer]
+          - region "Destination" [ref=f3e88]:
+            - heading "Destination" [level=3] [ref=f3e89]:
+              - generic [aria-hidden] [ref=f3e90]: B
+              - text: Destination
+            - generic [ref=f3e91]:
+              - generic [ref=f3e92]:
+                - generic [ref=f3e93]: Search destination by place name
+                - searchbox "Search destination by place name" [ref=f3e94]
+                - button "Search" [disabled] [ref=f3e95]
+              - paragraph [ref=f3e96]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=f3e97] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Pick destination on map" [ref=f3e98] [cursor=pointer]
+          - button "Compare car routes" [disabled] [ref=f3e99]
+          - paragraph [ref=f3e100]:
+            - text: Comparing sends both points to the routing provider.
+            - link "OpenStreetMap fallback data" [ref=f3e101] [cursor=pointer]:
+              - /url: https://www.openstreetmap.org/fixthemap
+            - text: .

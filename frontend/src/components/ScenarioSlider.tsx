@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useFloodStore } from "../store/useFloodStore";
+import { floodDemoPreset, useFloodStore } from "../store/useFloodStore";
 
 export default function ScenarioSlider() {
   const scenarios = useFloodStore((s) => s.scenarios);
@@ -9,6 +9,7 @@ export default function ScenarioSlider() {
   const runCustomRainfall = useFloodStore((s) => s.runCustomRainfall);
   const loading = useFloodStore((s) => s.loading);
   const active = useFloodStore((s) => s.simulationActive);
+  const applied = useFloodStore((s) => s.appliedRainfall);
   const stopSimulation = useFloodStore((s) => s.stopSimulation);
   const heatOffset = useFloodStore((s) => s.heatOffsetC);
   const showRoads = useFloodStore((s) => s.layerVisibility.cityRoads);
@@ -20,7 +21,9 @@ export default function ScenarioSlider() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (values.preset) {
+    if (values.preset === floodDemoPreset.id) {
+      void runCustomRainfall(floodDemoPreset.intensity, floodDemoPreset.duration, Number(values.temperature), true);
+    } else if (values.preset) {
       void runScenario(values.preset, Number(values.temperature));
     } else {
       void runCustomRainfall(Number(values.intensity), Number(values.duration), Number(values.temperature));
@@ -34,6 +37,10 @@ export default function ScenarioSlider() {
         <label>
           Preset
           <select value={values.preset} onChange={(event) => {
+            if (event.target.value === floodDemoPreset.id) {
+              setDraft({ ...values, preset: floodDemoPreset.id, intensity: String(floodDemoPreset.intensity), duration: String(floodDemoPreset.duration) });
+              return;
+            }
             const preset = scenarios.find((s) => s.scenario_id === event.target.value);
             setDraft(preset ? {
               ...values,
@@ -43,6 +50,7 @@ export default function ScenarioSlider() {
             } : { ...values, preset: "" });
           }}>
             <option value="">Custom rainfall</option>
+            <option value={floodDemoPreset.id}>Flood demo · 200 mm in 2 hours</option>
             {scenarios.map((s) => <option key={s.scenario_id} value={s.scenario_id}>{s.label}</option>)}
           </select>
         </label>
@@ -64,11 +72,12 @@ export default function ScenarioSlider() {
             aria-describedby="temperature-offset-help"
             onChange={(event) => setDraft({ ...values, temperature: event.target.value })} />
         </label>
-        <p id="temperature-offset-help" className="scenario-result">Adds or subtracts from the Landsat surface-temperature layer for this scenario. Live weather and routing use their own data.</p>
+        <p id="temperature-offset-help" className="scenario-result">Adjusts the Landsat surface-temperature layer. Air and feels-like forecasts use live weather data.</p>
         <button className="primary-button" disabled={loading}>
           {loading ? "Running…" : "Run flood simulation"}
         </button>
       </form>
+      {applied && <p className="scenario-result" role="status"><strong>{applied.floodDemo ? "Flood demo running" : "Rainfall simulation running"}</strong> · {Number(applied.rainfallMm.toFixed(1))} mm in {applied.durationMin} min. Open Car routes to see the effect on a trip.</p>}
       <div className="scenario-actions">
         {(active || loading) && <button type="button" className="pick-button" onClick={stopSimulation}>Stop simulation</button>}
         {active ? <label className="pilot-layer-option">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type WeatherAvailabilityResponse } from "../api/client";
+import { api, type AssistantOutlook, type WeatherAvailabilityResponse } from "../api/client";
 import Icon, { type IconName } from "./Icon";
 import TwoDayWeatherReport from "./TwoDayWeatherReport";
 
@@ -41,10 +41,11 @@ function condition(code?: number | null, isDay?: number | null): Condition {
   return { label: "Condition unavailable", sky: "neutral", icon: "thermometer" };
 }
 
-export default function ThreeHourOutlook({ open, onOpen, onClose }: {
+export default function ThreeHourOutlook({ open, onOpen, onClose, outlook }: {
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
+  outlook: AssistantOutlook | null;
 }) {
   const [weather, setWeather] = useState<WeatherAvailabilityResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +181,7 @@ export default function ThreeHourOutlook({ open, onOpen, onClose }: {
             {forecast && animated && <button type="button" className="weather-motion-toggle"
               onClick={() => setPaused((value) => !value)}>{paused ? "Resume background motion" : "Pause background motion"}</button>}
           </div>
-          <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport />}</div>
+          <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport outlook={outlook} />}</div>
         </div>
       </dialog>
     </>

@@ -1,0 +1,110 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - link "CityShield home" [ref=f2e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=f2e10]:
+      - generic [ref=f2e11]: Find an area
+      - searchbox "Find an area" [ref=f2e12]
+    - generic [ref=f2e13]:
+      - button "Routes" [expanded] [ref=f2e14] [cursor=pointer]
+      - button "Next 3 hours" [ref=f2e15] [cursor=pointer]
+      - button "Rainfall scenario" [ref=f2e16] [cursor=pointer]
+      - button "Data & models" [ref=f2e17] [cursor=pointer]
+  - main "Bengaluru map" [ref=f2e18]:
+    - region "Map layers" [ref=f2e19]:
+      - generic [ref=f2e20]:
+        - generic [ref=f2e21] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=f2e22]
+          - generic [ref=f2e24]: Flood
+        - generic [ref=f2e25] [cursor=pointer]:
+          - checkbox "Heat" [ref=f2e26]
+          - generic [ref=f2e28]: Heat
+        - generic [ref=f2e29] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=f2e30]
+          - generic [ref=f2e32]: Combined exposure
+      - paragraph [ref=f2e34]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=f2e35]:
+      - generic [ref=f2e36]:
+        - generic "Interactive Bengaluru map" [ref=f2e37]:
+          - generic:
+            - region "Map" [ref=f2e38]
+            - generic "Map marker": A
+            - generic "Map marker": B
+          - generic:
+            - generic:
+              - button "Find my location" [ref=f2e40] [cursor=pointer]
+              - generic [ref=f2e42]:
+                - button "Zoom in" [ref=f2e43] [cursor=pointer]
+                - button "Zoom out" [ref=f2e45] [cursor=pointer]
+              - group [ref=f2e51]:
+                - generic "Toggle attribution" [ref=f2e52] [cursor=pointer]
+                - generic [ref=f2e53]:
+                  - text: GBA delimitation via OpenCity and bharatlas | ©
+                  - link "OpenStreetMap" [ref=f2e54] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=f2e55] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - button "View whole city" [ref=f2e47] [cursor=pointer]
+      - generic "Map legend" [ref=f2e48]:
+        - status [ref=f2e56]: City hexagons · averages
+        - generic [ref=f2e49]: Municipal boundary
+        - generic [ref=f2e57]:
+          - strong [ref=f2e58]: Runoff on terrain depressions
+          - generic [ref=f2e59]: 0 mm
+          - generic [ref=f2e61]: ">0–5 mm"
+          - generic [ref=f2e63]: ">5–20 mm"
+          - generic [ref=f2e65]: ">20 mm"
+          - generic [ref=f2e67]: Permanent water
+      - generic:
+        - heading "Greater Bengaluru" [level=1]
+        - paragraph: Municipal area · Research prototype
+      - complementary "Car routes" [ref=f2e131]:
+        - generic [ref=f2e70]:
+          - heading "Car routes" [level=2] [ref=f2e132]
+          - button "Close panel" [ref=f2e72] [cursor=pointer]: ×
+        - generic [ref=f2e134]:
+          - region "Source" [ref=f2e135]:
+            - heading "Source" [level=3] [ref=f2e136]:
+              - generic [aria-hidden] [ref=f2e137]: A
+              - text: Source
+            - generic [ref=f2e138]:
+              - generic [ref=f2e139]:
+                - generic [ref=f2e140]: Search source by place name
+                - searchbox "Search source by place name" [ref=f2e141]
+                - button "Search" [disabled] [ref=f2e142]
+              - paragraph [ref=f2e143]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=f2e144] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Use my current location" [ref=f2e145] [cursor=pointer]
+            - button "Pick source on map" [ref=f2e146] [cursor=pointer]
+            - generic [ref=f2e166]:
+              - generic [ref=f2e167]: BMS College of Engineering, 2nd Cross Road, Mount Joy, Hanumantha Nagar, Sunkenahalli, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560019, India
+              - button "Clear source" [ref=f2e168] [cursor=pointer]: ×
+          - region "Destination" [ref=f2e147]:
+            - heading "Destination" [level=3] [ref=f2e148]:
+              - generic [aria-hidden] [ref=f2e149]: B
+              - text: Destination
+            - generic [ref=f2e150]:
+              - generic [ref=f2e151]:
+                - generic [ref=f2e152]: Search destination by place name
+                - searchbox "Search destination by place name" [ref=f2e153]
+                - button "Search" [disabled] [ref=f2e170]
+              - paragraph [ref=f2e155]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=f2e156] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Pick destination on map" [ref=f2e157] [cursor=pointer]
+            - generic [ref=f2e177]:
+              - generic [ref=f2e178]: Taj West End, Race Course Road, Fair Field Layout, High Grounds, Sampangirama Nagar, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560001, India
+              - button "Clear destination" [ref=f2e179] [cursor=pointer]: ×
+          - button "Compare car routes" [ref=f2e158] [cursor=pointer]
+          - paragraph [ref=f2e159]:
+            - text: Comparing sends both points to the routing provider.
+            - link "OpenStreetMap fallback data" [ref=f2e160] [cursor=pointer]:
+              - /url: https://www.openstreetmap.org/fixthemap
+            - text: .

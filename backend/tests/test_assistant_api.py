@@ -20,11 +20,36 @@ def test_city_watch_uses_first_forecast_hour_with_distinct_screened_cells(monkey
         ],
     }
     cells = [(f"{i}:20:0",) for i in range(10)] + [("1:20:1",)]
-    monkeypatch.setattr(routes_assistant, "get_weather", lambda: weather)
+    monkeypatch.setattr(routes_assistant, "get_alert_weather", lambda: [weather])
     monkeypatch.setattr(routes_assistant, "load_grid", lambda: {"cells": cells})
     monkeypatch.setattr(routes_assistant, "screen_values", lambda _grid, rain: [8 if rain > 3 else 0] * len(cells))
     result = routes_assistant.assistant_outlook()
     assert result["alert"] == {"valid_at": "2026-11-26T03:00:00+00:00", "cells": 10}
+
+
+def test_city_watch_limits_rain_to_its_forecast_zone_and_keeps_heat(monkeypatch):
+    time = "2026-11-26T03:00:00+00:00"
+    inputs = [
+        {"recent_rain_mm": 0, "upcoming_rain_mm": rain, "forecast_through": time,
+         "hourly_forecast": [{"precipitation_mm": rain, "valid_at": time, "feels_like_c": heat}],
+         "provenance": {"grid_cell_center": {"longitude": lng, "latitude": 12.98}}}
+        for lng, rain, heat in [(77.59, 0, 42), (77.72, 10, 30)]
+    ]
+    monkeypatch.setattr(routes_assistant, "get_alert_weather", lambda: inputs)
+    monkeypatch.setattr(routes_assistant, "load_grid", lambda: {"cells": [(f"{i}:20:0",) for i in range(20)]})
+    monkeypatch.setattr(routes_assistant, "_nearest_forecast_points", lambda _locations: (0,) * 9 + (1,) * 11)
+    monkeypatch.setattr(routes_assistant, "screen_values", lambda _grid, rain: [rain] * 20)
+
+    result = routes_assistant.assistant_outlook()
+    assert result["alert"] == {"valid_at": time, "cells": 11}
+    assert result["heat"] == {"valid_at": time, "feels_like_c": 42}
+    assert result["forecast_points"] == 2
+    def missing_grid():
+        raise FileNotFoundError
+    monkeypatch.setattr(routes_assistant, "load_grid", missing_grid)
+    result = routes_assistant.assistant_outlook()
+    assert not result["flood_screen_available"]
+    assert result["heat"]["feels_like_c"] == 42
 
 
 def test_runoff_spans_keep_order_when_path_doubles_back():
@@ -65,7 +90,8 @@ def test_refresh_keeps_traffic_only_when_provider_matches_the_selected_path(monk
     def fake_provider(_url, params, *, body):
         assert params["reconstructionMode"] == "strict"
         assert len(body["supportingPoints"]) == 2
-        return {"routes": [{"legs": [{"points": body["supportingPoints"]}], "sections": []}]}
+        return {"routes": [{"legs": [{"points": body["supportingPoints"]}],
+                            "summary": {"trafficDelayInSeconds": 0}, "sections": []}]}
 
     monkeypatch.setattr(routes_assistant, "fetch_json", fake_provider)
     try:

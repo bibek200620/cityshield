@@ -1,0 +1,55 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "CityShield home" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=e10]:
+      - generic [ref=e11]: Find an area
+      - searchbox "Find an area" [ref=e12]
+    - button "Open tools menu" [active] [ref=e77] [cursor=pointer]
+  - main "Bengaluru map" [ref=e20]:
+    - region "Map layers" [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=e24]
+          - generic [ref=e26]: Flood
+        - generic [ref=e27] [cursor=pointer]:
+          - checkbox "Heat" [ref=e28]
+          - generic [ref=e30]: Heat
+        - generic [ref=e31] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=e32]
+          - generic [ref=e34]: Combined exposure
+      - paragraph [ref=e36]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic "Interactive Bengaluru map" [ref=e39]:
+          - region "Map" [ref=e40]
+          - generic:
+            - generic:
+              - button "Find my location" [ref=e42] [cursor=pointer]
+              - generic [ref=e44]:
+                - button "Zoom in" [ref=e45] [cursor=pointer]
+                - button "Zoom out" [ref=e47] [cursor=pointer]
+              - group [ref=e52]:
+                - generic "Toggle attribution" [ref=e53] [cursor=pointer]
+                - generic [ref=e54]:
+                  - text: ©
+                  - link "OpenStreetMap" [ref=e55] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=e56] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - button "View whole city" [ref=e49] [cursor=pointer]
+      - generic "Map legend" [ref=e50]:
+        - status [ref=e57]: City hexagons · averages
+        - generic [ref=e51]: Flood and heat data use the 2025 GBA coverage; remaining areas show the basemap and routing only.
+        - generic [ref=e58]:
+          - strong [ref=e59]: Runoff on terrain depressions
+          - generic [ref=e60]: 0 mm
+          - generic [ref=e62]: ">0–5 mm"
+          - generic [ref=e64]: ">5–20 mm"
+          - generic [ref=e66]: ">20 mm"
+          - generic [ref=e68]: Permanent water
+      - generic:
+        - heading "Bengaluru" [level=1]
+        - paragraph: GBA risk data · map extends south to Anekal

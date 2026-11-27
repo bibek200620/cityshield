@@ -87,14 +87,37 @@ def test_traffic_sections_resolve_overlap_and_preserve_point_index_boundaries():
         {"sectionType": "TRAFFIC", "startPointIndex": 2, "endPointIndex": 3, "simpleCategory": "ROAD_CLOSURE"},
     ]}
     assert routes_driving.traffic_segments(route, 6) == [
-        {"start_index": 0, "end_index": 1, "level": "clear"},
+        {"start_index": 0, "end_index": 1, "level": "unknown"},
         {"start_index": 1, "end_index": 2, "level": "slow"},
         {"start_index": 2, "end_index": 3, "level": "heavy"},
         {"start_index": 3, "end_index": 4, "level": "slow"},
-        {"start_index": 4, "end_index": 5, "level": "clear"},
+        {"start_index": 4, "end_index": 5, "level": "unknown"},
     ]
     route["sections"][0]["endPointIndex"] = 6
-    assert routes_driving.traffic_segments(route, 6) is None
+    assert routes_driving.traffic_segments(route, 6) == [
+        {"start_index": 0, "end_index": 2, "level": "unknown"},
+        {"start_index": 2, "end_index": 3, "level": "heavy"},
+        {"start_index": 3, "end_index": 5, "level": "unknown"},
+    ]
+
+
+def test_aggregate_delay_without_a_location_does_not_color_route_blue():
+    route = {"summary": {"travelTimeInSeconds": 820, "noTrafficTravelTimeInSeconds": 600, "trafficDelayInSeconds": 0}, "sections": []}
+    assert routes_driving.traffic_segments(route, 10) is None
+    route["summary"]["travelTimeInSeconds"] = 600
+    assert routes_driving.traffic_segments(route, 10) == [{"start_index": 0, "end_index": 9, "level": "clear"}]
+
+
+def test_flood_scenario_changes_exposure_on_the_same_bengaluru_road():
+    client = TestClient(app)
+    coordinates = [[[77.637, 12.971], [77.657, 12.948], [77.677, 12.926]]]
+    dry = client.post("/api/drive/scenario", json={"rainfall_mm": 0, "routes": coordinates}).json()["routes"][0]
+    flood = client.post("/api/drive/scenario", json={"rainfall_mm": 200, "routes": coordinates}).json()["routes"][0]
+    assert dry["exposed_km"] == 0 and dry["spans"] == []
+    assert 0 < flood["high_km"] < flood["exposed_km"] < flood["route_km"]
+    assert flood["covered_km"] == dry["covered_km"]
+    assert all(0 <= span["start"] < span["end"] <= 1 for span in flood["spans"])
+    assert client.post("/api/drive/scenario", json={"rainfall_mm": 200, "routes": [[[0, 0], [1, 1]]]}).status_code == 422
 
 
 def test_route_ranking_uses_comparable_hazards_and_keeps_provider_etas(monkeypatch):

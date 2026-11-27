@@ -38,7 +38,11 @@ export default function TrafficBrief({ drive, onRead }: {
     return () => { mounted.current = false; };
   }, []);
   const route = drive.result?.routes.find((option) => option.id === drive.selectedId);
-  const brief = drive.result && route ? tripBrief(drive.result, route) : null;
+  const brief = drive.result && route ? tripBrief(drive.result, { ...route, traffic_segments: drive.liveTrafficSegments ?? route.traffic_segments }) : null;
+  const scenario = drive.scenarioRoutes.find((option) => option.id === route?.id);
+  const scenarioSummary = scenario && scenario.covered_km > 0
+    ? `In the rainfall demo, ${scenario.exposed_km.toFixed(2)} kilometres cross screened areas. The demo estimate is ${minutes(scenario.demoEtaSeconds)} minutes.`
+    : "";
   const navigating = drive.navigationMode !== "idle";
 
   async function check() {
@@ -69,12 +73,13 @@ export default function TrafficBrief({ drive, onRead }: {
         <div className="mascot-result-title">
           <h3>{brief.eta} min · {route.distance_km.toFixed(1)} km</h3>
           {onRead && <button type="button" className="mascot-secondary"
-            onClick={() => onRead(`The route estimate is ${brief.eta} minutes. ${brief.traffic} ${brief.forecast} ${brief.exposure} ${brief.reports}`)}>Read traffic</button>}
+            onClick={() => onRead(`The route estimate is ${brief.eta} minutes. ${brief.traffic} ${brief.forecast} ${brief.exposure} ${brief.reports} ${scenarioSummary}`)}>Read traffic</button>}
         </div>
         <p>{brief.traffic}</p>
         <p>{brief.forecast}</p>
         <p>{brief.exposure}</p>
         <p>{brief.reports}</p>
+        {drive.scenario && <p>{scenarioSummary || (drive.scenarioValue ? "Route runoff screening is unavailable for this scenario." : "Screening the route against the rainfall scenario…")}</p>}
         <p>Routing source: {drive.result.source}.</p>
       </section>}
     </div>

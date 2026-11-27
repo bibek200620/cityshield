@@ -23,6 +23,9 @@ WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 INCIDENT_URL = "https://api.tomtom.com/traffic/services/5/incidentDetails"
 SOURCE = "Open-Meteo weather model"
 WEATHER_LOCATION = {"latitude": 12.98, "longitude": 77.59}
+WATCH_LOCATIONS = (WEATHER_LOCATION, {"latitude": 13.08, "longitude": 77.58},
+                   {"latitude": 12.98, "longitude": 77.73}, {"latitude": 12.86, "longitude": 77.61},
+                   {"latitude": 12.99, "longitude": 77.48})
 WEATHER_UNITS = {
     "air_temperature": "°C",
     "apparent_temperature": "°C",
@@ -64,7 +67,7 @@ def _optional_weather_int(value: object, allowed: range) -> int | None:
     return None
 
 
-def parse_weather(payload: dict, now: float, retrieved_at: str | None = None) -> dict:
+def parse_weather(payload: dict, now: float, retrieved_at: str | None = None, *, location: dict | None = None) -> dict:
     """Validate Open-Meteo units, timestamps and spatial provenance before use."""
     if not isinstance(payload, dict):
         raise WeatherDataError("invalid_data", "Weather response must be an object")
@@ -175,7 +178,7 @@ def parse_weather(payload: dict, now: float, retrieved_at: str | None = None) ->
         "model_identifier": None,
         "model_version": None,
         "model_note": "The response does not identify the exact model or model run.",
-        "requested_location": WEATHER_LOCATION,
+        "requested_location": location or WEATHER_LOCATION,
         "grid_cell_center": {
             "latitude": grid_latitude,
             "longitude": grid_longitude,
@@ -211,17 +214,41 @@ def parse_weather(payload: dict, now: float, retrieved_at: str | None = None) ->
     }
 
 
-@lru_cache(maxsize=2)
-def weather_snapshot(_five_minute_slot: int) -> dict:
-    payload = fetch_json(WEATHER_URL, {
-        "latitude": WEATHER_LOCATION["latitude"], "longitude": WEATHER_LOCATION["longitude"],
+def weather_parameters() -> dict:
+    return {
         "current": "temperature_2m,apparent_temperature,weather_code,is_day",
         "hourly": "precipitation,temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day",
         "past_hours": 2, "forecast_hours": 4,
         "temperature_unit": "celsius", "precipitation_unit": "mm",
         "timeformat": "unixtime", "timezone": "UTC", "cell_selection": "land",
-    })
+    }
+
+
+@lru_cache(maxsize=2)
+def weather_snapshot(_five_minute_slot: int) -> dict:
+    payload = fetch_json(WEATHER_URL, {**weather_parameters(), **WEATHER_LOCATION})
     return {"payload": payload, "retrieved_at": iso_utc(int(time()))}
+
+
+@lru_cache(maxsize=2)
+def city_watch_snapshot(_five_minute_slot: int) -> tuple[list, str]:
+    payload = fetch_json(WEATHER_URL, {
+        **weather_parameters(),
+        **{key: ",".join(str(location[key]) for location in WATCH_LOCATIONS) for key in ("latitude", "longitude")},
+    })
+    if not isinstance(payload, list) or len(payload) != len(WATCH_LOCATIONS):
+        raise WeatherDataError("invalid_data", "The city watch requires all five forecast points")
+    return payload, iso_utc(int(time()))
+
+
+def get_alert_weather() -> list[dict]:
+    now = time()
+    try:
+        payload, retrieved_at = city_watch_snapshot(int(now // 300))
+        return [parse_weather(point, now, retrieved_at, location=location) for point, location in zip(payload, WATCH_LOCATIONS)]
+    except (*PROVIDER_ERRORS, OSError):
+        fallback = get_weather()
+        return [fallback] if fallback["status"] == "ready" else []
 
 
 @lru_cache(maxsize=2)
@@ -405,7 +432,7 @@ def annotate_runoff(routes: list[dict], lines: list, weather: dict) -> bool:
             "current_km": covered_km(line, [cells[i] for i in nearby if current[i] >= RUNOFF_THRESHOLD_MM]),
             "forecast_km": round(line.intersection(forecast_area).length / 1000, 2),
         }
-        if weather["upcoming_rain_mm"] >= 5:
+        if weather["upcoming_rain_mm"] > 0:
             route["forecast_runoff_spans"] = runoff_spans(line, forecast_area)
         route["runoff_comparable"] = route["runoff"]["covered_km"] >= 0.95 * line.length / 1000
 
@@ -416,6 +443,25 @@ def annotate_runoff(routes: list[dict], lines: list, weather: dict) -> bool:
     return True
 
 
+def scenario_route_exposure(lines: list[LineString], rainfall_mm: float) -> list[dict]:
+    grid, cells, index = projected_grid()
+    values = screen_values(grid, rainfall_mm)
+    results = []
+    for line in lines:
+        nearby = [int(i) for i in index.query(line, predicate="intersects") if values[i] is not None]
+        wet = unary_union([cells[i] for i in nearby if values[i] >= RUNOFF_THRESHOLD_MM])
+        high = unary_union([cells[i] for i in nearby if values[i] > 20])
+        results.append({
+            "covered_km": covered_km(line, [cells[i] for i in nearby]),
+            "route_km": line.length / 1000,
+            "exposed_km": line.intersection(wet).length / 1000,
+            "high_km": line.intersection(high).length / 1000,
+            "spans": runoff_spans(line, wet),
+            "high_spans": runoff_spans(line, high),
+        })
+    return results
+
+
 def annotate_conditions(routes: list[dict], key: str | None) -> dict:
     weather = get_weather()
     lines = [transform(PROJECT, LineString(route["coordinates"])) for route in routes]
@@ -424,7 +470,7 @@ def annotate_conditions(routes: list[dict], key: str | None) -> dict:
     if key:
         try:
             payload = fetch_json(INCIDENT_URL, {
-                "key": key, "bbox": "77.43,12.81,77.81,13.17",
+                "key": key, "bbox": "77.43,12.61,77.81,13.17",
                 "categoryFilter": "Flooding", "timeValidityFilter": "present",
                 "fields": "{incidents{geometry{type,coordinates},properties{id,iconCategory}}}",
             })

@@ -1,0 +1,582 @@
+{
+  "frontend/e2e/combined-map.spec.ts": {
+    "mtime": 1795652489.5981088,
+    "ast_hash": "2a678577e7b4642810661a5e04ae25d0",
+    "semantic_hash": ""
+  },
+  "frontend/package.json": {
+    "mtime": 1795641438.4069412,
+    "ast_hash": "f75109b656e0e80bb0fe3c3953f59411",
+    "semantic_hash": ""
+  },
+  "frontend/playwright.config.ts": {
+    "mtime": 1795641438.4076674,
+    "ast_hash": "cfa1a5dabdd863cf05c3aeb9353fa33d",
+    "semantic_hash": ""
+  },
+  "frontend/postcss.config.js": {
+    "mtime": 1795614731.945154,
+    "ast_hash": "c735540bb63936a123bc867d950c9f69",
+    "semantic_hash": ""
+  },
+  "frontend/public/data/bengaluru-heat.json": {
+    "mtime": 1795621388.7556133,
+    "ast_hash": "ebaf1148c35b8543e1783f9cfb461f4e",
+    "semantic_hash": ""
+  },
+  "frontend/public/data/bengaluru-hexes.json": {
+    "mtime": 1795621387.4069035,
+    "ast_hash": "96a0f7ad80d5f7100b41f267115e6fbd",
+    "semantic_hash": ""
+  },
+  "frontend/public/data/bengaluru-wards.json": {
+    "mtime": 1795620019.8318279,
+    "ast_hash": "bf22aabc8eadb14dc85cd06a62ad83b8",
+    "semantic_hash": ""
+  },
+  "frontend/src/App.tsx": {
+    "mtime": 1795652732.0251276,
+    "ast_hash": "a315cb388add17b31917b2aff13fd3e6",
+    "semantic_hash": ""
+  },
+  "frontend/src/api/client.ts": {
+    "mtime": 1795652695.3387687,
+    "ast_hash": "70025bcb42bfc2680091c3f82db893c9",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/DrivingPlanner.tsx": {
+    "mtime": 1795636860.8415883,
+    "ast_hash": "8fc7e2113f134563c290c9c3fb5f9758",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ExplainabilityPanel.tsx": {
+    "mtime": 1795625241.6842303,
+    "ast_hash": "b649c0b77a8d3aff478cb9d70e5ea795",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/Header.tsx": {
+    "mtime": 1795617181.1667414,
+    "ast_hash": "64ec64b255cf6cc0d549501a23b60eaf",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/HeatProvenancePanel.tsx": {
+    "mtime": 1795619564.9118896,
+    "ast_hash": "b18924ea10a22f750823f4276d5480f2",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/KpiStatsRow.tsx": {
+    "mtime": 1795617039.1910722,
+    "ast_hash": "d1a33b16c32567dac96b067c03da7994",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/MapView.tsx": {
+    "mtime": 1795653067.3512824,
+    "ast_hash": "f22fd91cc8ed440e1719c460c95fcb80",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/PlaceSearch.tsx": {
+    "mtime": 1795622051.2771678,
+    "ast_hash": "a89f47316a5bd7077b4ae181ee05ad19",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/RouteComparisonPanel.tsx": {
+    "mtime": 1795619564.9085834,
+    "ast_hash": "c6d72e8257d5f170abdd96c7c015a9b1",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/RoutePlaceSearch.tsx": {
+    "mtime": 1795652403.1787238,
+    "ast_hash": "c7861baacf25d098fd80b74f7f8be23b",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ScenarioSlider.tsx": {
+    "mtime": 1795621052.061991,
+    "ast_hash": "a123d5d78b79eb59dce8956b86f34786",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ThreeHourOutlook.tsx": {
+    "mtime": 1795636860.8427217,
+    "ast_hash": "29136649cbb375a4cea2f289de23e706",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/UncertaintyPanel.tsx": {
+    "mtime": 1795625241.6845489,
+    "ast_hash": "7e6a7ba361484cd07f2485d28058a2b6",
+    "semantic_hash": ""
+  },
+  "frontend/src/main.tsx": {
+    "mtime": 1795614731.946988,
+    "ast_hash": "f76ec142fe779e94a9376cca0cd252af",
+    "semantic_hash": ""
+  },
+  "frontend/src/map/drivingPlanner.ts": {
+    "mtime": 1795636860.8435233,
+    "ast_hash": "40922f9d7a3bf252ae061bdcf5d5508a",
+    "semantic_hash": ""
+  },
+  "frontend/src/map/hexGrid.ts": {
+    "mtime": 1795652271.0006664,
+    "ast_hash": "f3e71930aa9c8a82c6dd0cf7d35e6248",
+    "semantic_hash": ""
+  },
+  "frontend/src/store/useFloodStore.ts": {
+    "mtime": 1795625241.6852598,
+    "ast_hash": "03a42821c61d7dadb742d3853b6bf774",
+    "semantic_hash": ""
+  },
+  "frontend/src/theme.ts": {
+    "mtime": 1795625241.6854494,
+    "ast_hash": "9cba7d7ecc3e6a21649f65e3845726e0",
+    "semantic_hash": ""
+  },
+  "frontend/src/vite-env.d.ts": {
+    "mtime": 1795616773.580456,
+    "ast_hash": "75cb86042aee26e75f2c112076214491",
+    "semantic_hash": ""
+  },
+  "frontend/tailwind.config.ts": {
+    "mtime": 1795625241.6857262,
+    "ast_hash": "7843b782a2b7cf2e5a9eb92b16abdf82",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.json": {
+    "mtime": 1795614731.9474304,
+    "ast_hash": "e1441def0e28e1c88587851689a70ba1",
+    "semantic_hash": ""
+  },
+  "frontend/vite.config.ts": {
+    "mtime": 1795614731.9475696,
+    "ast_hash": "3db3d402b50bdbc88b175847896c65ed",
+    "semantic_hash": ""
+  },
+  "frontend/index.html": {
+    "mtime": 1795620225.1256876,
+    "ast_hash": "308021ee255894baaf35856a921db998",
+    "semantic_hash": ""
+  },
+  "frontend/public/cityshield.svg": {
+    "mtime": 1795619630.8486571,
+    "ast_hash": "546eedc1bf1485bd302801e6391ad9c4",
+    "semantic_hash": ""
+  },
+  "backend/app/__init__.py": {
+    "mtime": 1795614731.929377,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/api/__init__.py": {
+    "mtime": 1795614731.929487,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_backtest.py": {
+    "mtime": 1795614731.9296193,
+    "ast_hash": "f9aac96edb719738195c82735ac95f1e",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_city_flood.py": {
+    "mtime": 1795623206.6510322,
+    "ast_hash": "9cd1ae5e908c9c6bff284c9a1889ec44",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_driving.py": {
+    "mtime": 1795636860.8337538,
+    "ast_hash": "702da5fc0539c381ae322e0be374cece",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_explain.py": {
+    "mtime": 1795614731.929724,
+    "ast_hash": "f3ae4a7e71af74b1ff7e6e19253e0e76",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_exposure.py": {
+    "mtime": 1795618730.717066,
+    "ast_hash": "e423dba7197a8bbfde3e0c9e91b18024",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_heat.py": {
+    "mtime": 1795618593.7184582,
+    "ast_hash": "261973b29c6de63de6694dac6e8fc71a",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_infra.py": {
+    "mtime": 1795614731.929826,
+    "ast_hash": "34ef9d4670ce4274d450603625f66bed",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_places.py": {
+    "mtime": 1795636860.834025,
+    "ast_hash": "788218a29537d1cdde8108108772e769",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_route.py": {
+    "mtime": 1795625241.6826866,
+    "ast_hash": "55ec1264343c6630a20429041813e81a",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_scenarios.py": {
+    "mtime": 1795614731.9300761,
+    "ast_hash": "a299f6d41e01530a78fd4afcc0a883b3",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_simulate.py": {
+    "mtime": 1795618035.35093,
+    "ast_hash": "bd89deca5eec83a5c16784fdfe6dfb03",
+    "semantic_hash": ""
+  },
+  "backend/app/api/routes_weather.py": {
+    "mtime": 1795623244.906994,
+    "ast_hash": "17bd42a97c92cd255d8e8c7869ff3c4c",
+    "semantic_hash": ""
+  },
+  "backend/app/api/schemas.py": {
+    "mtime": 1795618035.3507931,
+    "ast_hash": "1ab2c67206901660e06cc58a2e26201f",
+    "semantic_hash": ""
+  },
+  "backend/app/api/ws_live.py": {
+    "mtime": 1795614731.930906,
+    "ast_hash": "a144d16440eb0fe2fe5cda1c0bbc9d5a",
+    "semantic_hash": ""
+  },
+  "backend/app/core/__init__.py": {
+    "mtime": 1795614731.931023,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/core/config.py": {
+    "mtime": 1795626537.7591147,
+    "ast_hash": "60b8ac868cadee752070e9d198e91a55",
+    "semantic_hash": ""
+  },
+  "backend/app/core/db.py": {
+    "mtime": 1795614731.9315324,
+    "ast_hash": "7d056948b7dc10c88d6ccc8632ecb69a",
+    "semantic_hash": ""
+  },
+  "backend/app/geo/__init__.py": {
+    "mtime": 1795617270.6844344,
+    "ast_hash": "94684406f9b59f64b0011720afdbd232",
+    "semantic_hash": ""
+  },
+  "backend/app/geo/exposure.py": {
+    "mtime": 1795618677.2043898,
+    "ast_hash": "53c0bb105b5638dac669b2053093488c",
+    "semantic_hash": ""
+  },
+  "backend/app/gis/__init__.py": {
+    "mtime": 1795614731.9316335,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/gis/dem.py": {
+    "mtime": 1795614731.9317791,
+    "ast_hash": "cb22be1692db41af954c25e80eaf4e23",
+    "semantic_hash": ""
+  },
+  "backend/app/gis/drainage_graph.py": {
+    "mtime": 1795643131.8716729,
+    "ast_hash": "946222aa2d7ae8b53a5215dd94e937e9",
+    "semantic_hash": ""
+  },
+  "backend/app/gis/real_ward.py": {
+    "mtime": 1795614731.9323401,
+    "ast_hash": "88443b3e3a48bb9e2759408db108b22e",
+    "semantic_hash": ""
+  },
+  "backend/app/gis/synthetic_ward.py": {
+    "mtime": 1795616990.7008467,
+    "ast_hash": "c0b7d30dde7fe52f2225e1050f2076de",
+    "semantic_hash": ""
+  },
+  "backend/app/gis/terrain_tiles.py": {
+    "mtime": 1795614731.9329424,
+    "ast_hash": "c209f7596cb133997b8565038b128a55",
+    "semantic_hash": ""
+  },
+  "backend/app/gis/ward_provider.py": {
+    "mtime": 1795614731.9331768,
+    "ast_hash": "7a67e82f8d8aedcc991d4a997baea472",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/__init__.py": {
+    "mtime": 1795616081.3565516,
+    "ast_hash": "7fe1778b077aca4962f6c120f9217487",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/city_study.py": {
+    "mtime": 1795643131.8723147,
+    "ast_hash": "a636e791f54699eed1b9afd06fc46aed",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/landsat.py": {
+    "mtime": 1795616431.4247026,
+    "ast_hash": "cecf32f3d3063e9969a2a271be319178",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/model.py": {
+    "mtime": 1795618633.557177,
+    "ast_hash": "b7a9f65ef9e9925ac2f6b69e8c363a84",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/reanalysis.py": {
+    "mtime": 1795636646.3422432,
+    "ast_hash": "eaf266e49d958278b3de66201b04c6fd",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/station_observations.py": {
+    "mtime": 1795643852.3803055,
+    "ast_hash": "abe348df349057a1cca5be912e8d290f",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/train.py": {
+    "mtime": 1795616172.8961897,
+    "ast_hash": "f4e16cb748dc9d160438895276f8f637",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/train_reanalysis.py": {
+    "mtime": 1795636656.9238265,
+    "ast_hash": "b1529276c2203db402732ec64678234d",
+    "semantic_hash": ""
+  },
+  "backend/app/heat/train_station_observations.py": {
+    "mtime": 1795643846.7559729,
+    "ast_hash": "42ba28996146dd881bc34b317478424e",
+    "semantic_hash": ""
+  },
+  "backend/app/hydrology/__init__.py": {
+    "mtime": 1795614731.9333854,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/hydrology/build_city_flood.py": {
+    "mtime": 1795620757.0873497,
+    "ast_hash": "52aeef189d760fb2c52165b5ee4ac97f",
+    "semantic_hash": ""
+  },
+  "backend/app/hydrology/scs_cn.py": {
+    "mtime": 1795614731.9336345,
+    "ast_hash": "52bff6e6ab4f77a98135c131c93b104e",
+    "semantic_hash": ""
+  },
+  "backend/app/main.py": {
+    "mtime": 1795626544.221538,
+    "ast_hash": "80488072c4cb3d6603d66cfe441625a5",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/__init__.py": {
+    "mtime": 1795614731.9356468,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/backtest.py": {
+    "mtime": 1795636860.8349454,
+    "ast_hash": "40caf64db989d56c83a37293ce5f7ada",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/explain.py": {
+    "mtime": 1795614731.9362326,
+    "ast_hash": "5f4519573a4677ffda9802a422c700ee",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/features.py": {
+    "mtime": 1795614731.936532,
+    "ast_hash": "9653262da27e7e37580b6b2008b14db5",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/flood_event_data.py": {
+    "mtime": 1795637818.5545428,
+    "ast_hash": "3379f34469a7b1e5ff55488cb1154d3e",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/flood_event_sources.json": {
+    "mtime": 1795646240.954757,
+    "ast_hash": "687262505a5427c0732dd49eff19b850",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/ifi_inventory.py": {
+    "mtime": 1795646430.01606,
+    "ast_hash": "9ee0d467ac91abe9b36fd078336f5122",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/infer.py": {
+    "mtime": 1795614731.936717,
+    "ast_hash": "2257f377848c2e22036de6c1e8b93c1e",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/model.py": {
+    "mtime": 1795614731.936909,
+    "ast_hash": "aa4aed1f77225135235fa5238a5ad409",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/physics_baseline.py": {
+    "mtime": 1795614731.9371536,
+    "ast_hash": "1d72e0884a9de1e981c405472838f78c",
+    "semantic_hash": ""
+  },
+  "backend/app/ml/train.py": {
+    "mtime": 1795643131.8727946,
+    "ast_hash": "4e3f15c5f23f06178af511b0c03d3c4c",
+    "semantic_hash": ""
+  },
+  "backend/app/routing/__init__.py": {
+    "mtime": 1795614731.9375925,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/routing/conditions.py": {
+    "mtime": 1795636860.8361177,
+    "ast_hash": "c07dad72986ad21410bbd92a861d2cc5",
+    "semantic_hash": ""
+  },
+  "backend/app/routing/criticality.py": {
+    "mtime": 1795614731.9378188,
+    "ast_hash": "6235acceccd2a9eacaeb989a7a585d45",
+    "semantic_hash": ""
+  },
+  "backend/app/routing/road_graph.py": {
+    "mtime": 1795614731.9381623,
+    "ast_hash": "0e1319948d581eebb77a03eb64337929",
+    "semantic_hash": ""
+  },
+  "backend/app/routing/router.py": {
+    "mtime": 1795625241.6834176,
+    "ast_hash": "df701a6c28f4aa37cd7837444e7fc7ce",
+    "semantic_hash": ""
+  },
+  "backend/app/scenarios/__init__.py": {
+    "mtime": 1795614731.9386208,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/app/scenarios/cache.py": {
+    "mtime": 1795616990.7016935,
+    "ast_hash": "a4839891b528a08df8cde84697559ccc",
+    "semantic_hash": ""
+  },
+  "backend/tests/__init__.py": {
+    "mtime": 1795614731.9394226,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "backend/tests/conftest.py": {
+    "mtime": 1795614731.942369,
+    "ast_hash": "1abae9ac26e3db836a74762ad4c11689",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_api_integration.py": {
+    "mtime": 1795636860.8365028,
+    "ast_hash": "186dfe8f602dc8959a486b85c57dc639",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_city_flood.py": {
+    "mtime": 1795620757.087899,
+    "ast_hash": "1eb026d5b83184a0d3aa71592e618046",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_city_study.py": {
+    "mtime": 1795643131.873239,
+    "ast_hash": "7911ba2b7b6755f35ec51b006f660943",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_criticality.py": {
+    "mtime": 1795614731.9428022,
+    "ast_hash": "f1a33b49625462415d9a8c2fd20ccd83",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_drainage_graph.py": {
+    "mtime": 1795643131.8737285,
+    "ast_hash": "f84ef4bbdf9c0c27bb1f7a98a8c36ae9",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_driving_api.py": {
+    "mtime": 1795636860.8372502,
+    "ast_hash": "0ef920b93f24eaaa04397a4e9cc9f591",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_exposure.py": {
+    "mtime": 1795618677.205098,
+    "ast_hash": "066a15d1238b91c3e00cda19baf43d98",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_exposure_api.py": {
+    "mtime": 1795641370.3269064,
+    "ast_hash": "8b994d6f21b764853751751f28c76fa7",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_flood_event_data.py": {
+    "mtime": 1795637761.9787436,
+    "ast_hash": "5e349256fc66954a7df646eddbff8845",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_frontiers_2020_sensor_summary.py": {
+    "mtime": 1795651468.447135,
+    "ast_hash": "9500c9407967a3991aa51315b8f258ee",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_heat.py": {
+    "mtime": 1795618603.8725219,
+    "ast_hash": "1efb6a5b477a67ac46888fb90832fa97",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_heat_api.py": {
+    "mtime": 1795616449.199635,
+    "ast_hash": "70dd7ef821dddb71718afc0483afdc31",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_heat_station_observations.py": {
+    "mtime": 1795643422.7718015,
+    "ast_hash": "69958acf2def4ea8843cbfa792f7b33b",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_ifi_inventory.py": {
+    "mtime": 1795646393.1403205,
+    "ast_hash": "5f2d0441f560e814e3b8cbd8e8d86049",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_ml_model.py": {
+    "mtime": 1795643131.8739727,
+    "ast_hash": "31b972de802b5346665070ed093e100b",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_model_cards.py": {
+    "mtime": 1795643621.611905,
+    "ast_hash": "ffe3715054964141341488fdfab46972",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_places_api.py": {
+    "mtime": 1795636860.8379657,
+    "ast_hash": "d4d6f8032b98ae0098cc2e76e1bf733c",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_reanalysis.py": {
+    "mtime": 1795636789.6161158,
+    "ast_hash": "70a7c8d1f39f5c95eb6d587ecb77737e",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_route_conditions.py": {
+    "mtime": 1795636860.8382552,
+    "ast_hash": "cd7110a3b4cfcd38e39350f9129ecb0f",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_router.py": {
+    "mtime": 1795614731.9431472,
+    "ast_hash": "129606f4100b23c2dd9302c980640535",
+    "semantic_hash": ""
+  },
+  "backend/tests/test_scs_cn.py": {
+    "mtime": 1795614731.9432788,
+    "ast_hash": "c7a4e00848a9f10be8464f6e1e50c52a",
+    "semantic_hash": ""
+  },
+  "backend/requirements.txt": {
+    "mtime": 1795616213.1418107,
+    "ast_hash": "7edc3e7d3c1e69b6d7837352a256340e",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/TwoDayWeatherReport.tsx": {
+    "mtime": 1795652870.4793909,
+    "ast_hash": "832d4b50b3a9cf840bd9a8ee7aed44d3",
+    "semantic_hash": ""
+  }
+}

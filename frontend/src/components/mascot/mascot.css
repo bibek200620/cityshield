@@ -118,8 +118,11 @@
   border-radius: 8px; color: #164584; background: #edf4ff; font-size: 11px; font-weight: 800;
 }
 .mascot-voice[aria-pressed="true"] { color: #fff; background: #2359a7; }
+.mascot-voice.mascot-expand { display: none; }
 .mascot-voice svg { width: 14px; height: 14px; }
 .mascot-expressions select { display: block; max-width: 190px; min-height: 36px; margin-top: 4px; padding: 4px; border: 1px solid #9aaac2; border-radius: 6px; font-size: 12px; background: white; }
+.mascot-voice-settings select { width: 100%; }
+.mascot-voice-settings .mascot-voice { margin-top: 4px; }
 .mascot-greeting { font-weight: 750; }
 .mascot-menu { display: grid; grid-template-columns: 1.25fr 1fr; gap: 6px; }
 .mascot-menu button, .mascot-primary, .mascot-secondary {
@@ -161,6 +164,9 @@
   .mascot-bubble { bottom: calc(100% + 10px); left: 0; width: min(273px, calc(100vw - 62px)); padding: 9px 11px; }
   .mascot-bubble[data-panel]:not([data-panel="home"]) { width: min(342px, calc(100vw - 62px)); }
   .mascot-tool :is(input[type="number"], input[type="search"]) { font-size: 16px; }
+  .mascot-bubble[data-compact="true"] .mascot-alerts { max-height: 87px; }
+  .mascot-bubble[data-compact="true"] :is(.mascot-menu, .mascot-actions) { display: none; }
+  .mascot-bubble[data-compact="true"] .mascot-expand { display: flex; justify-self: start; }
 }
 @media (max-height: 600px) {
   .map-mascot { --mascot-height: 94px; width: 86px; }

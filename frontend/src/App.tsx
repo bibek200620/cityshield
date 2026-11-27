@@ -7,6 +7,7 @@ import Icon, { type IconName } from "./components/Icon";
 import { useDrivingPlanner, type Endpoint } from "./map/drivingPlanner";
 import MapView, { type CityHeat } from "./components/MapView";
 import MapMascot from "./components/mascot/MapMascot";
+import { useAssistantOutlook } from "./map/assistantOutlook";
 import PlaceSearch, { type BengaluruPlace } from "./components/PlaceSearch";
 import RouteComparisonPanel from "./components/RouteComparisonPanel";
 import ScenarioSlider from "./components/ScenarioSlider";
@@ -94,13 +95,16 @@ function Dashboard() {
   const rainfallMm = useFloodStore((s) => s.currentRainfall.intensity * s.currentRainfall.duration / 60);
   const [place, setPlace] = useState<BengaluruPlace | null>(null);
   const [cityHeat, setCityHeat] = useState<CityHeat | null>(null);
-  const [cityFlood, setCityFlood] = useState<CityFloodResponse | null>(null);
+  const [cityFlood, setCityFlood] = useState<{ rainfallMm: number; value: CityFloodResponse } | null>(null);
   const [panel, setPanel] = useState<ToolPanel | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [weatherOpen, setWeatherOpen] = useState(false);
   const [reloadCount, setReloadCount] = useState(0);
   const [picking, setPicking] = useState<Endpoint | null>(null);
   const drive = useDrivingPlanner();
+  const outlook = useAssistantOutlook();
+  const scenarioRoute = drive.scenarioRoutes.find((route) => route.id === drive.selectedId);
+  const carDemo = drive.navigationMode === "simulating" || drive.navigationMode === "arrived";
   const toolPanel = useRef<HTMLElement>(null);
   const panelHeading = useRef<HTMLHeadingElement>(null);
   const toolsTrigger = useRef<HTMLButtonElement>(null);
@@ -145,17 +149,17 @@ function Dashboard() {
     const controller = new AbortController();
     api.getCityFlood(rainfallMm, controller.signal)
       .then((result) => {
-        if (!controller.signal.aborted) setCityFlood(result);
+        if (!controller.signal.aborted) setCityFlood({ rainfallMm, value: result });
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          setCityFlood({ status: "unavailable", message: "City flood screening could not load." });
+          setCityFlood({ rainfallMm, value: { status: "unavailable", message: "City flood screening could not load." } });
         }
       });
     return () => controller.abort();
   }, [rainfallMm, showCityFlood, reloadCount]);
 
-  const displayedFlood = cityFlood?.status === "ready" && cityFlood.rainfall_mm !== rainfallMm ? null : cityFlood;
+  const displayedFlood = cityFlood?.rainfallMm === rainfallMm ? cityFlood.value : null;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -191,10 +195,11 @@ function Dashboard() {
       <main id="atlas" className="atlas" aria-label="Bengaluru risk atlas" tabIndex={-1}>
         <section className="map-workspace" aria-labelledby="map-title">
           <MapView place={place} cityHeat={cityHeat}
-            assistant={<MapMascot drive={drive} />}
+            assistant={<MapMascot drive={drive} cityFlood={displayedFlood} outlook={outlook} />}
             cityFlood={displayedFlood?.status === "ready" ? displayedFlood : null}
             onReset={() => setPlace(null)}
             drivePoints={drive.points} drivingRoutes={drive.result?.routes} selectedDrivingId={drive.selectedId}
+            scenarioRoute={scenarioRoute} trafficSegments={drive.liveTrafficSegments}
             navigation={{ mode: drive.navigationMode, location: drive.navigationLocation, routeMatch: drive.routeMatch }}
             onPickPoint={picking ? (point) => {
               drive.setPoint(picking, { ...point, name: `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}` });
@@ -228,13 +233,18 @@ function Dashboard() {
             </div>}
           </div>
 
+          {carDemo && <div className="car-demo-control">
+            <span role="status">{drive.navigationMode === "arrived" ? "Demo complete" : "Car simulation"}</span>
+            <button type="button" className="pick-button" onClick={drive.stopNavigation}>{drive.navigationMode === "arrived" ? "Close demo" : "Stop car simulation"}</button>
+          </div>}
+
           <div className="map-weather" hidden={Boolean(picking)}>
-            <ThreeHourOutlook open={weatherOpen} onOpen={() => setWeatherOpen(true)}
+            <ThreeHourOutlook open={weatherOpen} outlook={outlook} onOpen={() => setWeatherOpen(true)}
               onClose={() => setWeatherOpen(false)} />
           </div>
         </section>
 
-        <aside id="map-tools" ref={toolPanel} hidden={!toolsOpen} className="tool-panel" aria-labelledby="map-tools-title">
+        <aside id="map-tools" ref={toolPanel} hidden={!toolsOpen} className="tool-panel" data-panel={panel} aria-labelledby="map-tools-title">
           <div className="tool-title">
             {panel && <button type="button" className="close-button" aria-label="Back to map tools"
               onClick={() => setPanel(null)}><Icon name="back" /></button>}
@@ -261,9 +271,9 @@ function Dashboard() {
           <div className="tool-content" hidden={panel !== "rainfall"}>
             <ScenarioSlider />
           </div>
-          {panel === "weatherReport" && <div className="tool-content"><TwoDayWeatherReport /></div>}
+          {panel === "weatherReport" && <div className="tool-content"><TwoDayWeatherReport outlook={outlook} /></div>}
           {panel === "drive" && <div className="tool-content">
-            <DrivingPlanner drive={drive} onPick={(endpoint) => {
+            <DrivingPlanner drive={drive} onSimulationStart={closePanel} onPick={(endpoint) => {
               setPicking(endpoint);
               setToolsOpen(false);
             }} />

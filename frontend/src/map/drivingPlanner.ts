@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { api, type DrivingResponse, type LatLng } from "../api/client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api, type DrivingOption, type DrivingResponse, type LatLng, type ScenarioRouteResponse, type TrafficFlowResponse, type TrafficLevel } from "../api/client";
+import { useFloodStore, type AppliedRainfallScenario } from "../store/useFloodStore";
 
 export type Endpoint = "source" | "destination";
 export type Waypoint = LatLng & { name: string };
 export type Waypoints = Record<Endpoint, Waypoint | null>;
-export type NavigationMode = "idle" | "locating" | "routing" | "active" | "rerouting" | "error";
+export type NavigationMode = "idle" | "locating" | "routing" | "active" | "rerouting" | "simulating" | "arrived" | "error";
 
 export interface LiveLocation extends LatLng {
   accuracy_m: number;
@@ -58,6 +59,43 @@ function segmentBearing(a: [number, number], b: [number, number]): number {
   const x = Math.cos(radians(a[1])) * Math.sin(radians(b[1]))
     - Math.sin(radians(a[1])) * Math.cos(radians(b[1])) * Math.cos(radians(b[0] - a[0]));
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function positionAtDistance(coordinates: DrivingOption["coordinates"], distances: number[], metres: number) {
+  let left = 1;
+  let right = distances.length - 1;
+  while (left < right) {
+    const middle = Math.floor((left + right) / 2);
+    if (distances[middle] >= metres) right = middle;
+    else left = middle + 1;
+  }
+  const a = coordinates[left - 1];
+  const b = coordinates[left];
+  const length = distances[left] - distances[left - 1];
+  const fraction = length ? (metres - distances[left - 1]) / length : 0;
+  return { point: [a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction] as [number, number], edgeEnd: left };
+}
+
+export function pathForFraction(coordinates: DrivingOption["coordinates"], distances: number[], start: number, end: number) {
+  const total = distances[distances.length - 1];
+  const first = positionAtDistance(coordinates, distances, total * start);
+  const last = positionAtDistance(coordinates, distances, total * end);
+  return [first.point, ...coordinates.slice(first.edgeEnd, last.edgeEnd), last.point];
+}
+
+function mergeTraffic(route: DrivingOption, flow: Extract<TrafficFlowResponse, { status: "ready" }>) {
+  const levels = Array<TrafficLevel>(route.coordinates.length - 1).fill("unknown");
+  for (const span of flow.segments) levels.fill(span.level, span.start_index, span.end_index);
+  for (const span of route.traffic_segments ?? []) {
+    if (span.level !== "unknown") levels.fill(span.level, span.start_index, span.end_index);
+  }
+  const spans: NonNullable<DrivingOption["traffic_segments"]> = [];
+  for (let start = 0, end = 1; end <= levels.length; end++) {
+    if (levels[end] === levels[start]) continue;
+    spans.push({ start_index: start, end_index: end, level: levels[start] });
+    start = end;
+  }
+  return spans;
 }
 
 export function isWithinNavigationArea(point: LatLng): boolean {
@@ -124,6 +162,7 @@ function locationFromPosition(position: GeolocationPosition): LiveLocation {
 }
 
 export function useDrivingPlanner() {
+  const scenario = useFloodStore((state) => state.appliedRainfall);
   const [points, setPoints] = useState(initialPoints);
   const [result, setResult] = useState<DrivingResponse | null>(null);
   const [selectedId, setSelectedId] = useState("0");
@@ -135,6 +174,12 @@ export function useDrivingPlanner() {
   const [routeMatch, setRouteMatch] = useState<RouteMatch | null>(null);
   const [offRoute, setOffRoute] = useState(false);
   const [watchingLocation, setWatchingLocation] = useState(false);
+  const [scenarioScreen, setScenarioScreen] = useState<{
+    scenario: AppliedRainfallScenario; result: DrivingResponse; value: ScenarioRouteResponse;
+  } | null>(null);
+  const [trafficFlow, setTrafficFlow] = useState<{
+    route: DrivingOption; value: Extract<TrafficFlowResponse, { status: "ready" }>;
+  } | null>(null);
   const navigationModeRef = useRef<NavigationMode>("idle");
   const navigationRequest = useRef<AbortController | null>(null);
   const routeRequest = useRef<AbortController | null>(null);
@@ -151,6 +196,83 @@ export function useDrivingPlanner() {
   currentPoints.current = points;
   currentResult.current = result;
   currentSelectedId.current = selectedId;
+  const selected = result?.routes.find((route) => route.id === selectedId);
+  const simulationRoute = navigationMode === "simulating" ? selected : undefined;
+  const sampleLiveTraffic = result?.source === "TomTom Routing";
+  const activeFlow = trafficFlow?.route === selected ? trafficFlow?.value : undefined;
+  const liveTrafficSegments = useMemo(() => selected && activeFlow ? mergeTraffic(selected, activeFlow) : undefined, [selected, activeFlow]);
+  const scenarioValue = scenarioScreen?.scenario === scenario && scenarioScreen?.result === result ? scenarioScreen.value : null;
+  const scenarioRoutes = useMemo(() => scenarioValue?.status === "ready" && result ? result.routes.map((route, index) => {
+    const exposure = scenarioValue.routes[index];
+    const providerSecondsPerKm = route.eta_seconds / exposure.route_km;
+    // Deliberately hypothetical speeds for a presentation. Keep the provider ETA intact.
+    const delay = (exposure.exposed_km - exposure.high_km) * Math.max(0, 240 - providerSecondsPerKm)
+      + exposure.high_km * Math.max(0, 720 - providerSecondsPerKm);
+    return { ...exposure, id: route.id, demoEtaSeconds: route.eta_seconds + Math.max(0, delay) };
+  }) : [], [result, scenarioValue]);
+  const comparable = scenarioRoutes.length > 1 && scenarioRoutes.every((route) => route.covered_km >= route.route_km * .95);
+  const bestScenarioRoute = comparable ? [...scenarioRoutes].sort((a, b) => a.exposed_km - b.exposed_km || a.demoEtaSeconds - b.demoEtaSeconds)[0] : null;
+  const recommendedScenarioId = bestScenarioRoute && scenarioRoutes.some((route) => route.exposed_km - bestScenarioRoute.exposed_km >= .1)
+    ? bestScenarioRoute.id : null;
+
+  useEffect(() => {
+    if (!result?.routes.length || !scenario) return;
+    const controller = new AbortController();
+    const roads = result.routes.map((route) => route.coordinates);
+    void api.screenDrivingScenario(scenario.rainfallMm, roads, controller.signal).then((value) => {
+      if (value.status === "ready" && value.routes.length !== roads.length) throw new Error("Unexpected route screening response.");
+      if (!controller.signal.aborted) setScenarioScreen({ scenario, result, value });
+    }).catch(() => {
+      if (!controller.signal.aborted) setScenarioScreen({ scenario, result, value: { status: "unavailable", message: "Rainfall scenario route screening is unavailable." } });
+    });
+    return () => controller.abort();
+  }, [result, scenario]);
+
+  useEffect(() => {
+    if (!sampleLiveTraffic || !selected || (selected.traffic_segments?.length && selected.traffic_segments.every((span) => span.level !== "unknown"))) return;
+    let pending: AbortController | undefined;
+    function refresh() {
+      if (!selected) return;
+      pending?.abort();
+      const controller = new AbortController();
+      pending = controller;
+      void api.sampleTraffic(selected.coordinates, controller.signal).then((value) => {
+        if (!controller.signal.aborted) setTrafficFlow(value.status === "ready" ? { route: selected, value } : null);
+      }).catch(() => {
+        if (!controller.signal.aborted) setTrafficFlow(null);
+      });
+    }
+    refresh();
+    const timer = window.setInterval(refresh, 5 * 60_000);
+    return () => {
+      window.clearInterval(timer);
+      pending?.abort();
+    };
+  }, [sampleLiveTraffic, selected]);
+
+  useEffect(() => {
+    if (!simulationRoute) return;
+    const { coordinates, distance_km, eta_seconds } = simulationRoute;
+    const distances = routeVertexDistances(coordinates);
+    const total = distances[distances.length - 1];
+    const started = performance.now();
+    function step() {
+      const progress = Math.min(1, (performance.now() - started) / 35_000);
+      const travelled = total * progress;
+      const { point: [lng, lat] } = positionAtDistance(coordinates, distances, travelled);
+      const { point: ahead } = positionAtDistance(coordinates, distances, Math.min(total, travelled + 25));
+      const bearing = progress < 1 ? segmentBearing([lng, lat], ahead) : null;
+      setRouteMatch({ lng, lat, bearing: bearing ?? 0, distance_from_route_m: 0, progress_m: travelled, remaining_m: total - travelled, progress });
+      setNavigationLocation({ lng, lat, accuracy_m: 0, heading_deg: bearing, speed_mps: progress < 1 ? distance_km * 1000 / eta_seconds : 0, timestamp: Date.now() });
+      if (progress >= 1) {
+        setNavigationMode("arrived");
+        setNavigationNotice("Demo car reached the destination.");
+      }
+    }
+    step();
+    const timer = window.setInterval(step, 200);
+    return () => window.clearInterval(timer);
+  }, [simulationRoute]);
 
   function setNavigationMode(mode: NavigationMode) {
     navigationModeRef.current = mode;
@@ -172,6 +294,16 @@ export function useDrivingPlanner() {
     setOffRoute(false);
     offRouteCount.current = 0;
     lastRerouteAt.current = 0;
+  }
+
+  function startCarSimulation() {
+    if (!selected || selected.coordinates.length < 2) return;
+    const distances = routeVertexDistances(selected.coordinates);
+    if (distances[distances.length - 1] === 0) return;
+    stopNavigation();
+    setNavigationNotice("Simulated drive · finishes in about 35 seconds.");
+    setNavigationMode("simulating");
+    return true;
   }
 
   async function routeFromLocation(location: LiveLocation, reroute: boolean) {
@@ -378,7 +510,9 @@ export function useDrivingPlanner() {
 
   return {
     points, setPoint, compare, result, selectedId, setSelectedId: selectRoute, loading, status,
+    scenario, scenarioValue, scenarioRoutes, recommendedScenarioId,
+    liveTrafficSegments, trafficFlowCheckedAt: activeFlow?.checked_at,
     navigationMode, navigationLocation, navigationNotice, routeMatch, offRoute,
-    startNavigation, stopNavigation, recalculateNavigation,
+    startNavigation, startCarSimulation, stopNavigation, recalculateNavigation,
   };
 }
