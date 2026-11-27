@@ -1,0 +1,41 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "CityShield home" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=e10]:
+      - generic [ref=e11]: Find an area
+      - searchbox "Find an area" [ref=e12]
+    - generic [ref=e13]:
+      - button "Routes" [ref=e14] [cursor=pointer]
+      - button "Next 3 hours" [ref=e15] [cursor=pointer]
+      - button "Rainfall scenario" [ref=e16] [cursor=pointer]
+      - button "Data & models" [ref=e17] [cursor=pointer]
+  - main "Bengaluru map" [ref=e18]:
+    - region "Map layers" [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=e22]
+          - generic [ref=e24]: Flood
+        - generic [ref=e25] [cursor=pointer]:
+          - checkbox "Heat" [ref=e26]
+          - generic [ref=e28]: Heat
+        - generic [ref=e29] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=e30]
+          - generic [ref=e32]: Combined exposure
+      - paragraph [ref=e34]: Loading city flood screening…
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic "Interactive Bengaluru map" [ref=e37]:
+          - region "Map" [ref=e38]
+          - generic:
+            - generic:
+              - button "Find my location" [ref=e40] [cursor=pointer]
+              - generic [ref=e42]:
+                - button "Zoom in" [ref=e43] [cursor=pointer]
+                - button "Zoom out" [ref=e45] [cursor=pointer]
+        - button "View whole city" [ref=e47] [cursor=pointer]
+      - generic "Map legend" [ref=e48]: Municipal boundary
+      - generic:
+        - heading "Greater Bengaluru" [level=1]
+        - paragraph: Municipal area · Research prototype

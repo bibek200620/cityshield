@@ -60,6 +60,7 @@ def test_driving_accepts_southern_suburb_coordinates(monkeypatch):
 def test_configured_traffic_adapter_uses_provider_time_without_hazard_adjustments(monkeypatch):
     def fetch(url, params):
         assert params["traffic"] == "true"
+        assert params["sectionType"] == "traffic"
         return {"routes": [{
             "summary": {"travelTimeInSeconds": 900, "noTrafficTravelTimeInSeconds": 600, "lengthInMeters": 8000},
             "legs": [{"points": [
@@ -77,3 +78,71 @@ def test_configured_traffic_adapter_uses_provider_time_without_hazard_adjustment
     assert result["traffic"]["status"] == "ready"
     assert result["routes"][0]["eta_seconds"] == 900
     assert result["routes"][0]["traffic_time_delta_seconds"] == 300
+    assert result["routes"][0]["traffic_segments"] is None
+
+
+def test_traffic_sections_resolve_overlap_and_preserve_point_index_boundaries():
+    route = {"sections": [
+        {"sectionType": "TRAFFIC", "startPointIndex": 1, "endPointIndex": 4, "magnitudeOfDelay": 2},
+        {"sectionType": "TRAFFIC", "startPointIndex": 2, "endPointIndex": 3, "simpleCategory": "ROAD_CLOSURE"},
+    ]}
+    assert routes_driving.traffic_segments(route, 6) == [
+        {"start_index": 0, "end_index": 1, "level": "unknown"},
+        {"start_index": 1, "end_index": 2, "level": "slow"},
+        {"start_index": 2, "end_index": 3, "level": "heavy"},
+        {"start_index": 3, "end_index": 4, "level": "slow"},
+        {"start_index": 4, "end_index": 5, "level": "unknown"},
+    ]
+    route["sections"][0]["endPointIndex"] = 6
+    assert routes_driving.traffic_segments(route, 6) == [
+        {"start_index": 0, "end_index": 2, "level": "unknown"},
+        {"start_index": 2, "end_index": 3, "level": "heavy"},
+        {"start_index": 3, "end_index": 5, "level": "unknown"},
+    ]
+
+
+def test_aggregate_delay_without_a_location_does_not_color_route_blue():
+    route = {"summary": {"travelTimeInSeconds": 820, "noTrafficTravelTimeInSeconds": 600, "trafficDelayInSeconds": 0}, "sections": []}
+    assert routes_driving.traffic_segments(route, 10) is None
+    route["summary"]["travelTimeInSeconds"] = 600
+    assert routes_driving.traffic_segments(route, 10) == [{"start_index": 0, "end_index": 9, "level": "clear"}]
+
+
+def test_flood_scenario_changes_exposure_on_the_same_bengaluru_road():
+    client = TestClient(app)
+    coordinates = [[[77.637, 12.971], [77.657, 12.948], [77.677, 12.926]]]
+    dry = client.post("/api/drive/scenario", json={"rainfall_mm": 0, "routes": coordinates}).json()["routes"][0]
+    flood = client.post("/api/drive/scenario", json={"rainfall_mm": 200, "routes": coordinates}).json()["routes"][0]
+    assert dry["exposed_km"] == 0 and dry["spans"] == []
+    assert 0 < flood["high_km"] < flood["exposed_km"] < flood["route_km"]
+    assert flood["covered_km"] == dry["covered_km"]
+    assert all(0 <= span["start"] < span["end"] <= 1 for span in flood["spans"])
+    assert client.post("/api/drive/scenario", json={"rainfall_mm": 200, "routes": [[[0, 0], [1, 1]]]}).status_code == 422
+
+
+def test_route_ranking_uses_comparable_hazards_and_keeps_provider_etas(monkeypatch):
+    routes = [
+        {"coordinates": [[77.6, 12.9], [77.7, 12.9]], "eta_seconds": 600, "distance_km": 10, "labels": ["Alternative"]},
+        {"coordinates": [[77.6, 12.9], [77.7, 12.91]], "eta_seconds": 660, "distance_km": 11, "labels": ["Alternative"]},
+        {"coordinates": [[77.6, 12.9], [77.7, 12.92]], "eta_seconds": 800, "distance_km": 12, "labels": ["Alternative"]},
+    ]
+    monkeypatch.setattr(settings, "TOMTOM_API_KEY", None)
+    monkeypatch.setattr(routes_driving, "valhalla_options", lambda _req: (routes, routes[0].copy()))
+
+    def annotate(candidates, _key):
+        for candidate, reports, km in zip(candidates, [1, 0, 0], [0, 2, 0.5]):
+            candidate.update(nearby_flood_reports=reports, runoff_comparable=True, runoff={"forecast_km": km})
+        return {"runoff_available": True}
+
+    monkeypatch.setattr(routes_driving, "annotate_conditions", annotate)
+    result = TestClient(app).post("/api/drive/routes", json=REQUEST).json()
+    assert result["routes"][0]["eta_seconds"] == 800
+    assert "Recommended for lower flood exposure" in result["routes"][0]["labels"]
+    assert result["routes"][1]["eta_seconds"] == 600
+    assert {"Best estimated time", "Shortest distance"} <= set(result["routes"][1]["labels"])
+
+
+def test_route_ranking_uses_eta_when_runoff_coverage_is_incomplete():
+    faster = {"eta_seconds": 900, "runoff": {"forecast_km": 3}, "runoff_comparable": True}
+    slower = {"eta_seconds": 950, "runoff": {"forecast_km": 0}, "runoff_comparable": False}
+    assert routes_driving.recommend_route([faster, slower]) is faster

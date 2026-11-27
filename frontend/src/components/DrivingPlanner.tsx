@@ -1,6 +1,7 @@
 import { useState } from "react";
 import RoutePlaceSearch from "./RoutePlaceSearch";
 import { NAVIGATION_AREA, type Endpoint, useDrivingPlanner } from "../map/drivingPlanner";
+import Icon from "./Icon";
 
 const timeInBengaluru = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false,
@@ -10,12 +11,14 @@ function distanceText(metres: number): string {
   return metres >= 1_000 ? `${(metres / 1_000).toFixed(1)} km` : `${Math.max(0, Math.round(metres))} m`;
 }
 
-export default function DrivingPlanner({ drive, onPick }: {
+export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
   drive: ReturnType<typeof useDrivingPlanner>;
   onPick: (endpoint: Endpoint) => void;
+  onSimulationStart: () => void;
 }) {
   const weather = drive.result?.weather;
   const [gpsStatus, setGpsStatus] = useState<string | null>(null);
+  const simulating = drive.navigationMode === "simulating" || drive.navigationMode === "arrived";
 
   function useMyLocation() {
     if (!navigator.geolocation) {
@@ -60,14 +63,16 @@ export default function DrivingPlanner({ drive, onPick }: {
             </button>
             {point && <div className="chosen-point">
               <span>{point.name}</span>
-              <button type="button" onClick={() => drive.setPoint(endpoint, null)} aria-label={`Clear ${endpoint}`}>×</button>
+              <button type="button" onClick={() => drive.setPoint(endpoint, null)} aria-label={`Clear ${endpoint}`}>
+                <Icon name="close" />
+              </button>
             </div>}
           </section>
         );
       })}
       <button type="button" className="primary-button" disabled={!drive.points.source || !drive.points.destination || drive.loading}
         onClick={() => void drive.compare()}>{drive.loading ? "Finding routes…" : "Compare car routes"}</button>
-      <p className="route-credit">Comparing sends both points to the routing provider. <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">OpenStreetMap fallback data</a>.</p>
+      <p className="route-credit">Place suggestions use <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>. Comparing sends both points to the routing provider.</p>
       {drive.status && <p className="route-error" role="alert">{drive.status}</p>}
       {drive.result && drive.navigationMode === "idle" && <div className="route-options" aria-label="Route options">
         <div className="route-conditions" aria-label="Trip conditions">
@@ -79,14 +84,30 @@ export default function DrivingPlanner({ drive, onPick }: {
             <p>City weather estimate by <a href="https://open-meteo.com/">Open-Meteo</a>.</p>
           </> : <p>{weather?.message ?? "Weather data unavailable."}</p>}
           {drive.result.flood_reports.status === "unavailable" && <p>Current road flood reports unavailable.</p>}
-          <p>Runoff is a model screen. Travel time estimates cover provider traffic inputs. Heat and modeled runoff are shown separately from travel times.</p>
+          <p>CityShield favors candidate routes with fewer nearby flood reports and materially less modeled runoff where coverage is comparable. Provider traffic estimates determine travel times when available.</p>
         </div>
+        {drive.scenario && <div className="route-conditions route-scenario" aria-label="Rainfall scenario impact">
+          <strong>{Number(drive.scenario.rainfallMm.toFixed(1))} mm rainfall scenario</strong>
+          <p role="status">{!drive.scenarioValue ? "Screening the compared roads…"
+            : drive.scenarioValue.status === "unavailable" ? drive.scenarioValue.message
+              : "Demo ETAs use hypothetical speed caps of 15 km/h in screened areas and 5 km/h in the highest runoff band. Check official closures when driving."}</p>
+        </div>}
         {!drive.result.shortest_available && <p role="status">Distance-based comparison is temporarily unavailable.</p>}
-        {drive.result.routes.map((option) => (
+        {drive.result.routes.map((option) => {
+          const scenario = drive.scenarioRoutes.find((route) => route.id === option.id);
+          return (
           <button type="button" className="route-option" key={option.id}
             aria-pressed={drive.selectedId === option.id} onClick={() => drive.setSelectedId(option.id)}>
             <strong>{option.labels.join(" · ")}</strong>
-            <span className="block">{Math.max(1, Math.round(option.eta_seconds / 60))} min · {option.distance_km.toFixed(1)} km</span>
+            <span className="block">{Math.max(1, Math.round(option.eta_seconds / 60))} min provider ETA · {option.distance_km.toFixed(1)} km</span>
+            {scenario && <span className="block route-scenario-estimate">
+              {scenario.covered_km > 0 ? <>
+                <b>{Math.max(1, Math.round(scenario.demoEtaSeconds / 60))} min demo ETA</b>
+                {` · ${scenario.exposed_km.toFixed(2)} km screened for runoff`}
+                <span className="block route-detail">{scenario.covered_km.toFixed(2)} km of route assessed</span>
+                {drive.recommendedScenarioId === option.id && <span className="block">Lowest scenario runoff exposure</span>}
+              </> : "This route is outside the scenario model grid."}
+            </span>}
             {option.traffic_time_delta_seconds != null && <span className="block route-detail">
               {Math.round(Math.abs(option.traffic_time_delta_seconds) / 60)} min {option.traffic_time_delta_seconds < 0 ? "below" : "above"} the provider’s no-traffic estimate
             </span>}
@@ -98,16 +119,22 @@ export default function DrivingPlanner({ drive, onPick }: {
               <span className="block">{option.runoff.covered_km.toFixed(2)} km within the model grid</span>
             </span>}
           </button>
-        ))}
+          );
+        })}
         <button type="button" className="primary-button"
           onClick={drive.startNavigation} disabled={!drive.result.routes.some((option) => option.id === drive.selectedId)}>
           Start navigation
         </button>
+        <button type="button" className="secondary-button" onClick={() => {
+          if (drive.startCarSimulation()) onSimulationStart();
+        }}>
+          Start car simulation
+        </button>
       </div>}
-      {drive.navigationMode !== "idle" && <section className="live-navigation" aria-label="Live GPS navigation">
+      {drive.navigationMode !== "idle" && <section className="live-navigation" aria-label={simulating ? "Car simulation" : "Live GPS navigation"}>
         <div className="live-navigation-heading">
-          <div><strong>{drive.navigationMode === "active" ? "Navigation" : drive.navigationMode === "error" ? "Navigation unavailable" : "Starting navigation"}</strong>
-            <span>{drive.navigationMode === "active" ? "Following live GPS" : drive.navigationMode === "rerouting" ? "Recalculating route" : drive.navigationMode === "routing" ? "Finding route from your location" : drive.navigationMode === "locating" ? "Waiting for GPS" : "Check location permission and retry"}</span>
+          <div><strong>{simulating ? (drive.navigationMode === "arrived" ? "Simulation complete" : "Car simulation") : drive.navigationMode === "active" ? "Navigation" : drive.navigationMode === "error" ? "Navigation unavailable" : "Starting navigation"}</strong>
+            <span>{simulating ? "Following the route without GPS" : drive.navigationMode === "active" ? "Following live GPS" : drive.navigationMode === "rerouting" ? "Recalculating route" : drive.navigationMode === "routing" ? "Finding route from your location" : drive.navigationMode === "locating" ? "Waiting for GPS" : "Check location permission and retry"}</span>
           </div>
           {drive.navigationMode !== "error" && <button type="button" className="pick-button" onClick={drive.stopNavigation}>Stop</button>}
           {drive.navigationMode === "error" && <button type="button" className="pick-button" onClick={drive.stopNavigation}>Close</button>}
@@ -116,18 +143,19 @@ export default function DrivingPlanner({ drive, onPick }: {
           {drive.routeMatch && <div><strong>{distanceText(drive.routeMatch.remaining_m)}</strong><small>remaining</small></div>}
           {drive.routeMatch && drive.result && (() => {
             const route = drive.result.routes.find((option) => option.id === drive.selectedId);
-            const remainingRatio = drive.routeMatch.remaining_m / Math.max(1, (route?.distance_km ?? 0) * 1_000);
-            return <div><strong>{Math.max(1, Math.round((route?.eta_seconds ?? 0) * remainingRatio / 60))} min</strong><small>estimated</small></div>;
+            const scenario = simulating ? drive.scenarioRoutes.find((item) => item.id === route?.id) : null;
+            const minutes = ((scenario?.demoEtaSeconds ?? route?.eta_seconds ?? 0) * (1 - drive.routeMatch.progress)) / 60;
+            return <div><strong>{Math.ceil(minutes)} min</strong><small>{scenario ? "demo ETA remaining" : "estimated remaining"}</small></div>;
           })()}
-          <div><strong>±{Math.round(drive.navigationLocation.accuracy_m)} m</strong><small>GPS accuracy</small></div>
-          {drive.navigationLocation.speed_mps !== null && <div><strong>{Math.round(drive.navigationLocation.speed_mps * 3.6)} km/h</strong><small>GPS speed</small></div>}
+          {!simulating && <div><strong>±{Math.round(drive.navigationLocation.accuracy_m)} m</strong><small>GPS accuracy</small></div>}
+          {!simulating && drive.navigationLocation.speed_mps !== null && <div><strong>{Math.round(drive.navigationLocation.speed_mps * 3.6)} km/h</strong><small>GPS speed</small></div>}
         </div>}
         {drive.navigationNotice && <p className="navigation-notice" role="status">{drive.navigationNotice}</p>}
         {drive.offRoute && drive.navigationMode === "active" && <div className="navigation-off-route">
           <span>You're off the selected route.</span>
           <button type="button" className="pick-button" onClick={drive.recalculateNavigation}>Recalculate route</button>
         </div>}
-        <p className="navigation-limits">The map follows your device GPS. Turn-by-turn voice guidance is not available.</p>
+        <p className="navigation-limits">{simulating ? "The car moves along the selected route in accelerated demo time." : "Flood-aware route selection uses available reports and modeled exposure. Follow official closures and warnings."}</p>
       </section>}
     </div>
   );

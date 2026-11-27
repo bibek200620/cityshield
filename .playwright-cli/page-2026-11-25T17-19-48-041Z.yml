@@ -1,0 +1,122 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - link "CityShield home" [ref=f2e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=f2e10]:
+      - generic [ref=f2e11]: Find an area
+      - searchbox "Find an area" [ref=f2e12]
+    - generic [ref=f2e13]:
+      - button "Routes" [ref=f2e14] [cursor=pointer]
+      - button "Next 3 hours" [expanded] [ref=f2e15] [cursor=pointer]
+      - button "Rainfall scenario" [ref=f2e16] [cursor=pointer]
+      - button "Data & models" [ref=f2e17] [cursor=pointer]
+  - main "Bengaluru map" [ref=f2e18]:
+    - region "Map layers" [ref=f2e19]:
+      - generic [ref=f2e20]:
+        - generic [ref=f2e21] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=f2e22]
+          - generic [ref=f2e24]: Flood
+        - generic [ref=f2e25] [cursor=pointer]:
+          - checkbox "Heat" [ref=f2e26]
+          - generic [ref=f2e28]: Heat
+        - generic [ref=f2e29] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=f2e30]
+          - generic [ref=f2e32]: Combined exposure
+      - paragraph [ref=f2e34]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=f2e35]:
+      - generic [ref=f2e36]:
+        - generic "Interactive Bengaluru map" [ref=f2e37]:
+          - region "Map" [ref=f2e38]
+          - generic:
+            - generic:
+              - button "Find my location" [ref=f2e40] [cursor=pointer]
+              - generic [ref=f2e42]:
+                - button "Zoom in" [ref=f2e43] [cursor=pointer]
+                - button "Zoom out" [ref=f2e45] [cursor=pointer]
+              - group [ref=f2e51]:
+                - generic "Toggle attribution" [ref=f2e52] [cursor=pointer]
+                - generic [ref=f2e53]:
+                  - text: GBA delimitation via OpenCity and bharatlas | ©
+                  - link "OpenStreetMap" [ref=f2e54] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=f2e55] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - button "View whole city" [ref=f2e47] [cursor=pointer]
+      - generic "Map legend" [ref=f2e48]:
+        - status [ref=f2e56]: City hexagons · averages
+        - generic [ref=f2e49]: Municipal boundary
+        - generic [ref=f2e57]:
+          - strong [ref=f2e58]: Runoff on terrain depressions
+          - generic [ref=f2e59]: 0 mm
+          - generic [ref=f2e61]: ">0–5 mm"
+          - generic [ref=f2e63]: ">5–20 mm"
+          - generic [ref=f2e65]: ">20 mm"
+          - generic [ref=f2e67]: Permanent water
+      - generic:
+        - heading "Greater Bengaluru" [level=1]
+        - paragraph: Municipal area · Research prototype
+      - complementary "Next 3 hours" [ref=f2e69]:
+        - generic [ref=f2e70]:
+          - heading "Next 3 hours" [active] [level=2] [ref=f2e71]
+          - button "Close panel" [ref=f2e72] [cursor=pointer]: ×
+        - generic [ref=f2e74]:
+          - paragraph [ref=f2e75]: Bengaluru city-point estimate · Open-Meteo · air temperature at 2 m
+          - list "Next three hourly weather estimates" [ref=f2e76]:
+            - listitem [ref=f2e77]:
+              - generic [ref=f2e78]:
+                - strong [ref=f2e79]: In 1 hour
+                - time [ref=f2e80]: 11:30 pm IST
+              - generic [ref=f2e81]:
+                - generic [ref=f2e82]:
+                  - strong [ref=f2e83]: 20.5°
+                  - generic [ref=f2e84]: air
+                - generic [ref=f2e85]:
+                  - strong [ref=f2e86]: 22.8°
+                  - generic [ref=f2e87]: feels like
+                - generic [ref=f2e88]:
+                  - strong [ref=f2e89]: 0.0 mm
+                  - generic [ref=f2e90]: rain
+                - generic [ref=f2e91]:
+                  - strong [ref=f2e92]: 95%
+                  - generic [ref=f2e93]: humidity
+            - listitem [ref=f2e94]:
+              - generic [ref=f2e95]:
+                - strong [ref=f2e96]: In 2 hour
+                - time [ref=f2e97]: 12:30 am IST
+              - generic [ref=f2e98]:
+                - generic [ref=f2e99]:
+                  - strong [ref=f2e100]: 20.3°
+                  - generic [ref=f2e101]: air
+                - generic [ref=f2e102]:
+                  - strong [ref=f2e103]: 22.6°
+                  - generic [ref=f2e104]: feels like
+                - generic [ref=f2e105]:
+                  - strong [ref=f2e106]: 0.0 mm
+                  - generic [ref=f2e107]: rain
+                - generic [ref=f2e108]:
+                  - strong [ref=f2e109]: 95%
+                  - generic [ref=f2e110]: humidity
+            - listitem [ref=f2e111]:
+              - generic [ref=f2e112]:
+                - strong [ref=f2e113]: In 3 hour
+                - time [ref=f2e114]: 01:30 am IST
+              - generic [ref=f2e115]:
+                - generic [ref=f2e116]:
+                  - strong [ref=f2e117]: 20.1°
+                  - generic [ref=f2e118]: air
+                - generic [ref=f2e119]:
+                  - strong [ref=f2e120]: 22.2°
+                  - generic [ref=f2e121]: feels like
+                - generic [ref=f2e122]:
+                  - strong [ref=f2e123]: 0.0 mm
+                  - generic [ref=f2e124]: rain
+                - generic [ref=f2e125]:
+                  - strong [ref=f2e126]: 96%
+                  - generic [ref=f2e127]: humidity
+          - paragraph [ref=f2e128]: Forecast-model estimates are not street-level observations. Rainfall here is not a flood warning; Landsat surface temperature does not provide a future heatwave forecast.
+          - paragraph [ref=f2e129]:
+            - text: "Weather data:"
+            - link "Open-Meteo" [ref=f2e130] [cursor=pointer]:
+              - /url: https://open-meteo.com/

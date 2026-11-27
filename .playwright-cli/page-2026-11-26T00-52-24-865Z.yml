@@ -1,0 +1,100 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "CityShield home" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=e10]:
+      - generic [ref=e11]: Find an area
+      - searchbox "Find an area" [ref=e12]
+    - button "Open tools menu" [ref=e77] [cursor=pointer]
+  - main "Bengaluru map" [ref=e20]:
+    - region "Map layers" [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=e24]
+          - generic [ref=e26]: Flood
+        - generic [ref=e27] [cursor=pointer]:
+          - checkbox "Heat" [ref=e28]
+          - generic [ref=e30]: Heat
+        - generic [ref=e31] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=e32]
+          - generic [ref=e34]: Combined exposure
+      - paragraph [ref=e36]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic "Interactive Bengaluru map" [ref=e39]:
+          - region "Map" [ref=e40]
+          - generic:
+            - generic:
+              - button "Find my location" [ref=e42] [cursor=pointer]
+              - generic [ref=e44]:
+                - button "Zoom in" [ref=e45] [cursor=pointer]
+                - button "Zoom out" [ref=e47] [cursor=pointer]
+              - group [ref=e52]:
+                - generic "Toggle attribution" [ref=e53] [cursor=pointer]
+                - generic [ref=e54]:
+                  - text: ©
+                  - link "OpenStreetMap" [ref=e55] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=e56] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - button "View whole city" [ref=e49] [cursor=pointer]
+      - generic "Map legend" [ref=e50]:
+        - status [ref=e57]: City hexagons · averages
+        - generic [ref=e51]: Flood and heat data use the 2025 GBA coverage; remaining areas show the basemap and routing only.
+        - generic [ref=e58]:
+          - strong [ref=e59]: Runoff on terrain depressions
+          - generic [ref=e60]: 0 mm
+          - generic [ref=e62]: ">0–5 mm"
+          - generic [ref=e64]: ">5–20 mm"
+          - generic [ref=e66]: ">20 mm"
+          - generic [ref=e68]: Permanent water
+      - generic:
+        - heading "Bengaluru" [level=1]
+        - paragraph: GBA risk data · map extends south to Anekal
+      - complementary "Two-day weather report" [ref=e78]:
+        - generic [ref=e79]:
+          - heading "Two-day weather report" [active] [level=2] [ref=e80]
+          - button "Close panel" [ref=e81] [cursor=pointer]: ×
+        - region "Two-day weather report" [ref=e83]:
+          - generic [ref=e84]:
+            - generic [ref=e85]:
+              - paragraph [ref=e86]: Bengaluru · weather model output
+              - heading "Two-day weather report" [level=2] [ref=e87]
+            - button "Refresh report" [ref=e88] [cursor=pointer]
+          - paragraph [ref=e89]: Open-Meteo weather model · 2 m air temperature · hourly precipitation · Bengaluru grid cell 12.970, 77.564. Retrieved Thu, 26 Nov, 06:22 am IST.
+          - generic [ref=e90]:
+            - article [ref=e91]:
+              - heading "Next 24 hours" [level=3] [ref=e92]
+              - paragraph [ref=e93]: Thu, 26 Nov, 06:30 am – Fri, 27 Nov, 05:30 am IST
+              - generic [ref=e94]:
+                - generic [ref=e95]:
+                  - term [ref=e96]: Air temperature
+                  - definition [ref=e97]: 19.9–27.9 °C
+                - generic [ref=e98]:
+                  - term [ref=e99]: Rain total
+                  - definition [ref=e100]: 2.4 mm
+                - generic [ref=e101]:
+                  - term [ref=e102]: Mean humidity
+                  - definition [ref=e103]: 81%
+            - article [ref=e104]:
+              - heading "24–48 hours" [level=3] [ref=e105]
+              - paragraph [ref=e106]: Fri, 27 Nov, 06:30 am – Sat, 28 Nov, 05:30 am IST
+              - generic [ref=e107]:
+                - generic [ref=e108]:
+                  - term [ref=e109]: Air temperature
+                  - definition [ref=e110]: 20.1–27.5 °C
+                - generic [ref=e111]:
+                  - term [ref=e112]: Rain total
+                  - definition [ref=e113]: 1.4 mm
+                - generic [ref=e114]:
+                  - term [ref=e115]: Mean humidity
+                  - definition [ref=e116]: 79%
+          - group [ref=e117]:
+            - generic "Show all 48 hourly estimates" [ref=e118] [cursor=pointer]
+          - paragraph [ref=e119]: This is a third-party forecast for a coarse Bengaluru grid point, not street-level observation, a CityShield-trained forecast, or an official warning. It does not forecast flood depths. Landsat surface temperature is not an air-temperature or heatwave forecast.
+          - paragraph [ref=e120]:
+            - text: "Provider:"
+            - link "Open-Meteo" [ref=e121] [cursor=pointer]:
+              - /url: https://open-meteo.com/

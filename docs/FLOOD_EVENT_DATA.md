@@ -2,7 +2,7 @@
 
 ## Current status
 
-The repository now contains 53 dated, district-scale event records from the checksum-verified IFI-Impacts v3 inventory that explicitly lists Bengaluru Urban. These are historical inventory records, not road/node observations. Their event times have date or date-range precision, their locations are district-level, and the source provides no coordinates or localized flood footprints. All 53 are explicitly ineligible for model training or event evaluation. The historical backtest endpoint therefore remains unavailable (HTTP 501).
+The repository contains 53 dated, district-scale event records from the checksum-verified IFI-Impacts v3 inventory, plus five attributed sensor-summary rows transcribed from a published Bengaluru case study. The five rows describe one 2020 storm and have no coordinates or matched rainfall series; one sensor value is inconsistent across two supplement tables. Both datasets are explicitly ineligible for CityShield model training or evaluation. The historical backtest endpoint therefore remains unavailable (HTTP 501).
 
 The user-supplied `bengaluru_flood_incidents.csv` was audited but is not copied into the project: it contains 92 curated media/research rows without coordinates or measured flood depth/rainfall; most are reported and not independently verified, and the file does not document the compiler's review method. It can be used as a reference lead list, not as verified ground truth.
 
@@ -41,6 +41,14 @@ The command refuses a source file whose MD5 does not match the cited v3 artifact
 3. **NRSC/NDEM flood inundation layers.** NRSC describes date-stamped satellite inundation layers. NDEM states that its portal content is intended for authorized users; no public, reusable Bengaluru-specific street event layer was verified for this work. Do not import portal data without authorized access and source terms. Source: [NRSC near-real-time mapping note](https://ndem.nrsc.gov.in/documents/downloads/nrt_technical_note.pdf) and [NDEM portal](https://ndem.nrsc.gov.in/).
 4. **Davis et al. (2022), WRF–PCSWMM Bengaluru flood study.** The open-access article (CC BY) describes observed rain-gauge and drain-sensor data for selected 2020–2021 events. Its data-availability statement says KSNDMC high-resolution observations are request-only and local-government datasets are classified, not public. This project cites the article only; it does not include or reconstruct the restricted underlying time series. Source: [Frontiers article](https://doi.org/10.3389/feart.2022.883842).
 
+### Published sensor summaries for 20–21 October 2020
+
+[`frontiers_2020_sensor_summary.csv`](data/flood_events/frontiers_2020_sensor_summary.csv) transcribes the five point-in-time observed drain levels in Supplementary Table S3, with WLS ID, reported place name, timestamp, observed flow depth, drain depth and source attribution. The five locations were selected as critical sensors; the file has no coordinates and does not include the underlying 15-minute series. Its repeated 124.5 mm Kengeri value is the same event-level 24-hour maximum for every row, not five independent or co-located rainfall observations.
+
+The user's two supplied `water_level_excess_over_drain_depth_pct` values match two Vrishabhavathi Valley rows by recalculation: 122% maps to WLS 100021 (`2.332 m` flow / `1.05 m` drain, at 00:45 IST) and 21% maps to WLS 100034 (`2.55 m` / `2.1 m`, at 01:30 IST). This joins on event/catchment and rounded derived value, not row order; the input rows did not carry the WLS IDs. Supplementary Table S6 separately lists a 0.9 m observed maximum for WLS 100021 at the same time. The conflicting 2.332 m and 0.9 m source values are both preserved in the CSV and marked unresolved.
+
+These summaries may be used as cited, one-event case-study evidence. They are not sufficient for training or testing CityShield: sensor coordinates and model-network IDs are absent, rainfall is an event maximum rather than a matched time series, only one storm is represented, and one measured value is contradictory. Do not report the article's PCSWMM scores as CityShield scores. The detailed source search and calculation record is in [`ISSUE5_RESEARCH_BENCHMARK.md`](ISSUE5_RESEARCH_BENCHMARK.md).
+
 The IFI subset is a third-party licensed district-scale event inventory. It has dates and district names but no coordinate geometry, local flood extent/depth, or matched event rainfall. It can support historical context and data provenance only; it is not used as a training label or for scoring the physics/GNN model. The Sphere India report remains a secondary narrative, not ground-verified street truth. The repository does not infer coordinates from locality names or treat city-level narrative as street-level ground truth. No physics or GNN score against observed flood events can currently be reported. Existing GNN labels come from the simplified physics baseline; agreement with those labels is surrogate agreement, not observed-event predictive performance.
 
 ## Verification
@@ -50,6 +58,7 @@ From `backend/` run:
 ```sh
 .venv/bin/python -m pytest tests/test_flood_event_data.py -q
 .venv/bin/python -m pytest tests/test_ifi_inventory.py -q
+.venv/bin/python -m pytest tests/test_frontiers_2020_sensor_summary.py -q
 ```
 
-The tests validate the evidence manifest, the 53-row source subset, date normalization, exact district filtering, source event ID uniqueness, source checksum pinning, no-coordinate handling, evaluation exclusion and deterministic storm-group separation. Until localized observed outcomes and matched rainfall are obtained, the backtest API remains unavailable (HTTP 501) and real-world flood model validation remains unavailable.
+The tests validate the evidence manifest, the 53-row source subset, date normalization, exact district filtering, source event ID uniqueness, source checksum pinning, no-coordinate handling, evaluation exclusion, deterministic storm-group separation, and the five published sensor-summary records and derived ratios. Until localized outcomes and matched rainfall are mapped to the evaluated CityShield network, the backtest API remains unavailable (HTTP 501) and real-world CityShield flood-model validation remains unavailable.

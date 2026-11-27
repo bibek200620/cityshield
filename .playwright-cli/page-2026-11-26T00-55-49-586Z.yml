@@ -1,0 +1,78 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "CityShield home" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=e10]:
+      - generic [ref=e11]: Find an area
+      - searchbox "Find an area" [ref=e12]
+    - button "Open tools menu" [ref=e143] [cursor=pointer]
+  - main "Bengaluru map" [ref=e20]:
+    - region "Map layers" [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=e24]
+          - generic [ref=e26]: Flood
+        - generic [ref=e27] [cursor=pointer]:
+          - checkbox "Heat" [ref=e28]
+          - generic [ref=e30]: Heat
+        - generic [ref=e31] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=e32]
+          - generic [ref=e34]: Combined exposure
+      - paragraph [ref=e36]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic "Interactive Bengaluru map" [ref=e39]:
+          - region "Map" [ref=e129]
+          - generic:
+            - generic:
+              - button "Find my location" [ref=e131] [cursor=pointer]
+              - generic [ref=e133]:
+                - button "Zoom in" [ref=e134] [cursor=pointer]
+                - button "Zoom out" [ref=e136] [cursor=pointer]
+              - group [ref=e138]:
+                - generic "Toggle attribution" [ref=e139] [cursor=pointer]
+                - generic [ref=e140]:
+                  - text: ©
+                  - link "OpenStreetMap" [ref=e141] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=e142] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - button "View whole city" [ref=e49] [cursor=pointer]
+      - generic "Map legend" [ref=e50]:
+        - status [ref=e57]: City hexagons · averages
+        - generic [ref=e51]: Flood and heat data use the 2025 GBA coverage; remaining areas show the basemap and routing only.
+        - generic [ref=e58]:
+          - strong [ref=e59]: Runoff on terrain depressions
+          - generic [ref=e60]: 0 mm
+          - generic [ref=e62]: ">0–5 mm"
+          - generic [ref=e64]: ">5–20 mm"
+          - generic [ref=e66]: ">20 mm"
+          - generic [ref=e68]: Permanent water
+      - complementary "Rainfall scenario" [ref=e144]:
+        - generic [ref=e79]:
+          - heading "Rainfall scenario" [active] [level=2] [ref=e145]
+          - button "Close panel" [ref=e81] [cursor=pointer]: ×
+        - region "Rainfall inputs" [ref=e147]:
+          - paragraph [ref=e148]: Updates city flood screening and the Bellandur simulation.
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - text: Preset
+              - combobox "Preset" [ref=e151]:
+                - option "Custom rainfall"
+                - option "Light shower"
+                - option "Moderate storm" [selected]
+                - option "Heavy cloudburst"
+            - generic [ref=e152]:
+              - generic [ref=e153]:
+                - text: Intensity (mm/hr)
+                - spinbutton "Intensity (mm/hr)" [ref=e154]: "60"
+              - generic [ref=e155]:
+                - text: Duration (min)
+                - spinbutton "Duration (min)" [ref=e156]: "90"
+            - button "Run flood simulation" [ref=e157] [cursor=pointer]
+          - paragraph [ref=e158]:
+            - text: "Bellandur pilot:"
+            - strong [ref=e159]: 10 of 132
+            - text: simulated road segments flooded at 60 mm/hr for 90 min.

@@ -14,6 +14,7 @@ export interface LayerVisibility {
   roads: boolean;
   floodDepth: boolean;
   pilotFlood: boolean;
+  cityRoads: boolean;
   drainage: boolean;
   infra: boolean;
   route: boolean;
@@ -22,6 +23,14 @@ export interface LayerVisibility {
 }
 
 export type VehicleType = "ambulance" | "fire" | "rescue" | "police";
+export const floodDemoPreset = { id: "flood-demo", intensity: 100, duration: 120 } as const;
+
+export interface AppliedRainfallScenario {
+  revision: number;
+  rainfallMm: number;
+  durationMin: number;
+  floodDemo: boolean;
+}
 
 interface FloodStore {
   scenarios: ScenarioSummary[];
@@ -33,6 +42,9 @@ interface FloodStore {
   selectedRouteId: string;
   vehicleType: VehicleType;
   selectedNodeId: string | null;
+  simulationActive: boolean;
+  appliedRainfall: AppliedRainfallScenario | null;
+  heatOffsetC: number;
   currentRainfall: { intensity: number; duration: number };
   heatData: HeatWorkflowResponse | null;
   combinedExposure: ExposureResponse | null;
@@ -47,9 +59,9 @@ interface FloodStore {
 
   loadInitial: () => Promise<void>;
   loadHeat: () => Promise<void>;
-  loadCombinedExposure: (scenarioId: string) => Promise<void>;
-  runScenario: (scenarioId: string) => Promise<void>;
-  runCustomRainfall: (intensity: number, duration: number, presetId?: string | null) => Promise<void>;
+  runScenario: (scenarioId: string, heatOffsetC?: number) => Promise<void>;
+  runCustomRainfall: (intensity: number, duration: number, heatOffsetC: number, floodDemo?: boolean) => Promise<void>;
+  stopSimulation: () => void;
   computeRoute: (start: LatLng, end: LatLng, vehicle?: VehicleType) => Promise<void>;
   setVehicleType: (vt: VehicleType) => void;
   setSelectedRouteId: (id: string) => void;
@@ -59,157 +71,187 @@ interface FloodStore {
   toggleLayer: (key: keyof LayerVisibility) => void;
 }
 
-export const useFloodStore = create<FloodStore>((set, get) => ({
-  scenarios: [],
-  activeScenarioId: null,
-  selectedPresetId: null,
-  simulateResult: null,
-  criticalInfra: [],
-  route: null,
-  selectedRouteId: "recommended",
-  vehicleType: "ambulance",
-  selectedNodeId: null,
-  currentRainfall: { intensity: 60, duration: 90 },
-  heatData: null,
-  combinedExposure: null,
-  combinedExposureError: null,
-  heatLoading: false,
-  heatError: null,
-  layerVisibility: {
-    roads: true,
-    floodDepth: true,
-    pilotFlood: false,
-    drainage: true,
-    infra: true,
-    route: true,
-    heat: false,
-    combined: false,
-  },
-  activeNav: "Dashboard",
-  searchQuery: "",
-  loading: false,
-  error: null,
+export const useFloodStore = create<FloodStore>((set, get) => {
+  let scenarioRequest: AbortController | null = null;
+  let revision = 0;
 
-  loadHeat: async () => {
-    set({ heatLoading: true, heatError: null });
-    try {
-      const heatData = await api.getHeatWorkflow();
-      set({ heatData });
-    } catch (e) {
-      set({ heatData: null, heatError: (e as Error).message });
-    } finally {
-      set({ heatLoading: false });
-    }
-  },
-
-  loadCombinedExposure: async (scenarioId: string) => {
-    set({ combinedExposure: null, combinedExposureError: null });
-    try {
-      const exposure = await api.getCombinedExposure(scenarioId);
-      set({ combinedExposure: exposure });
-    } catch (e) {
-      set({ combinedExposure: null, combinedExposureError: (e as Error).message });
-    }
-  },
-
-  loadInitial: async () => {
+  async function runRainfall(
+    intensity: number, duration: number, presetId: string | null, heatOffsetC: number | undefined,
+    load: (signal: AbortSignal) => Promise<SimulateResponse>,
+  ) {
+    scenarioRequest?.abort();
+    const request = new AbortController();
+    scenarioRequest = request;
     set({ loading: true, error: null });
     try {
-      const [scenarios, infra] = await Promise.all([
-        api.getScenarios(),
-        api.getCriticalInfrastructure(),
-      ]);
-      set({ scenarios, criticalInfra: infra });
-      get().loadHeat();
-      if (scenarios.length > 0) {
-        await get().runScenario(scenarios[1]?.scenario_id ?? scenarios[0].scenario_id);
-      }
-    } catch (e) {
-      set({ error: (e as Error).message });
-    } finally {
-      set({ loading: false });
-    }
-  },
-
-  runScenario: async (scenarioId: string) => {
-    const scenario = get().scenarios.find((s) => s.scenario_id === scenarioId);
-    if (!scenario) return;
-    set({
-      loading: true,
-      error: null,
-    });
-    try {
-      const result = await api.getScenarioDetail(scenarioId);
-      set({
-        simulateResult: result,
-        activeScenarioId: result.scenario_id,
-        route: null,
-        selectedPresetId: scenarioId,
-        currentRainfall: { intensity: scenario.rainfall_intensity_mm_hr, duration: scenario.duration_min },
-      });
-      await get().loadCombinedExposure(result.scenario_id);
-    } catch (e) {
-      set({ error: (e as Error).message });
-    } finally {
-      set({ loading: false });
-    }
-  },
-
-  runCustomRainfall: async (intensity: number, duration: number, presetId: string | null = null) => {
-    set({
-      loading: true,
-      error: null,
-    });
-    try {
-      const result = await api.simulate(intensity, duration);
-      set({
+      const result = await load(request.signal);
+      if (request.signal.aborted) return;
+      const floodDemo = presetId === floodDemoPreset.id;
+      const appliedRainfall = heatOffsetC === undefined ? null : {
+        revision: ++revision, rainfallMm: intensity * duration / 60, durationMin: duration, floodDemo,
+      };
+      set((state) => ({
+        simulationActive: true,
+        appliedRainfall,
         simulateResult: result,
         activeScenarioId: result.scenario_id,
         route: null,
         selectedPresetId: presetId,
         currentRainfall: { intensity, duration },
-      });
-      await get().loadCombinedExposure(result.scenario_id);
-    } catch (e) {
-      set({ error: (e as Error).message });
-    } finally {
-      set({ loading: false });
-    }
-  },
-
-  computeRoute: async (start: LatLng, end: LatLng, vehicle?: VehicleType) => {
-    const scenarioId = get().activeScenarioId;
-    if (!scenarioId) return;
-    const vt = vehicle ?? get().vehicleType;
-    set({ loading: true, error: null });
-    try {
-      const route = await api.route(start, end, scenarioId, "astar", vt);
-      set({ route, selectedRouteId: "recommended" });
-    } catch (e) {
-      set({ error: (e as Error).message });
-    } finally {
-      set({ loading: false });
-    }
-  },
-
-  setVehicleType: (vehicleType: VehicleType) => {
-    set({ vehicleType });
-    const currentRoute = get().route;
-    if (currentRoute) {
-      // Re-trigger with new vehicle type if locations known or adjust ETA locally
-      set({
-        route: {
-          ...currentRoute,
-          active_vehicle: vehicleType,
+        heatOffsetC: heatOffsetC ?? 0,
+        combinedExposure: null,
+        combinedExposureError: null,
+        layerVisibility: heatOffsetC === undefined ? state.layerVisibility : {
+          ...state.layerVisibility, floodDepth: true, cityRoads: true,
+          pilotFlood: floodDemo || state.layerVisibility.pilotFlood,
+          heat: heatOffsetC !== 0 || state.layerVisibility.heat,
         },
-      });
+      }));
+      try {
+        const combinedExposure = await api.getCombinedExposure(result.scenario_id, request.signal);
+        if (!request.signal.aborted) set({ combinedExposure });
+      } catch (error) {
+        if (!request.signal.aborted) set({ combinedExposureError: (error as Error).message });
+      }
+    } catch (error) {
+      if (!request.signal.aborted) set({ error: (error as Error).message });
+    } finally {
+      if (scenarioRequest === request) {
+        scenarioRequest = null;
+        set({ loading: false });
+      }
     }
-  },
+  }
 
-  setSelectedRouteId: (selectedRouteId: string) => set({ selectedRouteId }),
-  setActiveNav: (activeNav: string) => set({ activeNav }),
-  setSearchQuery: (searchQuery: string) => set({ searchQuery }),
-  selectNode: (nodeId: string | null) => set({ selectedNodeId: nodeId }),
-  toggleLayer: (key: keyof LayerVisibility) =>
-    set((state) => ({ layerVisibility: { ...state.layerVisibility, [key]: !state.layerVisibility[key] } })),
-}));
+  return {
+    scenarios: [],
+    activeScenarioId: null,
+    selectedPresetId: null,
+    simulateResult: null,
+    criticalInfra: [],
+    route: null,
+    selectedRouteId: "recommended",
+    vehicleType: "ambulance",
+    selectedNodeId: null,
+    simulationActive: true,
+    appliedRainfall: null,
+    heatOffsetC: 0,
+    currentRainfall: { intensity: 60, duration: 90 },
+    heatData: null,
+    combinedExposure: null,
+    combinedExposureError: null,
+    heatLoading: false,
+    heatError: null,
+    layerVisibility: {
+      roads: true,
+      floodDepth: true,
+      pilotFlood: false,
+      cityRoads: false,
+      drainage: true,
+      infra: true,
+      route: true,
+      heat: false,
+      combined: false,
+    },
+    activeNav: "Dashboard",
+    searchQuery: "",
+    loading: false,
+    error: null,
+
+    loadHeat: async () => {
+      set({ heatLoading: true, heatError: null });
+      try {
+        const heatData = await api.getHeatWorkflow();
+        set({ heatData });
+      } catch (e) {
+        set({ heatData: null, heatError: (e as Error).message });
+      } finally {
+        set({ heatLoading: false });
+      }
+    },
+
+    loadInitial: async () => {
+      set({ loading: true, error: null });
+      try {
+        const [scenarios, infra] = await Promise.all([
+          api.getScenarios(),
+          api.getCriticalInfrastructure(),
+        ]);
+        set({ scenarios, criticalInfra: infra });
+        void get().loadHeat();
+        if (get().simulationActive && !scenarioRequest && scenarios.length > 0) {
+          await get().runScenario(scenarios[1]?.scenario_id ?? scenarios[0].scenario_id);
+        }
+      } catch (error) {
+        set({ error: (error as Error).message });
+      } finally {
+        if (!scenarioRequest) set({ loading: false });
+      }
+    },
+
+    runScenario: async (scenarioId, heatOffsetC) => {
+      const scenario = get().scenarios.find((item) => item.scenario_id === scenarioId);
+      if (!scenario) return;
+      await runRainfall(scenario.rainfall_intensity_mm_hr, scenario.duration_min, scenarioId, heatOffsetC,
+        (signal) => api.getScenarioDetail(scenarioId, signal));
+    },
+
+    runCustomRainfall: (intensity, duration, heatOffsetC, floodDemo = false) => runRainfall(
+      intensity, duration, floodDemo ? floodDemoPreset.id : null, heatOffsetC,
+      (signal) => api.simulate(intensity, duration, signal)),
+
+    stopSimulation: () => {
+      scenarioRequest?.abort();
+      scenarioRequest = null;
+      set((state) => ({
+        simulationActive: false,
+        appliedRainfall: null,
+        heatOffsetC: 0,
+        simulateResult: null,
+        activeScenarioId: null,
+        combinedExposure: null,
+        combinedExposureError: null,
+        route: null,
+        loading: false,
+        error: null,
+        layerVisibility: { ...state.layerVisibility, floodDepth: false, pilotFlood: false, cityRoads: false, combined: false },
+      }));
+    },
+
+    computeRoute: async (start: LatLng, end: LatLng, vehicle?: VehicleType) => {
+      const scenarioId = get().activeScenarioId;
+      if (!scenarioId) return;
+      const vt = vehicle ?? get().vehicleType;
+      set({ loading: true, error: null });
+      try {
+        const route = await api.route(start, end, scenarioId, "astar", vt);
+        if (get().activeScenarioId === scenarioId) set({ route, selectedRouteId: "recommended" });
+      } catch (e) {
+        set({ error: (e as Error).message });
+      } finally {
+        set({ loading: false });
+      }
+    },
+
+    setVehicleType: (vehicleType: VehicleType) => {
+      set({ vehicleType });
+      const currentRoute = get().route;
+      if (currentRoute) {
+        // Re-trigger with new vehicle type if locations known or adjust ETA locally
+        set({
+          route: {
+            ...currentRoute,
+            active_vehicle: vehicleType,
+          },
+        });
+      }
+    },
+
+    setSelectedRouteId: (selectedRouteId: string) => set({ selectedRouteId }),
+    setActiveNav: (activeNav: string) => set({ activeNav }),
+    setSearchQuery: (searchQuery: string) => set({ searchQuery }),
+    selectNode: (nodeId: string | null) => set({ selectedNodeId: nodeId }),
+    toggleLayer: (key: keyof LayerVisibility) =>
+      set((state) => ({ layerVisibility: { ...state.layerVisibility, [key]: !state.layerVisibility[key] } })),
+  };
+});

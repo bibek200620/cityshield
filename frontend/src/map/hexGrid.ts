@@ -13,6 +13,29 @@ export interface HexSummary {
   count: number;
 }
 
+export interface HexPointValue {
+  lng: number;
+  lat: number;
+  value: number;
+}
+
+function ringContainsPoint(ring: Ring, lng: number, lat: number): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const crosses = (yi > lat) !== (yj > lat)
+      && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+function shapeContainsPoint(rings: Ring[], lng: number, lat: number): boolean {
+  return Boolean(rings.length && ringContainsPoint(rings[0], lng, lat)
+    && !rings.slice(1).some((ring) => ringContainsPoint(ring, lng, lat)));
+}
+
 export function getMapDetail(zoom: number): MapDetail {
   if (zoom < 11.5) return "city";
   if (zoom < 13) return "district";
@@ -39,6 +62,23 @@ export function summarizeHexes(mesh: HexCell[], values: ReadonlyMap<string, numb
     if (!covered) continue;
     const value = totalArea > 0 ? weightedSum / totalArea : null;
     for (const rings of hex.shapes) summaries.push({ rings, value, count });
+  }
+  return summaries;
+}
+
+/** Average point-based model cells into the same display hex mesh. */
+export function summarizeHexPoints(mesh: HexCell[], points: readonly HexPointValue[]): HexSummary[] {
+  const summaries: HexSummary[] = [];
+  for (const hex of mesh) {
+    const values: number[] = [];
+    for (const point of points) {
+      if (hex.shapes.some((rings) => shapeContainsPoint(rings, point.lng, point.lat))) {
+        values.push(point.value);
+      }
+    }
+    if (!values.length) continue;
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    for (const rings of hex.shapes) summaries.push({ rings, value: average, count: values.length });
   }
   return summaries;
 }

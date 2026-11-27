@@ -1,0 +1,144 @@
+- generic [ref=f3e3]:
+  - banner [ref=f3e4]:
+    - link "CityShield home" [ref=f3e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=f3e10]:
+      - generic [ref=f3e11]: Find an area
+      - searchbox "Find an area" [ref=f3e12]
+    - generic [ref=f3e13]:
+      - button "Routes" [expanded] [ref=f3e14] [cursor=pointer]
+      - button "Next 3 hours" [ref=f3e15] [cursor=pointer]
+      - button "Rainfall scenario" [ref=f3e16] [cursor=pointer]
+      - button "Data & models" [ref=f3e17] [cursor=pointer]
+  - main "Bengaluru map" [ref=f3e18]:
+    - region "Map layers" [ref=f3e19]:
+      - generic [ref=f3e20]:
+        - generic [ref=f3e21] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=f3e22]
+          - generic [ref=f3e24]: Flood
+        - generic [ref=f3e25] [cursor=pointer]:
+          - checkbox "Heat" [ref=f3e26]
+          - generic [ref=f3e28]: Heat
+        - generic [ref=f3e29] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=f3e30]
+          - generic [ref=f3e32]: Combined exposure
+      - paragraph [ref=f3e34]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=f3e35]:
+      - generic [ref=f3e36]:
+        - generic "Interactive Bengaluru map" [ref=f3e37]:
+          - generic:
+            - region "Map" [ref=f3e38]
+            - generic "Map marker": A
+            - generic "Map marker": B
+          - generic:
+            - generic:
+              - button "Find my location" [ref=f3e40] [cursor=pointer]
+              - generic [ref=f3e42]:
+                - button "Zoom in" [ref=f3e43] [cursor=pointer]
+                - button "Zoom out" [ref=f3e45] [cursor=pointer]
+              - group [ref=f3e52]:
+                - generic "Toggle attribution" [ref=f3e53] [cursor=pointer]
+                - generic [ref=f3e54]:
+                  - text: GBA delimitation via OpenCity and bharatlas | ©
+                  - link "OpenStreetMap" [ref=f3e55] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=f3e56] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - status [ref=f3e180]: Basemap unavailable. Check your connection or browser graphics support.
+        - button "View whole city" [ref=f3e47] [cursor=pointer]
+      - generic "Map legend" [ref=f3e48]:
+        - status [ref=f3e57]: City hexagons · averages
+        - generic [ref=f3e49]: 2025 GBA risk-data boundary
+        - generic [ref=f3e51]: Southern suburbs are visible for basemap and routing; current flood and heat risk data stop at this boundary.
+        - generic [ref=f3e58]:
+          - strong [ref=f3e59]: Runoff on terrain depressions
+          - generic [ref=f3e60]: 0 mm
+          - generic [ref=f3e62]: ">0–5 mm"
+          - generic [ref=f3e64]: ">5–20 mm"
+          - generic [ref=f3e66]: ">20 mm"
+          - generic [ref=f3e68]: Permanent water
+      - generic:
+        - heading "Bengaluru" [level=1]
+        - paragraph: GBA risk data · map extends south to Anekal
+      - complementary "Car routes" [ref=f3e70]:
+        - generic [ref=f3e71]:
+          - heading "Car routes" [level=2] [ref=f3e72]
+          - button "Close panel" [ref=f3e73] [cursor=pointer]: ×
+        - generic [ref=f3e75]:
+          - region "Source" [ref=f3e76]:
+            - heading "Source" [level=3] [ref=f3e77]:
+              - generic [aria-hidden] [ref=f3e78]: A
+              - text: Source
+            - generic [ref=f3e79]:
+              - generic [ref=f3e80]:
+                - generic [ref=f3e81]: Search source by place name
+                - searchbox "Search source by place name" [ref=f3e82]
+                - button "Search" [disabled] [ref=f3e83]
+              - paragraph [ref=f3e84]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=f3e85] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Use my current location" [ref=f3e86] [cursor=pointer]
+            - button "Pick source on map" [ref=f3e87] [cursor=pointer]
+            - generic [ref=f3e123]:
+              - generic [ref=f3e124]: Nova Granites (India) Ltd, 25A, Krishnasagara, Bengaluru, Anekal, Bengaluru Urban, Karnataka, 562107, India
+              - button "Clear source" [ref=f3e125] [cursor=pointer]: ×
+          - region "Destination" [ref=f3e88]:
+            - heading "Destination" [level=3] [ref=f3e89]:
+              - generic [aria-hidden] [ref=f3e90]: B
+              - text: Destination
+            - generic [ref=f3e91]:
+              - generic [ref=f3e92]:
+                - generic [ref=f3e93]: Search destination by place name
+                - searchbox "Search destination by place name" [ref=f3e94]
+                - button "Search" [disabled] [ref=f3e95]
+              - paragraph [ref=f3e96]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=f3e97] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Pick destination on map" [ref=f3e98] [cursor=pointer]
+            - generic [ref=f3e131]:
+              - generic [ref=f3e132]: BMS College of Engineering, Hanumantha Nagar Main Road / 50 Feet Road, Mount Joy, Hanumantha Nagar, Sunkenahalli, Bengaluru Central City Corporation, Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, 560019, India
+              - button "Clear destination" [ref=f3e133] [cursor=pointer]: ×
+          - button "Compare car routes" [ref=f3e99] [cursor=pointer]
+          - paragraph [ref=f3e100]:
+            - text: Comparing sends both points to the routing provider.
+            - link "OpenStreetMap fallback data" [ref=f3e101] [cursor=pointer]:
+              - /url: https://www.openstreetmap.org/fixthemap
+            - text: .
+          - generic "Route options" [ref=f3e235]:
+            - generic "Trip conditions" [ref=f3e236]:
+              - strong [ref=f3e237]: Trip conditions
+              - paragraph [ref=f3e238]: Live traffic is not configured. · FOSSGIS Valhalla · OpenStreetMap
+              - paragraph [ref=f3e239]: 20.5 °C air · feels like 22.8 °C · 23:45 IST
+              - paragraph [ref=f3e240]: 0 mm over two model hours ending 23:30 IST. 0 mm for the following three model hours.
+              - paragraph [ref=f3e241]:
+                - text: City weather estimate by
+                - link "Open-Meteo" [ref=f3e242] [cursor=pointer]:
+                  - /url: https://open-meteo.com/
+                - text: .
+              - paragraph [ref=f3e243]: Current road flood reports unavailable.
+              - paragraph [ref=f3e244]: Runoff is a model screen. Travel time estimates cover provider traffic inputs. Heat and modeled runoff are shown separately from travel times.
+            - 'button "Best estimated time 97 min · 33.5 km Screened runoff: 0.00 km recent · 0.00 km with upcoming rain 17.01 km within the model grid" [pressed] [ref=f3e245] [cursor=pointer]':
+              - strong [ref=f3e246]: Best estimated time
+              - generic [ref=f3e247]: 97 min · 33.5 km
+              - generic [ref=f3e248]:
+                - text: "Screened runoff: 0.00 km recent · 0.00 km with upcoming rain"
+                - generic [ref=f3e249]: 17.01 km within the model grid
+            - 'button "Shortest distance 124 min · 29.0 km Screened runoff: 0.00 km recent · 0.00 km with upcoming rain 14.51 km within the model grid" [ref=f3e250] [cursor=pointer]':
+              - strong [ref=f3e251]: Shortest distance
+              - generic [ref=f3e252]: 124 min · 29.0 km
+              - generic [ref=f3e253]:
+                - text: "Screened runoff: 0.00 km recent · 0.00 km with upcoming rain"
+                - generic [ref=f3e254]: 14.51 km within the model grid
+            - 'button "Alternative 98 min · 43.9 km Screened runoff: 0.00 km recent · 0.00 km with upcoming rain 28.24 km within the model grid" [ref=f3e255] [cursor=pointer]':
+              - strong [ref=f3e256]: Alternative
+              - generic [ref=f3e257]: 98 min · 43.9 km
+              - generic [ref=f3e258]:
+                - text: "Screened runoff: 0.00 km recent · 0.00 km with upcoming rain"
+                - generic [ref=f3e259]: 28.24 km within the model grid
+            - button "Start navigation" [ref=f3e260] [cursor=pointer]

@@ -1,0 +1,352 @@
+{
+  "communities": {
+    "0": [
+      "api_client",
+      "api_client_api",
+      "api_client_cityfloodcell",
+      "api_client_criticalaccessrisk",
+      "api_client_criticalinfraitem",
+      "api_client_drivingoption",
+      "api_client_exposurecell",
+      "api_client_exposureresponse",
+      "api_client_geolinestring",
+      "api_client_heatcell",
+      "api_client_heatworkflowresponse",
+      "api_client_latlng",
+      "api_client_nodeprediction",
+      "api_client_placesearchresponse",
+      "api_client_placesearchresult",
+      "api_client_request",
+      "api_client_roadsegment",
+      "api_client_routeoption",
+      "api_client_routeresponse",
+      "api_client_scenariosummary",
+      "api_client_simulateresponse",
+      "components_routeplacesearch",
+      "components_routeplacesearch_routeplacesearch",
+      "map_drivingplanner_livelocation",
+      "store_usefloodstore",
+      "store_usefloodstore_floodstore",
+      "store_usefloodstore_layervisibility"
+    ],
+    "1": [
+      "package",
+      "package_dependencies",
+      "package_dependencies_deck_gl_aggregation_layers",
+      "package_dependencies_deck_gl_core",
+      "package_dependencies_deck_gl_layers",
+      "package_dependencies_deck_gl_mapbox",
+      "package_dependencies_deck_gl_react",
+      "package_dependencies_maplibre_gl",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_react_router_dom",
+      "package_dependencies_recharts",
+      "package_dependencies_zustand",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_preview",
+      "package_scripts_test_e2e",
+      "package_type",
+      "package_version"
+    ],
+    "2": [
+      "components_mapview",
+      "components_mapview_city_bounds",
+      "components_mapview_city_view",
+      "components_mapview_default_bbox",
+      "components_mapview_depthcolor",
+      "components_mapview_flood_legend",
+      "components_mapview_floodscreencolor",
+      "components_mapview_heatcolor",
+      "components_mapview_pilot_view",
+      "components_mapview_pilotbounds",
+      "components_mapview_temperaturecolor",
+      "map_hexgrid",
+      "map_hexgrid_getmapdetail",
+      "map_hexgrid_hexcell",
+      "map_hexgrid_hexgrids",
+      "map_hexgrid_hexsummary",
+      "map_hexgrid_mapdetail",
+      "map_hexgrid_ring",
+      "map_hexgrid_summarizehexes"
+    ],
+    "3": [
+      "api_client_drivingresponse",
+      "components_drivingplanner",
+      "components_drivingplanner_distancetext",
+      "components_drivingplanner_drivingplanner",
+      "components_drivingplanner_timeinbengaluru",
+      "map_drivingplanner",
+      "map_drivingplanner_endpoint",
+      "map_drivingplanner_initialpoints",
+      "map_drivingplanner_iswithinnavigationarea",
+      "map_drivingplanner_locationfromposition",
+      "map_drivingplanner_matchrouteposition",
+      "map_drivingplanner_navigation_area",
+      "map_drivingplanner_navigationmode",
+      "map_drivingplanner_routematch",
+      "map_drivingplanner_segmentbearing",
+      "map_drivingplanner_segmentdistance",
+      "map_drivingplanner_waypoint",
+      "map_drivingplanner_waypoints"
+    ],
+    "4": [
+      "components_explainabilitypanel",
+      "components_explainabilitypanel_explainabilitypanel",
+      "components_explainabilitypanel_factor_label",
+      "components_heatprovenancepanel",
+      "components_heatprovenancepanel_heatprovenancepanel",
+      "components_kpistatsrow",
+      "components_kpistatsrow_kpistatsrow",
+      "components_mapview_mapview",
+      "components_routecomparisonpanel",
+      "components_routecomparisonpanel_routecomparisonpanel",
+      "components_routecomparisonpanel_vehicles",
+      "components_scenarioslider",
+      "components_scenarioslider_scenarioslider",
+      "components_uncertaintypanel",
+      "components_uncertaintypanel_uncertaintypanel",
+      "src_app_maplayers",
+      "store_usefloodstore_usefloodstore",
+      "store_usefloodstore_vehicletype"
+    ],
+    "5": [
+      "api_client_cityfloodresponse",
+      "api_client_weatheravailabilityresponse",
+      "components_mapview_cityheat",
+      "components_placesearch",
+      "components_placesearch_aliases",
+      "components_placesearch_bengaluruplace",
+      "components_placesearch_placesearch",
+      "components_placesearch_placesearchprops",
+      "components_threehouroutlook",
+      "components_threehouroutlook_bengalurutime",
+      "components_threehouroutlook_threehouroutlook",
+      "map_drivingplanner_usedrivingplanner",
+      "src_app",
+      "src_app_app",
+      "src_app_dashboard",
+      "src_app_layers",
+      "src_main"
+    ],
+    "6": [
+      "tsconfig",
+      "tsconfig_compileroptions",
+      "tsconfig_compileroptions_isolatedmodules",
+      "tsconfig_compileroptions_jsx",
+      "tsconfig_compileroptions_lib",
+      "tsconfig_compileroptions_module",
+      "tsconfig_compileroptions_moduleresolution",
+      "tsconfig_compileroptions_noemit",
+      "tsconfig_compileroptions_nofallthroughcasesinswitch",
+      "tsconfig_compileroptions_nounusedlocals",
+      "tsconfig_compileroptions_nounusedparameters",
+      "tsconfig_compileroptions_resolvejsonmodule",
+      "tsconfig_compileroptions_skiplibcheck",
+      "tsconfig_compileroptions_strict",
+      "tsconfig_compileroptions_target",
+      "tsconfig_compileroptions_usedefineforclassfields",
+      "tsconfig_include"
+    ],
+    "7": [
+      "package_devdependencies",
+      "package_devdependencies_autoprefixer",
+      "package_devdependencies_eslint",
+      "package_devdependencies_eslint_plugin_react_hooks",
+      "package_devdependencies_eslint_plugin_react_refresh",
+      "package_devdependencies_playwright_test",
+      "package_devdependencies_postcss",
+      "package_devdependencies_prettier",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_types_react",
+      "package_devdependencies_types_react_dom",
+      "package_devdependencies_typescript",
+      "package_devdependencies_typescript_eslint_eslint_plugin",
+      "package_devdependencies_typescript_eslint_parser",
+      "package_devdependencies_vite",
+      "package_devdependencies_vitejs_plugin_react"
+    ],
+    "8": [
+      "e2e_combined_map_spec",
+      "e2e_combined_map_spec_deferred",
+      "e2e_combined_map_spec_emptyexposure",
+      "e2e_combined_map_spec_mockapi",
+      "e2e_combined_map_spec_openmap",
+      "e2e_combined_map_spec_readyexposure",
+      "e2e_combined_map_spec_respond",
+      "e2e_combined_map_spec_unavailableexposure",
+      "e2e_combined_map_spec_unavailableheat"
+    ],
+    "9": [
+      "index_cityshield_bengaluru",
+      "index_html",
+      "index_root",
+      "public_cityshield_svg",
+      "src_main_tsx"
+    ],
+    "10": [
+      "src_theme",
+      "src_theme_statecolor",
+      "src_theme_statelabel",
+      "src_theme_theme"
+    ],
+    "11": [
+      "src_vite_env_d",
+      "src_vite_env_d_importmeta",
+      "src_vite_env_d_importmetaenv"
+    ],
+    "12": [
+      "components_header",
+      "components_header_header"
+    ],
+    "13": [
+      "playwright_config"
+    ],
+    "14": [
+      "postcss_config"
+    ],
+    "15": [
+      "tailwind_config"
+    ],
+    "16": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.12535612535612536,
+    "1": 0.08695652173913043,
+    "2": 0.14035087719298245,
+    "3": 0.13725490196078433,
+    "4": 0.1503267973856209,
+    "5": 0.13970588235294118,
+    "6": 0.11764705882352941,
+    "7": 0.125,
+    "8": 0.2222222222222222,
+    "9": 0.4,
+    "10": 0.5,
+    "11": 0.6666666666666666,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0
+  },
+  "gods": [
+    {
+      "id": "store_usefloodstore_usefloodstore",
+      "label": "useFloodStore",
+      "degree": 18
+    },
+    {
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 15
+    },
+    {
+      "id": "store_usefloodstore_floodstore",
+      "label": "FloodStore",
+      "degree": 8
+    },
+    {
+      "id": "api_client_latlng",
+      "label": "LatLng",
+      "degree": 7
+    },
+    {
+      "id": "api_client_api",
+      "label": "api",
+      "degree": 7
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 6
+    },
+    {
+      "id": "map_drivingplanner_usedrivingplanner",
+      "label": "useDrivingPlanner()",
+      "degree": 4
+    },
+    {
+      "id": "src_app_dashboard",
+      "label": "Dashboard()",
+      "degree": 3
+    },
+    {
+      "id": "api_client_placesearchresult",
+      "label": "PlaceSearchResult",
+      "degree": 3
+    },
+    {
+      "id": "api_client_cityfloodresponse",
+      "label": "CityFloodResponse",
+      "degree": 3
+    }
+  ],
+  "surprises": [
+    {
+      "source": "MapLayers()",
+      "target": "useFloodStore",
+      "source_files": [
+        "src/App.tsx",
+        "src/store/useFloodStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `MapLayers()` unexpectedly reaches hub `useFloodStore`"
+    },
+    {
+      "source": "Dashboard()",
+      "target": "useFloodStore",
+      "source_files": [
+        "src/App.tsx",
+        "src/store/useFloodStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "ExplainabilityPanel()",
+      "target": "useFloodStore",
+      "source_files": [
+        "src/components/ExplainabilityPanel.tsx",
+        "src/store/useFloodStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `ExplainabilityPanel()` unexpectedly reaches hub `useFloodStore`"
+    },
+    {
+      "source": "HeatProvenancePanel()",
+      "target": "useFloodStore",
+      "source_files": [
+        "src/components/HeatProvenancePanel.tsx",
+        "src/store/useFloodStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `HeatProvenancePanel()` unexpectedly reaches hub `useFloodStore`"
+    },
+    {
+      "source": "KpiStatsRow()",
+      "target": "useFloodStore",
+      "source_files": [
+        "src/components/KpiStatsRow.tsx",
+        "src/store/useFloodStore.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `KpiStatsRow()` unexpectedly reaches hub `useFloodStore`"
+    }
+  ],
+  "tokens": {
+    "input": 995,
+    "output": 568
+  }
+}

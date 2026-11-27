@@ -1,0 +1,4649 @@
+{
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "nodes": [
+    {
+      "id": "e2e_combined_map_spec",
+      "label": "combined-map.spec.ts",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_unavailableheat",
+      "label": "unavailableHeat",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_readyexposure",
+      "label": "readyExposure",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L27",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_emptyexposure",
+      "label": "emptyExposure",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L50",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_unavailableexposure",
+      "label": "unavailableExposure",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L56",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_deferred",
+      "label": "deferred()",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L63",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_respond",
+      "label": "respond()",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L69",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_mockapi",
+      "label": "mockApi()",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L73",
+      "_origin": "ast"
+    },
+    {
+      "id": "e2e_combined_map_spec_openmap",
+      "label": "openMap()",
+      "file_type": "code",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L138",
+      "_origin": "ast"
+    },
+    {
+      "id": "package",
+      "label": "package.json",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_name",
+      "label": "name",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L2",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_private",
+      "label": "private",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_version",
+      "label": "version",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_type",
+      "label": "type",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_scripts_dev",
+      "label": "dev",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_scripts_build",
+      "label": "build",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_scripts_preview",
+      "label": "preview",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_scripts_lint",
+      "label": "lint",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_scripts_test_e2e",
+      "label": "test:e2e",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies",
+      "label": "dependencies",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_deck_gl_aggregation_layers",
+      "label": "@deck.gl/aggregation-layers",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_deck_gl_core",
+      "label": "@deck.gl/core",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_deck_gl_layers",
+      "label": "@deck.gl/layers",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_deck_gl_mapbox",
+      "label": "@deck.gl/mapbox",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_deck_gl_react",
+      "label": "@deck.gl/react",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_maplibre_gl",
+      "label": "maplibre-gl",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_react",
+      "label": "react",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L20",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_react_dom",
+      "label": "react-dom",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L21",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_react_router_dom",
+      "label": "react-router-dom",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L22",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_recharts",
+      "label": "recharts",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_dependencies_zustand",
+      "label": "zustand",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies",
+      "label": "devDependencies",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L26",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_playwright_test",
+      "label": "@playwright/test",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L27",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_types_react",
+      "label": "@types/react",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L28",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_types_react_dom",
+      "label": "@types/react-dom",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L29",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_typescript_eslint_eslint_plugin",
+      "label": "@typescript-eslint/eslint-plugin",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L30",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_typescript_eslint_parser",
+      "label": "@typescript-eslint/parser",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_vitejs_plugin_react",
+      "label": "@vitejs/plugin-react",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L32",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_autoprefixer",
+      "label": "autoprefixer",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L33",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_eslint",
+      "label": "eslint",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L34",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_eslint_plugin_react_hooks",
+      "label": "eslint-plugin-react-hooks",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L35",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_eslint_plugin_react_refresh",
+      "label": "eslint-plugin-react-refresh",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L36",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_postcss",
+      "label": "postcss",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L37",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_prettier",
+      "label": "prettier",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L38",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_tailwindcss",
+      "label": "tailwindcss",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L39",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_typescript",
+      "label": "typescript",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L40",
+      "_origin": "ast"
+    },
+    {
+      "id": "package_devdependencies_vite",
+      "label": "vite",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L41",
+      "_origin": "ast"
+    },
+    {
+      "id": "playwright_config",
+      "label": "playwright.config.ts",
+      "file_type": "code",
+      "source_file": "playwright.config.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "postcss_config",
+      "label": "postcss.config.js",
+      "file_type": "code",
+      "source_file": "postcss.config.js",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app",
+      "label": "App.tsx",
+      "file_type": "code",
+      "source_file": "src/App.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_layers",
+      "label": "layers",
+      "file_type": "code",
+      "source_file": "src/App.tsx",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_maplayers",
+      "label": "MapLayers()",
+      "file_type": "code",
+      "source_file": "src/App.tsx",
+      "source_location": "L21",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_dashboard",
+      "label": "Dashboard()",
+      "file_type": "code",
+      "source_file": "src/App.tsx",
+      "source_location": "L62",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_app",
+      "label": "App()",
+      "file_type": "code",
+      "source_file": "src/App.tsx",
+      "source_location": "L233",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client",
+      "label": "client.ts",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_latlng",
+      "label": "LatLng",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_placesearchresult",
+      "label": "PlaceSearchResult",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_placesearchresponse",
+      "label": "PlaceSearchResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_drivingoption",
+      "label": "DrivingOption",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L21",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_drivingresponse",
+      "label": "DrivingResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L32",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_cityfloodcell",
+      "label": "CityFloodCell",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L42",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_cityfloodresponse",
+      "label": "CityFloodResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L49",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_geolinestring",
+      "label": "GeoLineString",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L53",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_scenariosummary",
+      "label": "ScenarioSummary",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L58",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_nodeprediction",
+      "label": "NodePrediction",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L65",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_roadsegment",
+      "label": "RoadSegment",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L73",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_simulateresponse",
+      "label": "SimulateResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L79",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_criticalaccessrisk",
+      "label": "CriticalAccessRisk",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L98",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_routeoption",
+      "label": "RouteOption",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L106",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_routeresponse",
+      "label": "RouteResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L120",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_weatheravailabilityresponse",
+      "label": "WeatherAvailabilityResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L131",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_twodayweatherreportresponse",
+      "label": "TwoDayWeatherReportResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L182",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_heatcell",
+      "label": "HeatCell",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L200",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_heatworkflowresponse",
+      "label": "HeatWorkflowResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L210",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_exposurecell",
+      "label": "ExposureCell",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L232",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_exposureresponse",
+      "label": "ExposureResponse",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L245",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_criticalinfraitem",
+      "label": "CriticalInfraItem",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L257",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_request",
+      "label": "request()",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L265",
+      "_origin": "ast"
+    },
+    {
+      "id": "api_client_api",
+      "label": "api",
+      "file_type": "code",
+      "source_file": "src/api/client.ts",
+      "source_location": "L277",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_drivingplanner",
+      "label": "DrivingPlanner.tsx",
+      "file_type": "code",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_drivingplanner_timeinbengaluru",
+      "label": "timeInBengaluru",
+      "file_type": "code",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_drivingplanner_distancetext",
+      "label": "distanceText()",
+      "file_type": "code",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_drivingplanner_drivingplanner",
+      "label": "DrivingPlanner()",
+      "file_type": "code",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explainabilitypanel",
+      "label": "ExplainabilityPanel.tsx",
+      "file_type": "code",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explainabilitypanel_factor_label",
+      "label": "FACTOR_LABEL",
+      "file_type": "code",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_explainabilitypanel_explainabilitypanel",
+      "label": "ExplainabilityPanel()",
+      "file_type": "code",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_header",
+      "label": "Header.tsx",
+      "file_type": "code",
+      "source_file": "src/components/Header.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_header_header",
+      "label": "Header()",
+      "file_type": "code",
+      "source_file": "src/components/Header.tsx",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_heatprovenancepanel",
+      "label": "HeatProvenancePanel.tsx",
+      "file_type": "code",
+      "source_file": "src/components/HeatProvenancePanel.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_heatprovenancepanel_heatprovenancepanel",
+      "label": "HeatProvenancePanel()",
+      "file_type": "code",
+      "source_file": "src/components/HeatProvenancePanel.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_kpistatsrow",
+      "label": "KpiStatsRow.tsx",
+      "file_type": "code",
+      "source_file": "src/components/KpiStatsRow.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_kpistatsrow_kpistatsrow",
+      "label": "KpiStatsRow()",
+      "file_type": "code",
+      "source_file": "src/components/KpiStatsRow.tsx",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview",
+      "label": "MapView.tsx",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_cityheat",
+      "label": "CityHeat",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_area_view",
+      "label": "AREA_VIEW",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_city_bounds",
+      "label": "CITY_BOUNDS",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_city_view",
+      "label": "CITY_VIEW",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_flood_legend",
+      "label": "FLOOD_LEGEND",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L32",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_floodscreencolor",
+      "label": "floodScreenColor()",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L40",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_depthcolor",
+      "label": "depthColor()",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L45",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_temperaturecolor",
+      "label": "temperatureColor()",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L50",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_mapview_mapview",
+      "label": "MapView()",
+      "file_type": "code",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L55",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_placesearch",
+      "label": "PlaceSearch.tsx",
+      "file_type": "code",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_placesearch_bengaluruplace",
+      "label": "BengaluruPlace",
+      "file_type": "code",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_placesearch_aliases",
+      "label": "aliases",
+      "file_type": "code",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_placesearch_placesearchprops",
+      "label": "PlaceSearchProps",
+      "file_type": "code",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_placesearch_placesearch",
+      "label": "PlaceSearch()",
+      "file_type": "code",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_routecomparisonpanel",
+      "label": "RouteComparisonPanel.tsx",
+      "file_type": "code",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_routecomparisonpanel_vehicles",
+      "label": "vehicles",
+      "file_type": "code",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_routecomparisonpanel_routecomparisonpanel",
+      "label": "RouteComparisonPanel()",
+      "file_type": "code",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_routeplacesearch",
+      "label": "RoutePlaceSearch.tsx",
+      "file_type": "code",
+      "source_file": "src/components/RoutePlaceSearch.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_routeplacesearch_routeplacesearch",
+      "label": "RoutePlaceSearch()",
+      "file_type": "code",
+      "source_file": "src/components/RoutePlaceSearch.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_scenarioslider",
+      "label": "ScenarioSlider.tsx",
+      "file_type": "code",
+      "source_file": "src/components/ScenarioSlider.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_scenarioslider_scenarioslider",
+      "label": "ScenarioSlider()",
+      "file_type": "code",
+      "source_file": "src/components/ScenarioSlider.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_threehouroutlook",
+      "label": "ThreeHourOutlook.tsx",
+      "file_type": "code",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_threehouroutlook_bengalurutime",
+      "label": "bengaluruTime",
+      "file_type": "code",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_threehouroutlook_threehouroutlook",
+      "label": "ThreeHourOutlook()",
+      "file_type": "code",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_twodayweatherreport",
+      "label": "TwoDayWeatherReport.tsx",
+      "file_type": "code",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_twodayweatherreport_bengalurutime",
+      "label": "bengaluruTime",
+      "file_type": "code",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_twodayweatherreport_summarize",
+      "label": "summarize()",
+      "file_type": "code",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_twodayweatherreport_twodayweatherreport",
+      "label": "TwoDayWeatherReport()",
+      "file_type": "code",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_uncertaintypanel",
+      "label": "UncertaintyPanel.tsx",
+      "file_type": "code",
+      "source_file": "src/components/UncertaintyPanel.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "components_uncertaintypanel_uncertaintypanel",
+      "label": "UncertaintyPanel()",
+      "file_type": "code",
+      "source_file": "src/components/UncertaintyPanel.tsx",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_main",
+      "label": "main.tsx",
+      "file_type": "code",
+      "source_file": "src/main.tsx",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner",
+      "label": "drivingPlanner.ts",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_endpoint",
+      "label": "Endpoint",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_waypoint",
+      "label": "Waypoint",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_waypoints",
+      "label": "Waypoints",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_navigationmode",
+      "label": "NavigationMode",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_livelocation",
+      "label": "LiveLocation",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_routematch",
+      "label": "RouteMatch",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_navigation_area",
+      "label": "NAVIGATION_AREA",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L26",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_initialpoints",
+      "label": "initialPoints",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L33",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_segmentdistance",
+      "label": "segmentDistance()",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L37",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_segmentbearing",
+      "label": "segmentBearing()",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L47",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_iswithinnavigationarea",
+      "label": "isWithinNavigationArea()",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L55",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_matchrouteposition",
+      "label": "matchRoutePosition()",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L61",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_locationfromposition",
+      "label": "locationFromPosition()",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L106",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_drivingplanner_usedrivingplanner",
+      "label": "useDrivingPlanner()",
+      "file_type": "code",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L118",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid",
+      "label": "hexGrid.ts",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_ring",
+      "label": "Ring",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_hexcell",
+      "label": "HexCell",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_mapdetail",
+      "label": "MapDetail",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_hexgrids",
+      "label": "HexGrids",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_hexsummary",
+      "label": "HexSummary",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_hexpointvalue",
+      "label": "HexPointValue",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_ringcontainspoint",
+      "label": "ringContainsPoint()",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L22",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_shapecontainspoint",
+      "label": "shapeContainsPoint()",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L34",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_getmapdetail",
+      "label": "getMapDetail()",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L39",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_summarizehexes",
+      "label": "summarizeHexes()",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L46",
+      "_origin": "ast"
+    },
+    {
+      "id": "map_hexgrid_summarizehexpoints",
+      "label": "summarizeHexPoints()",
+      "file_type": "code",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L70",
+      "_origin": "ast"
+    },
+    {
+      "id": "store_usefloodstore",
+      "label": "useFloodStore.ts",
+      "file_type": "code",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "store_usefloodstore_layervisibility",
+      "label": "LayerVisibility",
+      "file_type": "code",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "store_usefloodstore_vehicletype",
+      "label": "VehicleType",
+      "file_type": "code",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "store_usefloodstore_floodstore",
+      "label": "FloodStore",
+      "file_type": "code",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L26",
+      "_origin": "ast"
+    },
+    {
+      "id": "store_usefloodstore_usefloodstore",
+      "label": "useFloodStore",
+      "file_type": "code",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L62",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_theme",
+      "label": "theme.ts",
+      "file_type": "code",
+      "source_file": "src/theme.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_theme_theme",
+      "label": "theme",
+      "file_type": "code",
+      "source_file": "src/theme.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_theme_statecolor",
+      "label": "stateColor",
+      "file_type": "code",
+      "source_file": "src/theme.ts",
+      "source_location": "L22",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_theme_statelabel",
+      "label": "stateLabel",
+      "file_type": "code",
+      "source_file": "src/theme.ts",
+      "source_location": "L28",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_vite_env_d",
+      "label": "vite-env.d.ts",
+      "file_type": "code",
+      "source_file": "src/vite-env.d.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_vite_env_d_importmetaenv",
+      "label": "ImportMetaEnv",
+      "file_type": "code",
+      "source_file": "src/vite-env.d.ts",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_vite_env_d_importmeta",
+      "label": "ImportMeta",
+      "file_type": "code",
+      "source_file": "src/vite-env.d.ts",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "tailwind_config",
+      "label": "tailwind.config.ts",
+      "file_type": "code",
+      "source_file": "tailwind.config.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig",
+      "label": "tsconfig.json",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L2",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_target",
+      "label": "target",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L3",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_usedefineforclassfields",
+      "label": "useDefineForClassFields",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_lib",
+      "label": "lib",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_module",
+      "label": "module",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_skiplibcheck",
+      "label": "skipLibCheck",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_moduleresolution",
+      "label": "moduleResolution",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_resolvejsonmodule",
+      "label": "resolveJsonModule",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_isolatedmodules",
+      "label": "isolatedModules",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_noemit",
+      "label": "noEmit",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_jsx",
+      "label": "jsx",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_strict",
+      "label": "strict",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_nounusedlocals",
+      "label": "noUnusedLocals",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_nounusedparameters",
+      "label": "noUnusedParameters",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_compileroptions_nofallthroughcasesinswitch",
+      "label": "noFallthroughCasesInSwitch",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "tsconfig_include",
+      "label": "include",
+      "file_type": "code",
+      "source_file": "tsconfig.json",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "vite_config",
+      "label": "vite.config.ts",
+      "file_type": "code",
+      "source_file": "vite.config.ts",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "label": "index.html",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_html",
+      "community": 9,
+      "norm_label": "index.html"
+    },
+    {
+      "label": "CityShield · Bengaluru",
+      "file_type": "concept",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_cityshield_bengaluru",
+      "community": 9,
+      "norm_label": "cityshield · bengaluru"
+    },
+    {
+      "label": "root",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_root",
+      "community": 9,
+      "norm_label": "root"
+    },
+    {
+      "label": "cityshield.svg",
+      "file_type": "image",
+      "source_file": "public/cityshield.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "public_cityshield_svg",
+      "community": 9,
+      "norm_label": "cityshield.svg"
+    }
+  ],
+  "links": [
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "test",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_unavailableheat",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_readyexposure",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_emptyexposure",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_unavailableexposure",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_deferred",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_respond",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_mockapi",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_combined_map_spec",
+      "target": "e2e_combined_map_spec_openmap",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/combined-map.spec.ts",
+      "source_location": "L138",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_name",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_private",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_version",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_type",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_scripts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_dev",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_build",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_preview",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_lint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "package_scripts",
+      "target": "package_scripts_test_e2e",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "package",
+      "target": "package_dependencies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_deck_gl_aggregation_layers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_deck_gl_aggregation_layers",
+      "target": "deck_gl_aggregation_layers",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L14",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_deck_gl_core",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_deck_gl_core",
+      "target": "deck_gl_core",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L15",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_deck_gl_layers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_deck_gl_layers",
+      "target": "deck_gl_layers",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L16",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_deck_gl_mapbox",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_deck_gl_mapbox",
+      "target": "deck_gl_mapbox",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L17",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_deck_gl_react",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_deck_gl_react",
+      "target": "deck_gl_react",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L18",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_maplibre_gl",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_maplibre_gl",
+      "target": "maplibre_gl",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L19",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_react",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_react",
+      "target": "react",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L20",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_react_dom",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_react_dom",
+      "target": "react_dom",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L21",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_react_router_dom",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_react_router_dom",
+      "target": "react_router_dom",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L22",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_recharts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_recharts",
+      "target": "recharts",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L23",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_dependencies",
+      "target": "package_dependencies_zustand",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "package_dependencies_zustand",
+      "target": "zustand",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L24",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package",
+      "target": "package_devdependencies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_playwright_test",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_playwright_test",
+      "target": "playwright_test",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L27",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_types_react",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_types_react",
+      "target": "types_react",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L28",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_types_react_dom",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_types_react_dom",
+      "target": "types_react_dom",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L29",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_typescript_eslint_eslint_plugin",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_typescript_eslint_eslint_plugin",
+      "target": "typescript_eslint_eslint_plugin",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L30",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_typescript_eslint_parser",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_typescript_eslint_parser",
+      "target": "typescript_eslint_parser",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L31",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_vitejs_plugin_react",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_vitejs_plugin_react",
+      "target": "vitejs_plugin_react",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L32",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_autoprefixer",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_autoprefixer",
+      "target": "autoprefixer",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L33",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_eslint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_eslint",
+      "target": "eslint",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L34",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_eslint_plugin_react_hooks",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_eslint_plugin_react_hooks",
+      "target": "eslint_plugin_react_hooks",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L35",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_eslint_plugin_react_refresh",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_eslint_plugin_react_refresh",
+      "target": "eslint_plugin_react_refresh",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L36",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_postcss",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_postcss",
+      "target": "postcss",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L37",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_prettier",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_prettier",
+      "target": "prettier",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L38",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_tailwindcss",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_tailwindcss",
+      "target": "tailwindcss",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L39",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_typescript",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_typescript",
+      "target": "typescript",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L40",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "package_devdependencies",
+      "target": "package_devdependencies_vite",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "package_devdependencies_vite",
+      "target": "vite",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "package.json",
+      "source_location": "L41",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "playwright_config",
+      "target": "test",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "playwright.config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "api_client_api",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "api_client_cityfloodresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_heatprovenancepanel",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_drivingplanner",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "map_drivingplanner",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "map_drivingplanner_usedrivingplanner",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "map_drivingplanner_endpoint",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_mapview",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_mapview_cityheat",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_placesearch",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_placesearch_bengaluruplace",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_routecomparisonpanel",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_scenarioslider",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_threehouroutlook",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_twodayweatherreport",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_layers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_maplayers",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_dashboard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_app",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L233",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_latlng",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_placesearchresult",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_placesearchresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_drivingoption",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_drivingresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_cityfloodcell",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_cityfloodresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_geolinestring",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_scenariosummary",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_nodeprediction",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_roadsegment",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_simulateresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L79",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_criticalaccessrisk",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_routeoption",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_routeresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L120",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_weatheravailabilityresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L131",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_twodayweatherreportresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L182",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_heatcell",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L200",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_heatworkflowresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L210",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_exposurecell",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L232",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_exposureresponse",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L245",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_criticalinfraitem",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L257",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_request",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L265",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client",
+      "target": "api_client_api",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L277",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "components_routeplacesearch",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "map_drivingplanner",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "map_drivingplanner_navigation_area",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "map_drivingplanner_endpoint",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "map_drivingplanner_usedrivingplanner",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "components_drivingplanner_timeinbengaluru",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "components_drivingplanner_distancetext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner",
+      "target": "components_drivingplanner_drivingplanner",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_drivingplanner_drivingplanner",
+      "target": "components_drivingplanner_distancetext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DrivingPlanner.tsx",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "recharts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "api_client_api",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "components_explainabilitypanel_factor_label",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel",
+      "target": "components_explainabilitypanel_explainabilitypanel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "components_header",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/Header.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_header",
+      "target": "components_header_header",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/Header.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_heatprovenancepanel",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/HeatProvenancePanel.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_heatprovenancepanel",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/HeatProvenancePanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_heatprovenancepanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/HeatProvenancePanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_heatprovenancepanel",
+      "target": "components_heatprovenancepanel_heatprovenancepanel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/HeatProvenancePanel.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_kpistatsrow",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/KpiStatsRow.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_kpistatsrow",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/KpiStatsRow.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_kpistatsrow",
+      "target": "components_kpistatsrow_kpistatsrow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/KpiStatsRow.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "core",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "layers",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "mapbox",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "maplibre_gl",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_cityfloodcell",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_cityfloodresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_drivingoption",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_exposurecell",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_latlng",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_nodeprediction",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_roadsegment",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_hexgrid",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_hexgrid_getmapdetail",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_hexgrid_summarizehexes",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_hexgrid_summarizehexpoints",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_hexgrid_hexgrids",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_hexgrid_hexsummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_hexgrid_mapdetail",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_placesearch",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_placesearch_bengaluruplace",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_drivingplanner",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_drivingplanner_livelocation",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_drivingplanner_navigationmode",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_drivingplanner_routematch",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "map_drivingplanner_waypoints",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_cityheat",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_area_view",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_city_bounds",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_city_view",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_flood_legend",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_floodscreencolor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_depthcolor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_temperaturecolor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "components_mapview_mapview",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "components_placesearch",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_placesearch",
+      "target": "components_placesearch_bengaluruplace",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_placesearch",
+      "target": "components_placesearch_aliases",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "components_placesearch",
+      "target": "components_placesearch_placesearchprops",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "components_placesearch",
+      "target": "components_placesearch_placesearch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/PlaceSearch.tsx",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routecomparisonpanel",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routecomparisonpanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routecomparisonpanel",
+      "target": "store_usefloodstore_vehicletype",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routecomparisonpanel",
+      "target": "components_routecomparisonpanel_vehicles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routecomparisonpanel",
+      "target": "components_routecomparisonpanel_routecomparisonpanel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routeplacesearch",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RoutePlaceSearch.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routeplacesearch",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RoutePlaceSearch.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routeplacesearch",
+      "target": "api_client_api",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RoutePlaceSearch.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routeplacesearch",
+      "target": "api_client_placesearchresult",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RoutePlaceSearch.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routeplacesearch",
+      "target": "components_routeplacesearch_routeplacesearch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/RoutePlaceSearch.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_scenarioslider",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ScenarioSlider.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_scenarioslider",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ScenarioSlider.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_scenarioslider",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ScenarioSlider.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_scenarioslider",
+      "target": "components_scenarioslider_scenarioslider",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ScenarioSlider.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_threehouroutlook",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_threehouroutlook",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_threehouroutlook",
+      "target": "api_client_api",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_threehouroutlook",
+      "target": "api_client_weatheravailabilityresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_threehouroutlook",
+      "target": "components_threehouroutlook_bengalurutime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_threehouroutlook",
+      "target": "components_threehouroutlook_threehouroutlook",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/ThreeHourOutlook.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_twodayweatherreport",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_twodayweatherreport",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_twodayweatherreport",
+      "target": "api_client_api",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_twodayweatherreport",
+      "target": "api_client_twodayweatherreportresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_twodayweatherreport",
+      "target": "components_twodayweatherreport_bengalurutime",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_twodayweatherreport",
+      "target": "components_twodayweatherreport_summarize",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "components_twodayweatherreport",
+      "target": "components_twodayweatherreport_twodayweatherreport",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/TwoDayWeatherReport.tsx",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "components_uncertaintypanel",
+      "target": "recharts",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/UncertaintyPanel.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "components_uncertaintypanel",
+      "target": "store_usefloodstore",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/UncertaintyPanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_uncertaintypanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/UncertaintyPanel.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_uncertaintypanel",
+      "target": "components_uncertaintypanel_uncertaintypanel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/UncertaintyPanel.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/main.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main",
+      "target": "client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/main.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main",
+      "target": "react_router_dom",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/main.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main",
+      "target": "src_app",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/main.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main",
+      "target": "maplibre_gl_css",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/main.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_main",
+      "target": "users_shinobi_bibek_code_cityshield_frontend_src_index_css",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/main.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "api_client_api",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "api_client_drivingresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "api_client_latlng",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_endpoint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_waypoint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_waypoints",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_navigationmode",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_livelocation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_routematch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_navigation_area",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_initialpoints",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_segmentdistance",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_segmentbearing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_iswithinnavigationarea",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_matchrouteposition",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_locationfromposition",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner",
+      "target": "map_drivingplanner_usedrivingplanner",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L118",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner_matchrouteposition",
+      "target": "map_drivingplanner_segmentbearing",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_ring",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_hexcell",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_mapdetail",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_hexgrids",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_hexsummary",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_hexpointvalue",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_ringcontainspoint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_shapecontainspoint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_getmapdetail",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_summarizehexes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid",
+      "target": "map_hexgrid_summarizehexpoints",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "map_hexgrid_shapecontainspoint",
+      "target": "map_hexgrid_ringcontainspoint",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/hexGrid.ts",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "zustand",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_api",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_criticalinfraitem",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_latlng",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_routeresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_scenariosummary",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_simulateresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_heatworkflowresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "api_client_exposureresponse",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "store_usefloodstore_layervisibility",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "store_usefloodstore_vehicletype",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "store_usefloodstore_floodstore",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "src_theme",
+      "target": "src_theme_theme",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/theme.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_theme",
+      "target": "src_theme_statecolor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/theme.ts",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "src_theme",
+      "target": "src_theme_statelabel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/theme.ts",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "src_vite_env_d",
+      "target": "src_vite_env_d_importmetaenv",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/vite-env.d.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "src_vite_env_d",
+      "target": "src_vite_env_d_importmeta",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/vite-env.d.ts",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "tailwind_config",
+      "target": "tailwindcss",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tailwind.config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig",
+      "target": "tsconfig_compileroptions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_target",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_usedefineforclassfields",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_lib",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions_lib",
+      "target": "ref_es2020",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L5",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "tsconfig_compileroptions_lib",
+      "target": "ref_dom",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L5",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "tsconfig_compileroptions_lib",
+      "target": "ref_dom_iterable",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L5",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_module",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_skiplibcheck",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_moduleresolution",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_resolvejsonmodule",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_isolatedmodules",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_noemit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_jsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_strict",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_nounusedlocals",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_nounusedparameters",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_compileroptions",
+      "target": "tsconfig_compileroptions_nofallthroughcasesinswitch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig",
+      "target": "tsconfig_include",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "tsconfig_include",
+      "target": "ref_src",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L18",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "vite_config",
+      "target": "plugin_react",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "vite.config.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "vite_config",
+      "target": "vite",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "vite.config.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "components_threehouroutlook_threehouroutlook",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_maplayers",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "api_client_placesearchresult",
+      "target": "api_client_latlng",
+      "relation": "inherits",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/api/client.ts",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "map_drivingplanner_livelocation",
+      "target": "api_client_latlng",
+      "relation": "inherits",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/map/drivingPlanner.ts",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore_floodstore",
+      "target": "api_client_scenariosummary",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore_floodstore",
+      "target": "api_client_simulateresponse",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore_floodstore",
+      "target": "api_client_criticalinfraitem",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore_floodstore",
+      "target": "api_client_routeresponse",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore_floodstore",
+      "target": "api_client_heatworkflowresponse",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore_floodstore",
+      "target": "api_client_exposureresponse",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "store_usefloodstore_floodstore",
+      "target": "api_client_latlng",
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/store/useFloodStore.ts",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_dashboard",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/App.tsx",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_dashboard",
+      "target": "map_drivingplanner_usedrivingplanner",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/App.tsx",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "components_explainabilitypanel_explainabilitypanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/components/ExplainabilityPanel.tsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "components_heatprovenancepanel_heatprovenancepanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/components/HeatProvenancePanel.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_kpistatsrow_kpistatsrow",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/components/KpiStatsRow.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview_mapview",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "components_routecomparisonpanel_routecomparisonpanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/components/RouteComparisonPanel.tsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "components_scenarioslider_scenarioslider",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/components/ScenarioSlider.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_uncertaintypanel_uncertaintypanel",
+      "target": "store_usefloodstore_usefloodstore",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/components/UncertaintyPanel.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "components_mapview",
+      "target": "api_client_heatcell",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/MapView.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html",
+      "target": "index_cityshield_bengaluru"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html",
+      "target": "index_root"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_html",
+      "target": "public_cityshield_svg"
+    }
+  ]
+}

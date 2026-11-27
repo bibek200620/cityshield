@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
+    routes_assistant,
     routes_backtest,
     routes_city_flood,
     routes_driving,
@@ -60,6 +61,7 @@ app.include_router(routes_exposure.router)
 app.include_router(routes_backtest.router)
 app.include_router(routes_explain.router)
 app.include_router(routes_weather.router)
+app.include_router(routes_assistant.router)
 app.include_router(ws_live.router)
 
 

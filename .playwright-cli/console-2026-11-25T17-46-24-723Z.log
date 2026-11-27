@@ -1,0 +1,278 @@
+[     302ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:21551
+[     524ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[     525ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[  306342ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/src/map/drivingPlanner.ts?t=1795629090991:1
+[  306344ms] [ERROR] [hmr] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:176
+[  306345ms] [ERROR] [hmr] Failed to reload /src/components/MapView.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:176
+[  386294ms] [ERROR] SyntaxError: The requested module '/src/map/drivingPlanner.ts?t=1795629170878' does not provide an export named 'getRoutePosition' @ http://localhost:5173/@vite/client:174
+[  386300ms] [ERROR] [hmr] Failed to reload /src/App.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:176
+[  386300ms] [ERROR] SyntaxError: The requested module '/src/map/drivingPlanner.ts?t=1795629170878' does not provide an export named 'getRoutePosition' @ http://localhost:5173/@vite/client:174
+[  386300ms] [ERROR] [hmr] Failed to reload /src/components/MapView.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:176
+[  697366ms] The requested module '/src/map/drivingPlanner.ts?t=1795629170878' does not provide an export named 'getRoutePosition'
+[ 1188216ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:21551
+[ 1188400ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[ 1188401ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[ 1494048ms] [ERROR] Warning: React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://reactjs.org/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+%s Dashboard 1. useRef                     useRef
+2. useMemo                    useMemo
+3. useSyncExternalStore       useSyncExternalStore
+4. useEffect                  useEffect
+5. useDebugValue              useDebugValue
+6. useDebugValue              useDebugValue
+7. useRef                     useRef
+8. useMemo                    useMemo
+9. useSyncExternalStore       useSyncExternalStore
+10. useEffect                 useEffect
+11. useDebugValue             useDebugValue
+12. useDebugValue             useDebugValue
+13. useRef                    useRef
+14. useMemo                   useMemo
+15. useSyncExternalStore      useSyncExternalStore
+16. useEffect                 useEffect
+17. useDebugValue             useDebugValue
+18. useDebugValue             useDebugValue
+19. useRef                    useRef
+20. useMemo                   useMemo
+21. useSyncExternalStore      useSyncExternalStore
+22. useEffect                 useEffect
+23. useDebugValue             useDebugValue
+24. useDebugValue             useDebugValue
+25. useRef                    useRef
+26. useMemo                   useMemo
+27. useSyncExternalStore      useSyncExternalStore
+28. useEffect                 useEffect
+29. useDebugValue             useDebugValue
+30. useDebugValue             useDebugValue
+31. useRef                    useRef
+32. useMemo                   useMemo
+33. useSyncExternalStore      useSyncExternalStore
+34. useEffect                 useEffect
+35. useDebugValue             useDebugValue
+36. useDebugValue             useDebugValue
+37. useState                  useState
+38. useState                  useState
+39. useState                  useState
+40. useState                  useState
+41. useState                  useState
+42. useState                  useState
+43. useState                  useState
+44. useState                  useState
+45. useState                  useState
+46. useState                  useState
+47. useState                  useState
+48. useState                  useState
+49. useState                  useState
+50. useState                  useState
+51. useState                  useState
+52. useRef                    useState
+ 
+    at Dashboard (http://localhost:5173/src/App.tsx?t=1795630278545:113:23)
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4112:5)
+    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4582:5)
+    at App
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4525:15)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:5263:5) @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:521
+[ 1494064ms] Error: Should have a queue. This is likely a bug in React. Please file an issue.
+    at updateReducer (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11730:19)
+    at updateState (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:12021:18)
+    at Object.useState (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:12753:24)
+    at useState (http://localhost:5173/node_modules/.vite/deps/chunk-RLJ2RCJQ.js?v=ed7c7b1a:1066:29)
+    at useDrivingPlanner (http://localhost:5173/src/map/drivingPlanner.ts?t=1795630278545:95:51)
+    at Dashboard (http://localhost:5173/src/App.tsx?t=1795630278545:124:17)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11548:26)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14582:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3674:22)
+[ 1494064ms] Error: Should have a queue. This is likely a bug in React. Please file an issue.
+    at updateReducer (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11730:19)
+    at updateState (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:12021:18)
+    at Object.useState (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:12753:24)
+    at useState (http://localhost:5173/node_modules/.vite/deps/chunk-RLJ2RCJQ.js?v=ed7c7b1a:1066:29)
+    at useDrivingPlanner (http://localhost:5173/src/map/drivingPlanner.ts?t=1795630278545:95:51)
+    at Dashboard (http://localhost:5173/src/App.tsx?t=1795630278545:124:17)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11548:26)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14582:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3674:22)
+[ 1494069ms] [ERROR] The above error occurred in the <Dashboard> component:
+
+    at Dashboard (http://localhost:5173/src/App.tsx?t=1795630278545:113:23)
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4112:5)
+    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4582:5)
+    at App
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4525:15)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:5263:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14032
+[ 1494165ms] Error: Should have a queue. This is likely a bug in React. Please file an issue.
+    at updateReducer (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11730:19)
+    at updateState (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:12021:18)
+    at Object.useState (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:12753:24)
+    at useState (http://localhost:5173/node_modules/.vite/deps/chunk-RLJ2RCJQ.js?v=ed7c7b1a:1066:29)
+    at useDrivingPlanner (http://localhost:5173/src/map/drivingPlanner.ts?t=1795630278545:95:51)
+    at Dashboard (http://localhost:5173/src/App.tsx?t=1795630278545:124:17)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11548:26)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14582:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:15924:22)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19753:22)
+[ 1550573ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:21551
+[ 1550707ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[ 1550708ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[ 1680830ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680832ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680832ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680832ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680833ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680833ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680833ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680833ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680839ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680840ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680854ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680854ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680854ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680854ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680854ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680854ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680854ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680869ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680869ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680869ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680869ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680869ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680869ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680869ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680884ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1680884ms] [ERROR] Error @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:365
+[ 1683092ms] [ERROR] Failed to load resource: net::ERR_INTERNET_DISCONNECTED @ http://localhost:8000/api/drive/routes:1
+[ 1716206ms] [ERROR] Failed to load resource: net::ERR_INTERNET_DISCONNECTED @ http://localhost:8000/api/drive/routes:1
+[ 1824516ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:21551
+[ 1824679ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[ 1824679ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4417
+[ 1824720ms] [WARNING] Geolocation support is not available so the GeolocateControl will be disabled. @ http://localhost:5173/node_modules/.vite/deps/maplibre-gl.js?v=ed7c7b1a:218
+[ 2044700ms] [ERROR] Warning: React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://reactjs.org/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+%s Dashboard 1. useRef                     useRef
+2. useMemo                    useMemo
+3. useSyncExternalStore       useSyncExternalStore
+4. useEffect                  useEffect
+5. useDebugValue              useDebugValue
+6. useDebugValue              useDebugValue
+7. useRef                     useRef
+8. useMemo                    useMemo
+9. useSyncExternalStore       useSyncExternalStore
+10. useEffect                 useEffect
+11. useDebugValue             useDebugValue
+12. useDebugValue             useDebugValue
+13. useRef                    useRef
+14. useMemo                   useMemo
+15. useSyncExternalStore      useSyncExternalStore
+16. useEffect                 useEffect
+17. useDebugValue             useDebugValue
+18. useDebugValue             useDebugValue
+19. useRef                    useRef
+20. useMemo                   useMemo
+21. useSyncExternalStore      useSyncExternalStore
+22. useEffect                 useEffect
+23. useDebugValue             useDebugValue
+24. useDebugValue             useDebugValue
+25. useRef                    useRef
+26. useMemo                   useMemo
+27. useSyncExternalStore      useSyncExternalStore
+28. useEffect                 useEffect
+29. useDebugValue             useDebugValue
+30. useDebugValue             useDebugValue
+31. useRef                    useRef
+32. useMemo                   useMemo
+33. useSyncExternalStore      useSyncExternalStore
+34. useEffect                 useEffect
+35. useDebugValue             useDebugValue
+36. useDebugValue             useDebugValue
+37. useState                  useState
+38. useState                  useState
+39. useState                  useState
+40. useState                  useState
+41. useState                  useState
+42. useState                  useState
+43. useState                  useState
+44. useState                  useState
+45. useState                  useState
+46. useState                  useState
+47. useState                  useState
+48. useState                  useState
+49. useState                  useState
+50. useState                  useState
+51. useState                  useState
+52. useState                  useState
+53. useRef                    useRef
+54. useRef                    useRef
+55. useRef                    useRef
+56. useRef                    useRef
+57. useRef                    useRef
+58. useRef                    useRef
+59. useRef                    useRef
+60. useRef                    useRef
+61. useRef                    useRef
+62. useRef                    useRef
+63. useRef                    useRef
+64. useRef                    useRef
+65. useRef                    useEffect
+ 
+    at Dashboard (http://localhost:5173/src/App.tsx?t=1795630829270:113:23)
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4112:5)
+    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4582:5)
+    at App
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4525:15)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:5263:5) @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:521
+[ 2044710ms] Error: Rendered fewer hooks than expected. This may be caused by an accidental early return statement.
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11595:19)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14582:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3699:24)
+    at invokeGuardedCallback (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3733:39)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19765:15)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19198:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19137:13)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19116:15)
+[ 2044710ms] Error: Rendered fewer hooks than expected. This may be caused by an accidental early return statement.
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11595:19)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14582:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3699:24)
+    at invokeGuardedCallback (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:3733:39)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19765:15)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19198:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19137:13)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19116:15)
+[ 2044711ms] [ERROR] The above error occurred in the <Dashboard> component:
+
+    at Dashboard (http://localhost:5173/src/App.tsx?t=1795630829270:113:23)
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4112:5)
+    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4582:5)
+    at App
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:4525:15)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=ed7c7b1a:5263:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14032
+[ 2044756ms] Error: Rendered fewer hooks than expected. This may be caused by an accidental early return statement.
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:11595:19)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:14582:28)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:15924:22)
+    at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19753:22)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19198:20)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19137:13)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:19116:15)
+    at recoverFromConcurrentError (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:18736:28)
+    at performSyncWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:18879:28)
+    at flushSyncCallbacks (http://localhost:5173/node_modules/.vite/deps/chunk-NUMECXU6.js?v=ed7c7b1a:9119:30)

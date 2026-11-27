@@ -1,0 +1,101 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "CityShield home" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - text: CityShield
+    - generic [ref=e10]:
+      - generic [ref=e11]: Find an area
+      - searchbox "Find an area" [ref=e12]
+    - generic [ref=e13]:
+      - button "Routes" [expanded] [ref=e14] [cursor=pointer]
+      - button "Next 3 hours" [ref=e15] [cursor=pointer]
+      - button "Rainfall scenario" [ref=e16] [cursor=pointer]
+      - button "Data & models" [ref=e17] [cursor=pointer]
+  - main "Bengaluru map" [ref=e18]:
+    - region "Map layers" [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21] [cursor=pointer]:
+          - checkbox "Flood" [checked] [ref=e22]
+          - generic [ref=e24]: Flood
+        - generic [ref=e25] [cursor=pointer]:
+          - checkbox "Heat" [ref=e26]
+          - generic [ref=e28]: Heat
+        - generic [ref=e29] [cursor=pointer]:
+          - checkbox "Combined exposure" [ref=e30]
+          - generic [ref=e32]: Combined exposure
+      - paragraph [ref=e34]: Bengaluru · 90 mm scenario rainfall
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic "Interactive Bengaluru map" [ref=e37]:
+          - region "Map" [ref=e38]
+          - generic:
+            - generic:
+              - button "Find my location" [ref=e40] [cursor=pointer]
+              - generic [ref=e42]:
+                - button "Zoom in" [ref=e43] [cursor=pointer]
+                - button "Zoom out" [ref=e45] [cursor=pointer]
+              - group [ref=e51]:
+                - generic "Toggle attribution" [ref=e52] [cursor=pointer]
+                - generic [ref=e53]:
+                  - text: GBA delimitation via OpenCity and bharatlas | ©
+                  - link "OpenStreetMap" [ref=e54] [cursor=pointer]:
+                    - /url: https://www.openstreetmap.org/copyright
+                  - text: contributors ©
+                  - link "CARTO" [ref=e55] [cursor=pointer]:
+                    - /url: https://carto.com/about-carto/
+        - button "View whole city" [ref=e47] [cursor=pointer]
+      - generic "Map legend" [ref=e48]:
+        - status [ref=e56]: City hexagons · averages
+        - generic [ref=e49]: Municipal boundary
+        - generic [ref=e57]:
+          - strong [ref=e58]: Runoff on terrain depressions
+          - generic [ref=e59]: 0 mm
+          - generic [ref=e61]: ">0–5 mm"
+          - generic [ref=e63]: ">5–20 mm"
+          - generic [ref=e65]: ">20 mm"
+          - generic [ref=e67]: Permanent water
+      - generic:
+        - heading "Greater Bengaluru" [level=1]
+        - paragraph: Municipal area · Research prototype
+      - complementary "Car routes" [ref=e69]:
+        - generic [ref=e70]:
+          - heading "Car routes" [active] [level=2] [ref=e71]
+          - button "Close panel" [ref=e72] [cursor=pointer]: ×
+        - generic [ref=e74]:
+          - region "Source" [ref=e75]:
+            - heading "Source" [level=3] [ref=e76]:
+              - generic [aria-hidden] [ref=e77]: A
+              - text: Source
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - generic [ref=e80]: Search source by place name
+                - searchbox "Search source by place name" [ref=e81]
+                - button "Search" [disabled] [ref=e82]
+              - paragraph [ref=e83]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=e84] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Use my current location" [ref=e85] [cursor=pointer]
+            - button "Pick source on map" [ref=e86] [cursor=pointer]
+          - region "Destination" [ref=e87]:
+            - heading "Destination" [level=3] [ref=e88]:
+              - generic [aria-hidden] [ref=e89]: B
+              - text: Destination
+            - generic [ref=e90]:
+              - generic [ref=e91]:
+                - generic [ref=e92]: Search destination by place name
+                - searchbox "Search destination by place name" [ref=e93]
+                - button "Search" [disabled] [ref=e94]
+              - paragraph [ref=e95]:
+                - text: Submitted place names are searched in OpenStreetMap.
+                - link "© OpenStreetMap contributors" [ref=e96] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: .
+            - button "Pick destination on map" [ref=e97] [cursor=pointer]
+          - button "Compare car routes" [disabled] [ref=e98]
+          - paragraph [ref=e99]:
+            - text: Comparing sends both points to the routing provider.
+            - link "OpenStreetMap fallback data" [ref=e100] [cursor=pointer]:
+              - /url: https://www.openstreetmap.org/fixthemap
+            - text: .
