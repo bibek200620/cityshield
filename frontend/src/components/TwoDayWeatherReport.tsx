@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type AssistantOutlook, type TwoDayWeatherReportResponse } from "../api/client";
+import { api, type AssistantOutlook, type LatLng, type TwoDayWeatherReportResponse } from "../api/client";
 import { summarizeHourly } from "../map/weatherReport";
 import Icon from "./Icon";
 
@@ -15,7 +15,7 @@ const bengaluruTime = new Intl.DateTimeFormat("en-IN", {
 const localHour = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
 const formatTime = (value: string) => bengaluruTime.format(new Date(value));
 
-function downloadForecast(report: Extract<TwoDayWeatherReportResponse, { status: "ready" }>) {
+function downloadForecast(report: Extract<TwoDayWeatherReportResponse, { status: "ready" }>, locationName: string) {
   const { grid_cell_center: grid, retrieved_at: retrievedAt } = report.provenance;
   const fields = ["valid_at_utc", "valid_at_ist", "air_temperature_c", "feels_like_c", "precipitation_mm",
     "relative_humidity_pct", "grid_latitude", "grid_longitude", "retrieved_at_utc", "source"];
@@ -29,27 +29,35 @@ function downloadForecast(report: Extract<TwoDayWeatherReportResponse, { status:
   const url = URL.createObjectURL(new Blob([csv + "\r\n"], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `cityshield-bengaluru-48h-${report.forecast_from.slice(0, 10)}.csv`;
+  const safeName = locationName.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  link.download = `cityshield-${safeName || "india"}-48h-${report.forecast_from.slice(0, 10)}.csv`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
-export default function TwoDayWeatherReport({ outlook }: { outlook: AssistantOutlook | null }) {
+export default function TwoDayWeatherReport({ outlook, location, locationName = "Bengaluru" }: {
+  outlook: AssistantOutlook | null;
+  location?: LatLng;
+  locationName?: string;
+}) {
   const [report, setReport] = useState<TwoDayWeatherReportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const latitude = location?.lat;
+  const longitude = location?.lng;
 
   const loadReport = useCallback(async (signal?: AbortSignal) => {
     setRefreshing(true);
     setError(null);
     try {
-      setReport(await api.getWeatherReport(signal));
+      setReport(await api.getWeatherReport(signal, latitude !== undefined && longitude !== undefined
+        ? { lat: latitude, lng: longitude } : undefined));
     } catch (reason) {
       if (!signal?.aborted) setError(reason instanceof Error ? reason.message : "The weather report could not load.");
     } finally {
       if (!signal?.aborted) setRefreshing(false);
     }
-  }, []);
+  }, [latitude, longitude]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -61,7 +69,7 @@ export default function TwoDayWeatherReport({ outlook }: { outlook: AssistantOut
     <div className="weather-report-section">
       <div className="weather-report-heading">
         <div>
-          <h3>Greater Bengaluru</h3>
+          <h3>{locationName}</h3>
           <p>48-hour forecast · India Standard Time</p>
         </div>
         <div className="weather-report-actions">
@@ -69,7 +77,7 @@ export default function TwoDayWeatherReport({ outlook }: { outlook: AssistantOut
             {refreshing ? "Updating…" : "Refresh report"}
           </button>
           {report?.status === "ready" && <button type="button" className="secondary-button"
-            disabled={refreshing} onClick={() => downloadForecast(report)}>Export CSV</button>}
+            disabled={refreshing} onClick={() => downloadForecast(report, locationName)}>Export CSV</button>}
         </div>
       </div>
 
@@ -121,8 +129,8 @@ export default function TwoDayWeatherReport({ outlook }: { outlook: AssistantOut
         </details>
         <footer className="weather-report-source">
           <p><a href="https://open-meteo.com/">Open-Meteo</a> · Model grid at {report.provenance.grid_cell_center.latitude.toFixed(3)}° N, {report.provenance.grid_cell_center.longitude.toFixed(3)}° E. Retrieved {formatTime(report.provenance.retrieved_at)} IST.</p>
-          {outlook?.status === "ready" && <p>City screening uses {outlook.forecast_points ?? 1} weather-model grid {(outlook.forecast_points ?? 1) === 1 ? "point" : "points"}.</p>}
-          <p>For official weather warnings, see <a href="https://mausam.imd.gov.in/bengaluru/">IMD Met Centre Bengaluru</a>.</p>
+          {outlook?.status === "ready" && <p>Bengaluru flood and heat screening uses {outlook.forecast_points ?? 1} weather-model grid {(outlook.forecast_points ?? 1) === 1 ? "point" : "points"}; it is a Bengaluru research layer, separate from this location forecast.</p>}
+          <p>For official warnings across India, see the <a href="https://mausam.imd.gov.in/">India Meteorological Department</a>.</p>
         </footer>
       </>}
     </div>

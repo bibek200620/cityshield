@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type AssistantOutlook, type WeatherAvailabilityResponse } from "../api/client";
+import { api, type AssistantOutlook, type LatLng, type WeatherAvailabilityResponse } from "../api/client";
 import Icon, { type IconName } from "./Icon";
 import TwoDayWeatherReport from "./TwoDayWeatherReport";
 
@@ -41,23 +41,28 @@ function condition(code?: number | null, isDay?: number | null): Condition {
   return { label: "Condition unavailable", sky: "neutral", icon: "thermometer" };
 }
 
-export default function ThreeHourOutlook({ open, onOpen, onClose, outlook }: {
+export default function ThreeHourOutlook({ open, onOpen, onClose, outlook, location, locationName = "India" }: {
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
   outlook: AssistantOutlook | null;
+  location?: LatLng;
+  locationName?: string;
 }) {
   const [weather, setWeather] = useState<WeatherAvailabilityResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [request, setRequest] = useState(0);
   const [paused, setPaused] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const latitude = location?.lat;
+  const longitude = location?.lng;
   const dialog = useRef<HTMLDialogElement>(null);
   const preview = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    api.getWeatherNowcast(controller.signal)
+    api.getWeatherNowcast(controller.signal, latitude !== undefined && longitude !== undefined
+      ? { lat: latitude, lng: longitude } : undefined)
       .then((result) => {
         if (!controller.signal.aborted) setWeather(result);
       })
@@ -67,7 +72,7 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook }: {
         }
       });
     return () => controller.abort();
-  }, [request]);
+  }, [request, latitude, longitude]);
 
   useEffect(() => {
     if (open && dialog.current && !dialog.current.open) {
@@ -118,7 +123,7 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook }: {
         <div className="weather-dialog-content">
           <header className="weather-dialog-header">
             <div>
-              <h2 id="weather-title">Bengaluru forecast</h2>
+              <h2 id="weather-title">{locationName} forecast</h2>
               <p>Next 3 hours · India Standard Time</p>
             </div>
             <button type="button" className="weather-icon-button" aria-label="Close forecast"
@@ -134,7 +139,7 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook }: {
           </div>}
           {!forecast && !unavailable && <p role="status">Loading the hourly outlook…</p>}
           {forecast && <>
-            <section className="weather-overview" aria-label="Current Bengaluru weather estimate">
+            <section className="weather-overview" aria-label={`Current ${locationName} weather estimate`}>
               <div className="weather-reading">
                 <span className="weather-big-temp">{degrees(forecast.air_temperature_c)}</span>
                 <span className="weather-condition"><Icon name={current.icon} />{current.label}</span>
@@ -181,7 +186,7 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook }: {
             {forecast && animated && <button type="button" className="weather-motion-toggle"
               onClick={() => setPaused((value) => !value)}>{paused ? "Resume background motion" : "Pause background motion"}</button>}
           </div>
-          <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport outlook={outlook} />}</div>
+        <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport outlook={outlook} location={location} locationName={locationName} />}</div>
         </div>
       </dialog>
     </>

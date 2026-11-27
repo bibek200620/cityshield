@@ -8,7 +8,7 @@ import { useDrivingPlanner, type Endpoint } from "./map/drivingPlanner";
 import MapView, { type CityHeat } from "./components/MapView";
 import MapMascot from "./components/mascot/MapMascot";
 import { useAssistantOutlook } from "./map/assistantOutlook";
-import PlaceSearch, { type BengaluruPlace } from "./components/PlaceSearch";
+import PlaceSearch, { type MapPlace } from "./components/PlaceSearch";
 import RouteComparisonPanel from "./components/RouteComparisonPanel";
 import ScenarioSlider from "./components/ScenarioSlider";
 import ThreeHourOutlook from "./components/ThreeHourOutlook";
@@ -93,7 +93,7 @@ function Dashboard() {
   const showRoads = useFloodStore((s) => s.layerVisibility.cityRoads);
   const toggleLayer = useFloodStore((s) => s.toggleLayer);
   const rainfallMm = useFloodStore((s) => s.currentRainfall.intensity * s.currentRainfall.duration / 60);
-  const [place, setPlace] = useState<BengaluruPlace | null>(null);
+  const [place, setPlace] = useState<MapPlace | null>(null);
   const [cityHeat, setCityHeat] = useState<CityHeat | null>(null);
   const [cityFlood, setCityFlood] = useState<{ rainfallMm: number; value: CityFloodResponse } | null>(null);
   const [panel, setPanel] = useState<ToolPanel | null>(null);
@@ -102,6 +102,10 @@ function Dashboard() {
   const [reloadCount, setReloadCount] = useState(0);
   const [picking, setPicking] = useState<Endpoint | null>(null);
   const drive = useDrivingPlanner();
+  const weatherLocation = drive.navigationLocation ?? drive.points.destination ?? drive.points.source ??
+    (place ? { lat: place.center[1], lng: place.center[0] } : { lat: 12.98, lng: 77.59 });
+  const weatherLocationName = drive.navigationLocation ? "Current location"
+    : drive.points.destination?.name ?? drive.points.source?.name ?? place?.name.split(",")[0] ?? "Bengaluru";
   const outlook = useAssistantOutlook();
   const scenarioRoute = drive.scenarioRoutes.find((route) => route.id === drive.selectedId);
   const carDemo = drive.navigationMode === "simulating" || drive.navigationMode === "arrived";
@@ -192,10 +196,10 @@ function Dashboard() {
         </button>
       </header>
 
-      <main id="atlas" className="atlas" aria-label="Bengaluru risk atlas" tabIndex={-1}>
+      <main id="atlas" className="atlas" aria-label="India map" tabIndex={-1}>
         <section className="map-workspace" aria-labelledby="map-title">
           <MapView place={place} cityHeat={cityHeat}
-            assistant={<MapMascot drive={drive} cityFlood={displayedFlood} outlook={outlook} />}
+            assistant={<MapMascot drive={drive} cityFlood={displayedFlood} outlook={outlook} weatherLocation={weatherLocation} />}
             cityFlood={displayedFlood?.status === "ready" ? displayedFlood : null}
             onReset={() => setPlace(null)}
             drivePoints={drive.points} drivingRoutes={drive.result?.routes} selectedDrivingId={drive.selectedId}
@@ -213,7 +217,7 @@ function Dashboard() {
               <Icon name={picking ? "extent" : "location"} />
               <div>
                 <h1 id="map-title" ref={mapHeading} tabIndex={-1}>
-                  {picking ? `Pick ${picking}` : place?.name ?? "Greater Bengaluru"}
+                  {picking ? `Pick ${picking}` : place?.name ?? "India · Bengaluru risk layers"}
                 </h1>
                 {picking && <p role="status">Select a point on the map.</p>}
               </div>
@@ -239,7 +243,7 @@ function Dashboard() {
           </div>}
 
           <div className="map-weather" hidden={Boolean(picking)}>
-            <ThreeHourOutlook open={weatherOpen} outlook={outlook} onOpen={() => setWeatherOpen(true)}
+            <ThreeHourOutlook open={weatherOpen} outlook={outlook} location={weatherLocation} locationName={weatherLocationName} onOpen={() => setWeatherOpen(true)}
               onClose={() => setWeatherOpen(false)} />
           </div>
         </section>
@@ -271,7 +275,7 @@ function Dashboard() {
           <div className="tool-content" hidden={panel !== "rainfall"}>
             <ScenarioSlider />
           </div>
-          {panel === "weatherReport" && <div className="tool-content"><TwoDayWeatherReport outlook={outlook} /></div>}
+          {panel === "weatherReport" && <div className="tool-content"><TwoDayWeatherReport outlook={outlook} location={weatherLocation} locationName={weatherLocationName} /></div>}
           {panel === "drive" && <div className="tool-content">
             <DrivingPlanner drive={drive} onSimulationStart={closePanel} onPick={(endpoint) => {
               setPicking(endpoint);

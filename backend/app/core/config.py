@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     TOMTOM_API_KEY: SecretStr | None = None
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-2.5-flash-lite"
+    CX_CONVERSATION_ENABLED: bool = True
     PLACE_SEARCH_URL: str = "https://nominatim.openstreetmap.org/search"
 
     @property

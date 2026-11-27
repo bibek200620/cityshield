@@ -118,7 +118,7 @@ test("the forecast report shows rain, flood and heat evidence and exports on a p
     valid_at: new Date(start + (index + 1) * 3_600_000).toISOString(),
     air_temperature_c: 28, feels_like_c: 42, relative_humidity_pct: 75, precipitation_mm: index === 3 ? 8 : 0,
   }));
-  await page.route("**/api/weather/report", (route) => route.fulfill({ json: {
+  await page.route("**/api/weather/report*", (route) => route.fulfill({ json: {
     status: "ready", source: "Open-Meteo", forecast_from: hours[0].valid_at, forecast_through: hours[47].valid_at,
     forecast_hours: 48, hourly_forecast: hours,
     provenance: { retrieved_at: new Date(start).toISOString(), grid_cell_center: { latitude: 12.98, longitude: 77.59 } },

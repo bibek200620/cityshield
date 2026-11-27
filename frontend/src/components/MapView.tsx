@@ -8,7 +8,7 @@ import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, Lat
 import { getMapDetail, summarizeHexes, summarizeHexPoints, type HexGrids, type HexSummary, type MapDetail } from "../map/hexGrid";
 import { createRoadRunoffScreen, ROAD_SCREEN_MIN_ZOOM, type RoadRunoff } from "../map/roadRunoff";
 import { useFloodStore } from "../store/useFloodStore";
-import type { BengaluruPlace } from "./PlaceSearch";
+import type { MapPlace } from "./PlaceSearch";
 import { pathForFraction, routeVertexDistances, type LiveLocation, type NavigationMode, type RouteMatch, type Waypoints } from "../map/drivingPlanner";
 import Icon from "./Icon";
 
@@ -68,7 +68,7 @@ export default function MapView({
   place, cityHeat, cityFlood, onReset, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
   navigation, assistant, scenarioRoute, trafficSegments,
 }: {
-  place: BengaluruPlace | null;
+  place: MapPlace | null;
   cityHeat: CityHeat | null;
   cityFlood: Extract<CityFloodResponse, { status: "ready" }> | null;
   onReset: () => void;
@@ -578,7 +578,7 @@ export default function MapView({
   return (
     <>
       <div className="map-frame">
-        <div ref={container} className="map-canvas" aria-label="Interactive Bengaluru map" />
+        <div ref={container} className="map-canvas" aria-label="Interactive India map" />
         {mapError && <p className="map-status" role="status">Basemap unavailable. Check your connection or browser graphics support.</p>}
         <button className="map-reset" type="button" aria-label="View whole city" title="View whole city"
           onClick={() => { onReset(); map.current?.fitBounds(CITY_BOUNDS, CITY_VIEW); }}>

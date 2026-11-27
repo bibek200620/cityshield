@@ -8,6 +8,7 @@ import { expressions } from "./faces";
 import ForecastBrief from "./ForecastBrief";
 import TrafficBrief from "./TrafficBrief";
 import { useCXVoice } from "./cxVoice";
+import { useCXCompanion } from "./useCXCompanion";
 import "./mascot.css";
 
 const MascotModel = lazy(() => import("./MascotModel"));
@@ -24,8 +25,9 @@ function alertKey(alert: MascotAlert) {
   return alert.key ?? `${alert.kind}:${alert.face}`;
 }
 
-export default function MapMascot({ drive, outlook, cityFlood }: {
+export default function MapMascot({ drive, outlook, cityFlood, weatherLocation }: {
   drive: ReturnType<typeof useDrivingPlanner>; outlook: AssistantOutlook | null; cityFlood: CityFloodResponse | null;
+  weatherLocation: { lat: number; lng: number };
 }) {
   const [phrasing, setPhrasing] = useState<AssistantPhrasing | null>(null);
   const [now, setNow] = useState(Date.now);
@@ -45,6 +47,11 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
   const route = result?.routes.find((option) => option.id === selectedId);
   const useTomTom = result?.source === "TomTom Routing";
   const distances = useMemo(() => route ? routeVertexDistances(route.coordinates) : [], [route]);
+  const companion = useCXCompanion(drive, route, distances, read, weatherLocation);
+  const { active: talking, canAnnounce, speak } = companion;
+  const voiceStatus = companion.phase === "listening" ? (companion.awake ? "Listening" : "Say hello CX")
+    : companion.phase === "working" ? "Checking"
+      : companion.phase === "speaking" ? "Speaking" : "Starting";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -137,22 +144,25 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
 
   useEffect(() => {
     if (!voiceOn) return;
+    if (talking && !canAnnounce) return;
     const time = Date.now();
     const fresh = alerts.filter((alert) => time - (spoken.current.get(alertKey(alert)) ?? 0) > voiceCooldown);
     if (!fresh.length) return;
+    const text = fresh.map((alert) => alertText(alert, phrasing)).join(" ");
+    if (talking && !speak(text)) return;
+    if (!talking) read?.(text);
     fresh.forEach((alert) => spoken.current.set(alertKey(alert), time));
-    read?.(fresh.map((alert) => alertText(alert, phrasing)).join(" "));
-  }, [alerts, voiceOn, phrasing, read]);
+  }, [alerts, voiceOn, phrasing, read, talking, canAnnounce, speak]);
 
   function toggleVoice() {
     if (voiceOn) {
-      window.speechSynthesis?.cancel();
+      if (!talking) window.speechSynthesis?.cancel();
       setVoiceOn(false);
       return;
     }
     const time = Date.now();
     alerts.forEach((alert) => spoken.current.set(alertKey(alert), time));
-    read?.(alerts.length ? alerts.map((alert) => alertText(alert, phrasing)).join(" ") : "Hi, I’m C X. Voice alerts are on.");
+    if (!talking) read?.(alerts.length ? alerts.map((alert) => alertText(alert, phrasing)).join(" ") : "Hi, I’m C X. Voice alerts are on.");
     setVoiceOn(true);
   }
 
@@ -166,6 +176,8 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
     setPanel("home");
     trigger.current?.focus();
   }
+
+  const speakInPanel = talking ? (text: string) => { if (canAnnounce) speak(text); } : read;
 
   return (
     <aside className="map-mascot" aria-label="CX map assistant" onKeyDown={(event) => {
@@ -183,8 +195,8 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
           <strong ref={heading} tabIndex={-1}>{panel === "report" ? "Forecast report" : panel === "traffic" ? "Traffic" : "CX"}</strong>
           <button className="mascot-close" type="button" aria-label="Close CX bubble" onClick={closeBubble}><Icon name="close" /></button>
         </div>
-        {panel === "report" && <ForecastBrief onRead={read} autoSpeak={voiceOn} />}
-        {panel === "traffic" && <TrafficBrief drive={drive} onRead={read} />}
+        {panel === "report" && <ForecastBrief onRead={speakInPanel} autoSpeak={voiceOn && !talking} />}
+        {panel === "traffic" && <TrafficBrief drive={drive} onRead={speakInPanel} />}
         {panel === "home" && <>
         {alerts.length ? <ul className="mascot-alerts">
           {alerts.map((alert) => <li key={alert.kind}>
@@ -201,11 +213,15 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
         </div>
         {!manualOpen && <button type="button" className="mascot-voice mascot-expand" onClick={() => setManualOpen(true)}>CX options</button>}
         <div className="mascot-actions">
+          {manualOpen && companion.supported && !talking && <button className="mascot-voice mascot-talk" type="button"
+            aria-describedby="cx-mic-help" onClick={companion.start}>
+            <Icon name="microphone" />Talk to CX
+          </button>}
           {read && <button className="mascot-voice" type="button" aria-pressed={voiceOn} onClick={toggleVoice}>
             <Icon name={voiceOn ? "volume" : "mute"} />{voiceOn ? "Voice on" : "Enable voice"}
           </button>}
-          {read && alerts.length > 0 && <button className="mascot-voice" type="button"
-            onClick={() => read(alerts.map((alert) => alertText(alert, phrasing)).join(" "))}>Read alerts</button>}
+          {speakInPanel && alerts.length > 0 && <button className="mascot-voice" type="button"
+            onClick={() => speakInPanel(alerts.map((alert) => alertText(alert, phrasing)).join(" "))}>Read alerts</button>}
           {read && voices.length > 0 && <details className="mascot-expressions mascot-voice-settings">
             <summary>Choose voice</summary>
             <label className="sr-only" htmlFor="mascot-voice-choice">CX voice</label>
@@ -213,7 +229,7 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
               <option value="">Automatic · {voices[0].name}</option>
               {voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}</option>)}
             </select>
-            <button type="button" className="mascot-voice" onClick={() => read("Hi, I’m C X. I’ll keep you updated on rain and traffic.")}>Preview voice</button>
+            <button type="button" className="mascot-voice" onClick={() => speakInPanel?.("Hi, I’m C X. I’ll keep you updated on rain and traffic.")}>Preview voice</button>
           </details>}
           {!alerts.length && <details className="mascot-expressions">
             <summary>Expressions</summary>
@@ -224,6 +240,10 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
             </select>
           </details>}
         </div>
+        {manualOpen && !talking && <p id="cx-mic-help">{companion.supported
+          ? "Say “Hello CX” or “CX agent” after starting. Your browser may process microphone audio online. If conversation mode is enabled, open-ended questions go to Gemini."
+          : "Voice commands require a browser with speech recognition and speech playback."}</p>}
+        {companion.error && <p role="status">{companion.error}</p>}
         </>}
       </div>}
       <button ref={trigger} className="mascot-trigger" type="button" aria-label="CX assistant"
@@ -234,13 +254,16 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
           else {
             setManualOpen(true);
             setPanel("home");
-            read?.("Hi!");
+            if (!talking) read?.("Hi!");
           }
         }}>
         <Suspense fallback={<span className="mascot-fallback" aria-hidden="true"><i /><b>CX</b></span>}>
           <MascotModel pose={pose} />
         </Suspense>
       </button>
+      {talking && <button type="button" className="mascot-mic-state" aria-label="Stop listening" onClick={companion.stop}>
+        <Icon name="microphone" /><span role="status">{voiceStatus}</span>
+      </button>}
     </aside>
   );
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 const paths = {
+  microphone: <><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5 11v1a7 7 0 0 0 14 0v-1m-7 8v3m-3 0h6" /></>,
   volume: <><path d="M3 10v4h4l5 4V6l-5 4H3Z" /><path d="M16 9a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10" /></>,
   mute: <><path d="M3 10v4h4l5 4V6l-5 4H3Z" /><path d="m16 10 5 5m0-5-5 5" /></>,
   more: <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,

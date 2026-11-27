@@ -26,6 +26,7 @@ export interface DrivingOption {
   distance_km: number;
   eta_seconds: number;
   coordinates: [number, number][];
+  guidance?: { point_index: number; instruction: string }[];
   traffic_time_delta_seconds?: number | null;
   traffic_segments?: { start_index: number; end_index: number; level: TrafficLevel }[] | null;
   nearby_flood_reports?: number;
@@ -76,6 +77,19 @@ export interface AssistantPhrasing {
   source: "preset" | "gemini";
   styles: Record<AssistantAlertKind, "direct" | "gentle">;
 }
+
+export interface CXConversationTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export type CXConversationAction =
+  | { kind: "route"; source?: string; destination?: string }
+  | { kind: "weather"; hours?: number; day?: "today" | "tomorrow"; at_end?: boolean }
+  | { kind: "eta" | "direction" };
+
+type CXConversationResponse = { status: "ready"; reply: string; action?: CXConversationAction }
+  | { status: "unavailable"; reason: "disabled" | "busy" | "provider" };
 
 export type AssistantRouteContext = { status: "unavailable" } | {
   status: "ready";
@@ -345,12 +359,20 @@ export const api = {
   getScenarios: () => request<ScenarioSummary[]>("/api/scenarios"),
   getScenarioDetail: (scenarioId: string, signal?: AbortSignal) => request<SimulateResponse>(`/api/scenarios/${scenarioId}`, { signal }),
   getCriticalInfrastructure: () => request<CriticalInfraItem[]>("/api/critical-infrastructure"),
-  getWeatherNowcast: async (signal?: AbortSignal): Promise<WeatherAvailabilityResponse> =>
-    withOpenMeteoFallback(await request<WeatherAvailabilityResponse>("/api/weather/nowcast", { signal }), "nowcast", signal),
-  getWeatherReport: async (signal?: AbortSignal): Promise<TwoDayWeatherReportResponse> =>
-    withOpenMeteoFallback(await request<TwoDayWeatherReportResponse>("/api/weather/report", { signal }), "report", signal),
+  getWeatherNowcast: async (signal?: AbortSignal, location?: LatLng): Promise<WeatherAvailabilityResponse> => {
+    const query = location ? `?latitude=${location.lat}&longitude=${location.lng}` : "";
+    return withOpenMeteoFallback(await request<WeatherAvailabilityResponse>(`/api/weather/nowcast${query}`, { signal }), "nowcast", signal);
+  },
+  getWeatherReport: async (signal?: AbortSignal, location?: LatLng): Promise<TwoDayWeatherReportResponse> => {
+    const query = location ? `?latitude=${location.lat}&longitude=${location.lng}` : "";
+    return withOpenMeteoFallback(await request<TwoDayWeatherReportResponse>(`/api/weather/report${query}`, { signal }), "report", signal);
+  },
   getAssistantOutlook: (signal: AbortSignal) => request<AssistantOutlook>("/api/assistant/outlook", { signal }),
   getAssistantPhrasing: (signal: AbortSignal) => request<AssistantPhrasing>("/api/assistant/phrasing", { signal }),
+  askCX: (message: string, history: CXConversationTurn[], signal: AbortSignal) =>
+    request<CXConversationResponse>("/api/assistant/conversation", {
+      method: "POST", body: JSON.stringify({ message, history }), signal,
+    }),
   refreshAssistantRoute: (coordinates: DrivingOption["coordinates"], tomtom: boolean, signal: AbortSignal) =>
     request<AssistantRouteContext>("/api/assistant/route-context", {
       method: "POST", body: JSON.stringify({ coordinates, tomtom }), signal,

@@ -40,7 +40,7 @@ export default function RoutePlaceSearch({
         .then((response) => {
           if (controller.signal.aborted) return;
           setResults(response.results);
-          if (!response.results.length) setStatus("No matching place found inside the supported Bengaluru map area.");
+          if (!response.results.length) setStatus("No matching place found in India.");
         })
         .catch((error: unknown) => {
           if (!controller.signal.aborted) {

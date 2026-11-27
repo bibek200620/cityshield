@@ -1,4 +1,4 @@
-"""User-submitted Bengaluru place search via a configurable geocoder."""
+"""User-submitted India place search via a configurable geocoder."""
 from __future__ import annotations
 
 import json
@@ -17,13 +17,13 @@ from app.core.config import settings
 router = APIRouter()
 _provider_lock = Lock()
 _next_provider_call = 0.0
-_CITY_WEST, _CITY_SOUTH, _CITY_EAST, _CITY_NORTH = 77.44, 12.62, 77.80, 13.16
+_INDIA_WEST, _INDIA_SOUTH, _INDIA_EAST, _INDIA_NORTH = 68.0, 6.0, 98.0, 38.0
 
 
 def _limited_provider_get(url: str) -> list[dict]:
     global _next_provider_call
     request = Request(url, headers={
-        "User-Agent": "CityShield/0.1 (Bengaluru urban-risk research MVP)",
+        "User-Agent": "CityShield/0.1 (India weather and routing)",
         "Accept": "application/json",
     })
     with _provider_lock:
@@ -39,13 +39,11 @@ def _limited_provider_get(url: str) -> list[dict]:
 @lru_cache(maxsize=128)
 def _search_cached(provider_url: str, query: str) -> tuple[dict, ...]:
     params = urlencode({
-        "q": f"{query}, Bengaluru, India",
+        "q": f"{query}, India",
         "format": "jsonv2",
         "limit": 5,
         "addressdetails": 1,
         "countrycodes": "in",
-        "viewbox": "77.44,13.16,77.80,12.62",
-        "bounded": 1,
         "accept-language": "en",
     })
     try:
@@ -65,7 +63,7 @@ def _search_cached(provider_url: str, query: str) -> tuple[dict, ...]:
             continue
         if not isfinite(lat) or not isfinite(lng) or not name:
             continue
-        if not (_CITY_SOUTH <= lat <= _CITY_NORTH and _CITY_WEST <= lng <= _CITY_EAST):
+        if not (_INDIA_SOUTH <= lat <= _INDIA_NORTH and _INDIA_WEST <= lng <= _INDIA_EAST):
             continue
         osm_type = str(item.get("osm_type", "place"))
         osm_id = item.get("osm_id", item.get("place_id", name))

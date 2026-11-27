@@ -129,7 +129,7 @@ def test_two_day_forecast_rejects_missing_late_hour_and_invalid_late_values():
 
 def test_two_day_weather_api_returns_unavailable_without_provider_data(monkeypatch):
     monkeypatch.setattr(conditions, "time", lambda: 7500)
-    monkeypatch.setattr(conditions, "weather_report_snapshot", lambda _slot: (_ for _ in ()).throw(TimeoutError()))
+    monkeypatch.setattr(conditions, "weather_report_snapshot", lambda *_args: (_ for _ in ()).throw(TimeoutError()))
 
     with TestClient(app) as client:
         response = client.get("/api/weather/report")
@@ -158,7 +158,7 @@ def test_two_day_weather_api_returns_unavailable_without_provider_data(monkeypat
 def test_weather_provider_failures_have_distinct_states(monkeypatch, failure, expected_reason):
     monkeypatch.setattr(conditions, "time", lambda: 7500)
     if failure == "timeout":
-        def timeout(_slot):
+        def timeout(*_args):
             raise TimeoutError()
         monkeypatch.setattr(conditions, "weather_snapshot", timeout)
     else:
@@ -169,9 +169,10 @@ def test_weather_provider_failures_have_distinct_states(monkeypatch, failure, ex
             payload["current"]["time"] = 1000
         elif failure == "invalid":
             payload["hourly_units"]["precipitation"] = "inch"
-        monkeypatch.setattr(conditions, "weather_snapshot", lambda _slot: {
+        monkeypatch.setattr(conditions, "weather_snapshot", lambda *_args: {
             "payload": payload,
             "retrieved_at": "1970-01-01T02:05:00+00:00",
+            "location": {"latitude": 12.98, "longitude": 77.59},
         })
 
     response = conditions.get_weather()
@@ -184,7 +185,7 @@ def test_weather_provider_failures_have_distinct_states(monkeypatch, failure, ex
 def test_weather_api_reports_timeout_without_making_a_network_request(monkeypatch):
     monkeypatch.setattr(conditions, "time", lambda: 7500)
 
-    def timeout(_slot):
+    def timeout(*_args):
         raise TimeoutError()
 
     monkeypatch.setattr(conditions, "weather_snapshot", timeout)

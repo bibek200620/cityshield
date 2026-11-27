@@ -12,7 +12,7 @@ const units = {
 for (const stale of [false, true]) {
   test(stale ? "stale fallback weather remains unavailable" : "weather panels share a fresh fallback forecast", async ({ page }) => {
     await page.clock.setFixedTime(now);
-    await page.route(/\/api\/weather\/(nowcast|report)$/, (route) => route.fulfill({
+    await page.route(/\/api\/weather\/(nowcast|report)(?:\?.*)?$/, (route) => route.fulfill({
       headers,
       json: { status: "unavailable", reason: "provider_error", message: "The weather provider could not be reached." },
     }));

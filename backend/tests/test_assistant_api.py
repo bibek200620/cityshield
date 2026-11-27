@@ -1,7 +1,10 @@
 import io
 import json
+from collections import deque
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from shapely.geometry import LineString, box
 
@@ -129,3 +132,95 @@ def test_legacy_gemini_unavailable_uses_known_flash_lite_fallback(monkeypatch):
         assert tried == ["gemini-2.5-flash-lite", "gemini-3.5-flash-lite"]
     finally:
         routes_assistant._gemini_phrasings.cache_clear()
+
+
+@pytest.fixture
+def conversation_client(monkeypatch):
+    app = FastAPI()
+    app.include_router(routes_assistant.router)
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", SecretStr("fixture"))
+    monkeypatch.setattr(settings, "CX_CONVERSATION_ENABLED", True)
+    monkeypatch.setattr(routes_assistant, "_conversation_calls", deque())
+    return TestClient(app)
+
+
+def test_conversation_requires_opt_in(conversation_client, monkeypatch):
+    monkeypatch.setattr(settings, "CX_CONVERSATION_ENABLED", False)
+    monkeypatch.setattr(routes_assistant, "urlopen", lambda *_args, **_kwargs: pytest.fail("Unexpected provider call"))
+    response = conversation_client.post("/api/assistant/conversation", json={"message": "Tell me a joke"})
+    assert response.json() == {"status": "unavailable", "reason": "disabled"}
+
+
+@pytest.mark.parametrize("message,history", [
+    (" " * 5, []),
+    ("a" * 501, []),
+    ("hello", [{"role": "user", "text": "hello"}] * 5),
+    ("hello", [{"role": "system", "text": "hello"}]),
+])
+def test_conversation_validates_input(conversation_client, monkeypatch, message, history):
+    monkeypatch.setattr(routes_assistant, "urlopen", lambda *_args, **_kwargs: pytest.fail("Unexpected provider call"))
+    response = conversation_client.post("/api/assistant/conversation", json={"message": message, "history": history})
+    assert response.status_code == 422
+
+
+def test_conversation_returns_only_spoken_text_and_limits_provider_calls(conversation_client, monkeypatch):
+    monkeypatch.setattr(routes_assistant, "_CHAT_MINUTE_LIMIT", 1)
+    requests = []
+
+    def fake_provider(request, timeout):
+        requests.append(json.loads(request.data))
+        assert "fixture" not in request.full_url
+        assert request.get_header("X-goog-api-key") == "fixture"
+        parts = [{"text": json.dumps({"kind": "reply", "reply": "Of course.\nHere’s another one."})}]
+        return io.BytesIO(json.dumps({"candidates": [{"content": {"parts": parts}, "finishReason": "STOP"}]}).encode())
+
+    monkeypatch.setattr(routes_assistant, "urlopen", fake_provider)
+    payload = {
+        "message": " Tell me another. ",
+        "history": [{"role": "user", "text": "Tell me a joke"}, {"role": "assistant", "text": "Here’s one."}],
+    }
+    response = conversation_client.post("/api/assistant/conversation", json=payload)
+    assert response.json() == {"status": "ready", "reply": "Of course. Here’s another one."}
+    assert requests[0]["contents"] == [
+        {"role": "user", "parts": [{"text": "Tell me a joke"}]},
+        {"role": "model", "parts": [{"text": "Here’s one."}]},
+        {"role": "user", "parts": [{"text": "Tell me another."}]},
+    ]
+    assert "tools" not in requests[0]
+    assert requests[0]["generationConfig"]["responseSchema"] == routes_assistant._CX_DECISION_SCHEMA
+    response = conversation_client.post("/api/assistant/conversation", json=payload)
+    assert response.json() == {"status": "unavailable", "reason": "busy"}
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize("decision,expected", [
+    ({"kind": "route", "source": "Majestic", "destination": "Lalbagh"},
+     {"kind": "route", "source": "Majestic", "destination": "Lalbagh"}),
+    ({"kind": "weather", "hours": 6}, {"kind": "weather", "day": None, "hours": 6, "at_end": False}),
+])
+def test_conversation_returns_validated_travel_intents(conversation_client, monkeypatch, decision, expected):
+    def fake_provider(*_args, **_kwargs):
+        return io.BytesIO(json.dumps({"candidates": [{"content": {"parts": [{"text": json.dumps(decision)}]}}]}).encode())
+
+    monkeypatch.setattr(routes_assistant, "urlopen", fake_provider)
+    response = conversation_client.post("/api/assistant/conversation", json={"message": "Route from Majestic to Lalbagh"})
+    assert response.json() == {"status": "ready", "reply": "I’ll check that for you.", "action": expected}
+
+
+def test_conversation_rejects_route_endpoints_not_present_in_user_turn(conversation_client, monkeypatch):
+    def fake_provider(*_args, **_kwargs):
+        decision = {"kind": "route", "source": "Somewhere else", "destination": "Lalbagh"}
+        return io.BytesIO(json.dumps({"candidates": [{"content": {"parts": [{"text": json.dumps(decision)}]}}]}).encode())
+
+    monkeypatch.setattr(routes_assistant, "urlopen", fake_provider)
+    response = conversation_client.post("/api/assistant/conversation", json={"message": "Route to Lalbagh"})
+    assert response.json() == {"status": "unavailable", "reason": "provider"}
+
+
+def test_conversation_returns_unavailable_on_provider_failure(conversation_client, monkeypatch):
+    def timeout(*_args, **_kwargs):
+        raise TimeoutError
+
+    monkeypatch.setattr(routes_assistant, "urlopen", timeout)
+    response = conversation_client.post("/api/assistant/conversation", json={"message": "Hello"})
+    assert response.json() == {"status": "unavailable", "reason": "provider"}

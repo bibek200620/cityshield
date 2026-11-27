@@ -14,8 +14,8 @@ def test_place_search_returns_bounded_named_results_and_attribution(monkeypatch)
         return [
             {"osm_type": "way", "osm_id": 17, "display_name": "BMS College of Engineering, Bengaluru", "lat": "12.9412", "lon": "77.5651", "type": "college"},
             {"osm_type": "relation", "osm_id": 19, "display_name": "Anekal, Bengaluru Urban", "lat": "12.70", "lon": "77.58", "type": "town"},
-            {"osm_type": "way", "osm_id": 18, "display_name": "Outside Bengaluru", "lat": "12.5", "lon": "77.5", "type": "college"},
-            {"osm_type": "way", "osm_id": 20, "display_name": "Below supported map bounds", "lat": "12.61", "lon": "77.5", "type": "town"},
+            {"osm_type": "way", "osm_id": 18, "display_name": "Mysuru Palace, Karnataka", "lat": "12.3", "lon": "76.65", "type": "museum"},
+            {"osm_type": "way", "osm_id": 20, "display_name": "Outside India bounds", "lat": "12.3", "lon": "60.5", "type": "town"},
             {"display_name": "Malformed location", "lat": "nan", "lon": "77.5"},
         ]
 
@@ -42,11 +42,17 @@ def test_place_search_returns_bounded_named_results_and_attribution(monkeypatch)
             "lng": 77.58,
             "category": "town",
         },
+        {
+            "id": "way/18",
+            "name": "Mysuru Palace, Karnataka",
+            "lat": 12.3,
+            "lng": 76.65,
+            "category": "museum",
+        },
     ]
     query = parse_qs(urlparse(captured["url"]).query)
-    assert query["q"] == ["bms college, Bengaluru, India"]
-    assert query["viewbox"] == ["77.44,13.16,77.80,12.62"]
-    assert query["bounded"] == ["1"]
+    assert query["q"] == ["bms college, India"]
+    assert query["countrycodes"] == ["in"]
 
 
 def test_place_search_caches_normalized_queries(monkeypatch):

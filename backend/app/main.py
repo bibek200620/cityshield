@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Bengaluru Flood & Heatwave Intelligence (Research MVP)",
+    title="India Weather & Routing with Bengaluru Risk Research",
     description=(
         "User-entered rainfall scenarios drive a simplified SCS-CN/physics/GNN flood simulation. "
         "Optional single-scene Landsat LST and common-grid exposure endpoints are provided when "

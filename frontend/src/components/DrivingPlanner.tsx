@@ -30,7 +30,7 @@ export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
       const { latitude: lat, longitude: lng } = position.coords;
       if (!(NAVIGATION_AREA.south <= lat && lat <= NAVIGATION_AREA.north
         && NAVIGATION_AREA.west <= lng && lng <= NAVIGATION_AREA.east)) {
-        setGpsStatus("Your current location is outside the supported Bengaluru map area.");
+        setGpsStatus("Your current location is outside the supported India map area.");
         return;
       }
       drive.setPoint("source", { lat, lng, name: "My current location" });

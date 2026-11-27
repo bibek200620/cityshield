@@ -1,13 +1,20 @@
 import { useEffect, useId, useState } from "react";
+import { api, type PlaceSearchResult } from "../api/client";
 import Icon from "./Icon";
 
-export interface BengaluruPlace {
+export interface MapPlace {
   id: string;
   name: string;
-  kannada: string;
-  corporation: string;
   bounds: [number, number, number, number];
   center: [number, number];
+  kannada?: string;
+  corporation?: string;
+}
+
+function fromSearchResult(place: PlaceSearchResult): MapPlace {
+  const delta = 0.08;
+  return { id: place.id, name: place.name, center: [place.lng, place.lat],
+    bounds: [place.lng - delta, place.lat - delta, place.lng + delta, place.lat + delta] };
 }
 
 const aliases: Record<string, string> = {
@@ -17,18 +24,19 @@ const aliases: Record<string, string> = {
 };
 
 interface PlaceSearchProps {
-  selected: BengaluruPlace | null;
-  onSelect: (place: BengaluruPlace) => void;
+  selected: MapPlace | null;
+  onSelect: (place: MapPlace) => void;
   label?: string;
   placeholder?: string;
 }
 
 export default function PlaceSearch({
-  selected, onSelect, label = "Find an area", placeholder = "Search Bengaluru wards",
+  selected, onSelect, label = "Search India", placeholder = "City, town or landmark in India",
 }: PlaceSearchProps) {
   const inputId = useId();
   const resultsId = useId();
-  const [places, setPlaces] = useState<BengaluruPlace[]>([]);
+  const [places, setPlaces] = useState<MapPlace[]>([]);
+  const [indiaPlaces, setIndiaPlaces] = useState<MapPlace[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState(false);
 
@@ -37,7 +45,7 @@ export default function PlaceSearch({
     fetch("/data/bengaluru-wards.json", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Ward index unavailable");
-        return response.json() as Promise<BengaluruPlace[]>;
+        return response.json() as Promise<MapPlace[]>;
       })
       .then(setPlaces)
       .catch(() => {
@@ -46,11 +54,29 @@ export default function PlaceSearch({
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const value = query.trim();
+    if (value.length < 3) {
+      setIndiaPlaces([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void api.searchPlaces(value, controller.signal).then((response) => {
+        if (!controller.signal.aborted) setIndiaPlaces(response.results.map(fromSearchResult));
+      }).catch(() => {
+        if (!controller.signal.aborted) setIndiaPlaces([]);
+      });
+    }, 700);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [query]);
+
   const term = query.trim().toLocaleLowerCase();
   const match = aliases[term] ?? term;
-  const results = term.length >= 2 ? places.filter((place) =>
-    place.name.toLocaleLowerCase().includes(match) || place.kannada.includes(term),
+  const wardResults = term.length >= 2 ? places.filter((place) =>
+    place.name.toLocaleLowerCase().includes(match) || Boolean(place.kannada?.includes(term)),
   ).slice(0, 7) : [];
+  const results = [...indiaPlaces, ...wardResults.filter((ward) => !indiaPlaces.some((place) => place.name === ward.name))].slice(0, 7);
 
   return (
     <div className="place-search" role="search" onBlur={(event) => {
@@ -77,11 +103,11 @@ export default function PlaceSearch({
           {results.length > 0 ? <ul aria-label="Matching areas">
             {results.map((place) => <li key={place.id}>
               <button type="button" onClick={() => { onSelect(place); setQuery(""); }}>
-                {place.name} <small>{place.corporation}</small>
+                {place.name} {place.corporation && <small>{place.corporation}</small>}
               </button>
             </li>)}
           </ul> : <p role="status">{error ? "Ward search unavailable." :
-            places.length ? "No matching ward. Try a nearby area name." : "Loading ward index…"}</p>}
+            indiaPlaces.length === 0 ? "Searching India…" : "No matching place found. Try a nearby area name."}</p>}
         </div>
       )}
     </div>
