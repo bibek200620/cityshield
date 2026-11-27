@@ -5,6 +5,7 @@ test("plays the published snapshots without substituting a CityShield match", as
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());
   await page.route("http://localhost:8000/api/**", (route) => route.abort());
+  await page.route("**/api/backtest", (route) => route.fulfill({ status: 404, json: { detail: "Not Found" } }));
   await page.goto("/");
   const navigation = page.getByRole("navigation", { name: "Console workspaces" });
   const open = navigation.getByRole("button", { name: "Storm replay", exact: true });
@@ -19,7 +20,8 @@ test("plays the published snapshots without substituting a CityShield match", as
   await expect(modeled).toContainText("0.8124 m");
   await expect(modeled).toContainText("19:15");
   await expect(replay).toContainText("a different time from the Table S3 reading");
-  await expect(replay.getByRole("button", { name: "Find imported storms" })).toBeVisible();
+  await replay.getByRole("button", { name: "Find imported storms" }).click();
+  await expect(replay.getByText("Imported storm comparisons are unavailable on this server.")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   await page.clock.install();

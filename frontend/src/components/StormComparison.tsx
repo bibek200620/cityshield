@@ -53,7 +53,11 @@ export default function StormComparison() {
       const first = result.events.find((item) => item.status === "ready") ?? result.events[0];
       setEventId(first?.event_id ?? "");
     } catch (error) {
-      if (!controller.signal.aborted) setCatalog(loadFailure(error, "Could not reach the storm comparison service."));
+      if (controller.signal.aborted) return;
+      const failure = loadFailure(error, "Could not reach the storm comparison service.");
+      setCatalog(failure.code === 404
+        ? { ...failure, message: "Imported storm comparisons are unavailable on this server." }
+        : failure);
     }
   }
 
