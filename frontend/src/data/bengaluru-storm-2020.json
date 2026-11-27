@@ -1,0 +1,70 @@
+{
+  "eventId": "BLR-2020-10-20",
+  "timeZone": "Asia/Kolkata",
+  "highestGaugeRainfall24hMm": 124.5,
+  "rainfallStation": "Kengeri, Raja Rajeshwari Nagar",
+  "source": {
+    "authors": "Davis et al. (2022)",
+    "article": "https://doi.org/10.3389/feart.2022.883842",
+    "supplement": "https://ndownloader.figshare.com/files/35248909",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "model": "PCSWMM · WRF WSM6KF3"
+  },
+  "snapshots": [
+    {
+      "sensorId": "100003",
+      "valley": "KC",
+      "location": "Hulimavu Lake-Inlet",
+      "observedAt": "2020-10-20T20:30:00+05:30",
+      "observedDepthM": 0.79,
+      "drainDepthM": 1.0,
+      "studyPeak": {
+        "modelDepthM": 0.8124,
+        "modelAt": "2020-10-20T19:15:00+05:30",
+        "observedDepthM": 0.79,
+        "observedAt": "2020-10-21T00:45:00+05:30"
+      }
+    },
+    {
+      "sensorId": "100018",
+      "valley": "HB",
+      "location": "Kanakanagar",
+      "observedAt": "2020-10-20T23:45:00+05:30",
+      "observedDepthM": 1.57,
+      "drainDepthM": 2.0,
+      "studyPeak": null
+    },
+    {
+      "sensorId": "100026",
+      "valley": "HB",
+      "location": "Ananda Nagara (HMT Layout)",
+      "observedAt": "2020-10-21T00:30:00+05:30",
+      "observedDepthM": 1.45,
+      "drainDepthM": 1.8,
+      "studyPeak": null
+    },
+    {
+      "sensorId": "100021",
+      "valley": "VV",
+      "location": "Vrishabhavathi Nagar",
+      "observedAt": "2020-10-21T00:45:00+05:30",
+      "observedDepthM": 2.332,
+      "drainDepthM": 1.05,
+      "studyPeak": {
+        "modelDepthM": 0.6859,
+        "modelAt": "2020-10-20T18:45:00+05:30",
+        "observedDepthM": 0.9,
+        "observedAt": "2020-10-21T00:45:00+05:30"
+      }
+    },
+    {
+      "sensorId": "100034",
+      "valley": "VV",
+      "location": "Nayandahalli Junction",
+      "observedAt": "2020-10-21T01:30:00+05:30",
+      "observedDepthM": 2.55,
+      "drainDepthM": 2.1,
+      "studyPeak": null
+    }
+  ]
+}

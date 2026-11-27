@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Layer } from "@deck.gl/core";
-import { PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
+import type { MultiPolygon, Polygon } from "geojson";
+import { GeoJsonLayer, PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import maplibregl from "maplibre-gl";
 import type { FillExtrusionLayerSpecification } from "maplibre-gl";
@@ -30,7 +31,7 @@ const ROAD_COLORS = {
   at_risk: [177, 103, 32],
   flooded: [175, 45, 48],
 } satisfies Record<RoadSegment["state"], [number, number, number]>;
-const RUNOFF_COLORS: [number, number, number][] = [[119, 66, 179], [145, 28, 145], [97, 18, 85]];
+const RUNOFF_COLORS: [number, number, number][] = [[94, 123, 154], [59, 93, 132], [34, 57, 89]];
 const TRAFFIC_COLORS = {
   clear: [34, 106, 217],
   slow: [239, 178, 20],
@@ -42,16 +43,17 @@ const TRAFFIC_LABELS: Record<TrafficLevel, string> = {
 };
 
 const FLOOD_LEGEND = [
-  { label: "0 mm", color: [210, 231, 242] },
-  { label: ">0–5 mm", color: [120, 182, 218] },
-  { label: ">5–20 mm", color: [48, 120, 185] },
-  { label: ">20 mm", color: [19, 58, 111] },
-  { label: "Permanent water", color: [129, 141, 148] },
+  { label: "0 mm", color: [227, 234, 241], opacity: 70 },
+  { label: ">0–5 mm", color: [165, 191, 220], opacity: 145 },
+  { label: ">5–20 mm", color: [100, 143, 189], opacity: 170 },
+  { label: ">20 mm", color: [43, 89, 142], opacity: 197 },
+  { label: "Permanent water", color: [146, 158, 170], opacity: 135 },
 ] as const;
 
 function floodScreenColor(score: number | null): [number, number, number, number] {
   const index = score === null ? 4 : score === 0 ? 0 : score <= 5 ? 1 : score <= 20 ? 2 : 3;
-  return [...FLOOD_LEGEND[index].color, index === 0 ? 110 : 175];
+  const { color, opacity } = FLOOD_LEGEND[index];
+  return [...color, opacity];
 }
 
 function depthColor(depth: number): [number, number, number, number] {
@@ -65,10 +67,11 @@ function temperatureColor(temperature: number): [number, number, number, number]
 }
 
 export default function MapView({
-  place, cityHeat, cityFlood, onReset, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
+  place, wardOutline, cityHeat, cityFlood, onReset, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
   navigation, assistant, scenarioRoute, trafficSegments,
 }: {
   place: BengaluruPlace | null;
+  wardOutline?: Polygon | MultiPolygon;
   cityHeat: CityHeat | null;
   cityFlood: Extract<CityFloodResponse, { status: "ready" }> | null;
   onReset: () => void;
@@ -174,14 +177,14 @@ export default function MapView({
       currentDetail = next;
       setDetail(next);
     });
-    instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-    instance.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    instance.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+    instance.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "top-left");
     instance.addControl(new maplibregl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true, timeout: 10_000 },
       trackUserLocation: true,
       showUserLocation: true,
       showAccuracyCircle: true,
-    }), "bottom-right");
+    }), "top-right");
     const deckOverlay = new MapboxOverlay({
       layers: [],
       getTooltip: ({ object, layer }) => {
@@ -421,7 +424,7 @@ export default function MapView({
         data: heatHexes,
         getPolygon: (cell) => cell.rings,
         getFillColor: (cell) => temperatureColor((cell.value ?? 0) + heatOffset),
-        getLineColor: [255, 255, 255, 215],
+        getLineColor: [255, 221, 161, 155],
         lineWidthMinPixels: 1,
         pickable: true,
         updateTriggers: { getFillColor: heatOffset },
@@ -433,7 +436,7 @@ export default function MapView({
         data: floodHexes,
         getPolygon: (cell) => cell.rings,
         getFillColor: (cell) => floodScreenColor(cell.value),
-        getLineColor: [46, 86, 117, 140],
+        getLineColor: [98, 131, 166, 112],
         lineWidthMinPixels: 1,
         pickable: true,
       }));
@@ -445,6 +448,24 @@ export default function MapView({
         getFillColor: (cell) => floodScreenColor(cell.screen_mm),
         stroked: false,
         pickable: true,
+      }));
+    }
+    layers.push(new GeoJsonLayer({
+      id: "gba-boundary",
+      data: "/data/bengaluru-boundary.geojson",
+      filled: false,
+      getLineColor: [77, 98, 119, 190],
+      getLineWidth: 1.35,
+      lineWidthUnits: "pixels",
+    }));
+    if (wardOutline) {
+      layers.push(new GeoJsonLayer({
+        id: "selected-ward",
+        data: { type: "Feature", geometry: wardOutline, properties: {} },
+        filled: false,
+        getLineColor: [36, 77, 128],
+        getLineWidth: 2.5,
+        lineWidthUnits: "pixels",
       }));
     }
     if (roadSegments?.length) {
@@ -573,7 +594,7 @@ export default function MapView({
       }
     }
     overlay.current?.setProps({ layers });
-  }, [cityFlood, heatHexes, floodHexes, exposure, result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments, scenarioRoute, trafficSegments]);
+  }, [cityFlood, heatHexes, floodHexes, wardOutline, exposure, result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments, scenarioRoute, trafficSegments]);
 
   return (
     <>
@@ -582,7 +603,7 @@ export default function MapView({
         {mapError && <p className="map-status" role="status">Basemap unavailable. Check your connection or browser graphics support.</p>}
         <button className="map-reset" type="button" aria-label="View whole city" title="View whole city"
           onClick={() => { onReset(); map.current?.fitBounds(CITY_BOUNDS, CITY_VIEW); }}>
-          <Icon name="extent" /><span>View whole city</span>
+          <Icon name="extent" />
         </button>
       </div>
       <div className="map-footer">
@@ -623,7 +644,7 @@ export default function MapView({
           {visibility.heat && <span><i className="heat-scale" /> Surface temperature · 25–45 °C{heatOffset !== 0 &&
             ` · ${heatOffset > 0 ? "+" : ""}${heatOffset} °C scenario offset`}</span>}
           {visibility.combined && <span><i style={{ background: "#814eb4" }} /> Depth ≥15 cm + heat top 10%</span>}
-          <p className="coverage-note">Flood and heat layers cover the 2025 GBA boundary. Beyond it, the map and routing remain available.</p>
+          <span><i className="boundary-swatch" /> 2025 city boundary</span>
         </section>
       </div>
     </>

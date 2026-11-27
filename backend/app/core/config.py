@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     MODEL_CHECKPOINT_PATH: str = "./app/ml/checkpoints/gnn_surrogate.pt"
     MC_DROPOUT_SAMPLES: int = 20
 
+    # Authorized observation bundles and separately produced drainage runs.
+    STORM_EVENT_DIR: str = "./data/storm_events"
+
     # Heat model uses only a locally supplied, single Landsat C2 L2 scene.
     HEAT_SCENE_DIR: str = "./data/heat/landsat"
     HEAT_MODEL_PATH: str = "./data/heat/model/heat_lst_model.json"

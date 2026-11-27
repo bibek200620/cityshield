@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Icon from "./Icon";
 
 export interface BengaluruPlace {
@@ -28,9 +28,22 @@ export default function PlaceSearch({
 }: PlaceSearchProps) {
   const inputId = useId();
   const resultsId = useId();
+  const input = useRef<HTMLInputElement>(null);
+  const resultsList = useRef<HTMLUListElement>(null);
   const [places, setPlaces] = useState<BengaluruPlace[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      if (event.defaultPrevented || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "k" ||
+        document.querySelector("dialog[open]")) return;
+      event.preventDefault();
+      input.current?.focus();
+    }
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,10 +71,15 @@ export default function PlaceSearch({
     }}>
       <label className="sr-only" htmlFor={inputId}>{label}</label>
       <span className="search-glyph"><Icon name="search" /></span>
-      <input id={inputId} type="search" placeholder={selected?.name ?? placeholder} value={query}
+      <input ref={input} id={inputId} type="search" placeholder={selected?.name ?? placeholder} value={query}
+        aria-keyshortcuts="Control+K Meta+K"
         aria-controls={error || match.length >= 2 ? resultsId : undefined}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => {
+          if (event.key === "ArrowDown" && results.length) {
+            event.preventDefault();
+            resultsList.current?.querySelector("button")?.focus();
+          }
           if (event.key === "Enter" && results.length === 1) {
             onSelect(results[0]);
             setQuery("");
@@ -72,11 +90,30 @@ export default function PlaceSearch({
           }
         }}
         autoComplete="off" />
+      {!query && <kbd className="search-shortcut" aria-hidden="true" title="Control or Command + K">Ctrl K</kbd>}
       {(error || match.length >= 2) && (
         <div className="search-results" id={resultsId}>
-          {results.length > 0 ? <ul aria-label="Matching areas">
+          {results.length > 0 ? <ul ref={resultsList} aria-label="Matching areas">
             {results.map((place) => <li key={place.id}>
-              <button type="button" onClick={() => { onSelect(place); setQuery(""); }}>
+              <button type="button" onClick={(event) => {
+                onSelect(place);
+                setQuery("");
+                if (event.detail === 0) input.current?.focus();
+              }}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.stopPropagation();
+                    setQuery("");
+                    input.current?.focus();
+                  }
+                  if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                    event.preventDefault();
+                    const row = event.currentTarget.parentElement;
+                    const next = event.key === "ArrowUp" ? row?.previousElementSibling : row?.nextElementSibling;
+                    if (next) next.querySelector("button")?.focus();
+                    else if (event.key === "ArrowUp") input.current?.focus();
+                  }
+                }}>
                 {place.name} <small>{place.corporation}</small>
               </button>
             </li>)}

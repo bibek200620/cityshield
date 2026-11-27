@@ -311,6 +311,63 @@ export interface CriticalInfraItem {
   lng: number;
 }
 
+type BacktestPartition = "development" | "holdout";
+
+export interface StormBacktestEvent {
+  event_id: string;
+  catchment_id: string | null;
+  partition: BacktestPartition | null;
+  status: "ready" | "unavailable";
+  message: string | null;
+}
+
+export interface StormBacktestSample {
+  timestamp: string;
+  rainfall_mm: number;
+  observed_depth_m: number;
+  modeled_depth_m: number;
+}
+
+export interface StormBacktestSensor {
+  id: string;
+  name: string | null;
+  node_id: string;
+  gauge_id: string;
+  latitude: number;
+  longitude: number;
+  series: StormBacktestSample[];
+  metrics: {
+    sample_count: number;
+    mae_m: number;
+    observed_peak_m: number;
+    modeled_peak_m: number;
+    observed_peak_at: string | null;
+    modeled_peak_at: string | null;
+    peak_timing_error_minutes: number | null;
+  };
+}
+
+export interface StormBacktest {
+  status: "ready";
+  event_id: string;
+  storm_group_id: string;
+  catchment_id: string;
+  partition: BacktestPartition;
+  network_id: string;
+  network_version: string;
+  interval_minutes: number;
+  model: { name: string; version: string; source_url: string | null; run_reference: string };
+  observation_source: { title: string; url: string };
+  sensors: StormBacktestSensor[];
+  limitations: string[];
+}
+
+export class ApiRequestError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -318,7 +375,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}) as any);
-    throw new Error(body.message || body.detail || `Request failed: ${res.status}`);
+    throw new ApiRequestError(res.status, body.message || body.detail || `Request failed: ${res.status}`);
   }
   return res.json();
 }
@@ -342,6 +399,10 @@ export const api = {
     request<PlaceSearchResponse>(`/api/places/search?query=${encodeURIComponent(query)}`, { signal }),
   getCityFlood: (rainfallMm: number, signal: AbortSignal) =>
     request<CityFloodResponse>(`/api/flood/city?rainfall_mm=${rainfallMm}`, { signal }),
+  listStormBacktests: (signal: AbortSignal) =>
+    request<{ events: StormBacktestEvent[] }>("/api/backtest", { signal }),
+  getStormBacktest: (eventId: string, signal: AbortSignal) =>
+    request<StormBacktest>(`/api/backtest/${encodeURIComponent(eventId)}`, { signal }),
   getScenarios: () => request<ScenarioSummary[]>("/api/scenarios"),
   getScenarioDetail: (scenarioId: string, signal?: AbortSignal) => request<SimulateResponse>(`/api/scenarios/${scenarioId}`, { signal }),
   getCriticalInfrastructure: () => request<CriticalInfraItem[]>("/api/critical-infrastructure"),

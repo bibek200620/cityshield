@@ -6,6 +6,16 @@ The risk-data boundary is the five Greater Bengaluru Authority corporations. Its
 
 The map viewport, general place search, and driving route bounds extend south to 12.62°N (and span 77.44–77.80°E), so southern suburbs through Anekal can be seen and used for routing. This is basemap and route coverage only. The 2025 GBA polygon remains the cutoff for city flood and heat risk outputs; no values are extrapolated south of it. The route bounds are a rectangular supported region, not an administrative boundary.
 
+### Ward analysis and scenario comparison
+
+Search for a ward to outline it and open its analysis. The ward mean weights the non-null value of each municipal runoff cell part by the area that intersects the ward in EPSG:32643. The “scored area above 20 mm” percentage uses only the intersection area with a runoff value as its denominator. Mapped permanent water and cells with missing values are excluded. This percentage describes grid values under a chosen rainfall input. Model runoff and observed inundation measure different quantities.
+
+The temperature reading weights the historical Landsat display cells by their ward overlap. The included area is display-grid coverage and can differ from the area of valid Landsat pixels. The optional temperature offset applies uniformly to the historical value.
+
+Use **Compare scenarios** to save the current inputs or a rainfall preset as a baseline in this browser. With a ward selected, the comparison uses that ward for both scenarios. The city view counts distinct 300 m cells above 20 mm. The CSV records the comparison scope, both inputs and outputs, and the source metadata. Baselines save the inputs and recalculate against the available model inputs on later visits. **Data sources** shows source availability and timestamps.
+
+The checked-in ward evidence file can be regenerated with `python scripts/build_ward_evidence.py /path/to/wards.geojson` from the repository root with the backend environment active. Use the [OpenCity 2025 ward GeoJSON distributed by bharatlas](https://data.bharatlas.com/admin/wards-bengaluru-gba/wards_bengaluru_gba.a181f1d8.geojson), SHA-256 `53733db2674e9e1283dcc57172945b3b1963d2c25d84e57f571e49d3880af11e`, with the [catalog's CC0 designation](https://bharatlas.com/layers#city-wards). The script verifies its IDs against the atlas index and stores 15 m simplified display outlines. The intersection weights use the source ward polygons before display simplification.
+
 ## City land-surface temperature
 
 The city model uses six spectral features from USGS Landsat 8/9 Collection 2 Level-2 images over the municipal boundary. It selects the lowest scene-level cloud cover for each configured month on path 144, row 051, then excludes fill, clouds, shadows, snow and invalid values at pixel level. It samples 30,000 valid pixels per training scene and 100,000 per evaluation scene using seed 42. The 30 m input grid is the delivered Landsat product grid. The thermal instrument's native resolution is coarser. [USGS Level-2 surface temperature documentation](https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature).

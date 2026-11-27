@@ -32,7 +32,7 @@ export default function ScenarioSlider() {
 
   return (
     <section aria-label="Rainfall inputs">
-      <p className="scenario-result">Test rainfall against the city grid and mapped roads. Simulated depths are available in the Bellandur pilot.</p>
+      <p className="scenario-result">Choose a preset or enter the rainfall intensity and duration to see estimated runoff on the map.</p>
       <form className="scenario-form" onSubmit={submit}>
         <label>
           Preset
@@ -66,13 +66,17 @@ export default function ScenarioSlider() {
               onChange={(event) => setDraft({ ...values, duration: event.target.value, preset: "" })} />
           </label>
         </div>
-        <label>
-          Surface temperature offset (°C)
-          <input type="number" min="-20" max="20" step="0.1" required value={values.temperature}
-            aria-describedby="temperature-offset-help"
-            onChange={(event) => setDraft({ ...values, temperature: event.target.value })} />
-        </label>
-        <p id="temperature-offset-help" className="scenario-result">Adjusts the Landsat surface-temperature layer. Air and feels-like forecasts use live weather data.</p>
+        <details className="scenario-advanced">
+          <summary>Surface temperature settings</summary>
+          <label>
+            Surface temperature offset (°C)
+            <input type="number" min="-20" max="20" step="0.1" required value={values.temperature}
+              aria-describedby="temperature-offset-help"
+              onInvalid={(event) => { event.currentTarget.closest("details")?.setAttribute("open", ""); }}
+              onChange={(event) => setDraft({ ...values, temperature: event.target.value })} />
+          </label>
+          <p id="temperature-offset-help" className="scenario-result">Applies to the historical Landsat layer. Weather forecasts use a separate air temperature estimate.</p>
+        </details>
         <button className="primary-button" disabled={loading}>
           {loading ? "Running…" : "Run flood simulation"}
         </button>

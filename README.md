@@ -15,7 +15,7 @@ The application foundation comes from [Nimbus](https://github.com/SagnickInTheSh
 
 ## Compare car routes
 
-CX is the 3D map assistant at the lower left. Its head and eyes follow the mouse when motion is enabled. Open CX for a spoken greeting, a forecast report for 1–48 hours, a trip report with traffic and rain exposure, or a preview of its 56 face poses. The model uses the supplied CX GLB with web-optimized geometry. CX watches the three-hour Bengaluru forecast for modeled flood risk. During navigation it compares your GPS progress with fresh traffic reports and modeled runoff ahead. It refreshes the active route context every five minutes without changing your route. The streetside warnings use research screening and are not official flood alerts.
+Open **Assistant** in the map footer for spoken alerts, a forecast report for 1–48 hours, or a trip report with traffic and rain exposure. The optional **Expressions** panel previews the original 3D model. The assistant watches the three-hour Bengaluru forecast for modeled flood risk. During navigation it compares your GPS progress with fresh traffic reports and modeled runoff ahead. It refreshes active route conditions every five minutes. Follow official warnings for street safety.
 
 To enable Gemini phrasing, set `GEMINI_API_KEY` in `backend/.env` and restart the backend. The default is `GEMINI_MODEL=gemini-2.5-flash-lite`. Google limits access to established 2.5 accounts. If the default model returns HTTP 404, CityShield tries `gemini-3.5-flash-lite`. CX uses reviewed preset language when Gemini is unavailable. Gemini receives only alert categories, and the browser supplies the voice. [Gemini 2.5 Flash-Lite availability](https://aistudio.google.com/docs/models/gemini-2.5-flash-lite).
 
@@ -23,7 +23,9 @@ For the demo, select **Rainfall scenario → Flood demo** and run it. CX announc
 
 Open **Car routes** in the three-dot menu. Search for a place such as a college, hotel, building, or address and select a suggestion as it appears while typing, use **Use my current location** for the source, or use **Pick on map**. Place search queries OpenStreetMap Nominatim after a short typing pause and is limited to the supported map bounds (77.44–77.80°E, 12.62–13.16°N); results depend on OSM coverage. The bounds include southern suburbs through Anekal, but do not imply flood/heat hazard coverage outside the GBA polygon. The map also has a **Find my location** control for browser GPS tracking. Both location options require browser permission.
 
-Use the three-dot menu to open **Two-day weather report**, **Next 3 hours**, **Rainfall scenario**, **Data & models**, or **Car routes**. Select the forecast card on the map to open the next three hours and the forecast source. The two-day report shows 48 hourly Open-Meteo estimates summarized into two 24-hour windows. **Refresh report** requests current provider data. **Export CSV** downloads the 48 estimates with timestamps and source metadata. This is a forecast-model output for a coarse Bengaluru grid cell, not an independent CityShield weather simulation, street-level measurement, flood-depth forecast, or official warning.
+Use **Scenarios**, **Routes**, **Weather**, or **Data sources** in the main navigation. Select **Next 3 hours** in the map overview to open the short forecast and its source. The two-day report shows 48 hourly Open-Meteo estimates for a Bengaluru grid cell, summarized into two 24-hour windows. **Refresh report** requests provider data. **Export CSV** downloads the 48 estimates with timestamps and source metadata.
+
+Use **Storm replay** to inspect the published October 2020 drain readings and study peaks. An operator can [import authorized storms and export a matching surveyed drainage model run](docs/STORM_BUNDLE.md) to enable a paired comparison. [Published data sources](docs/FLOOD_EVENT_DATA.md).
 
 The planner compares routes by estimated driving time and distance and shows an alternate when the provider supplies a distinct route. CityShield sends selected endpoint coordinates to the configured routing provider on comparison. Its default OpenStreetMap/Valhalla mode uses road-network travel-time estimates. Set `TOMTOM_API_KEY` in `backend/.env` and restart the backend to request TomTom traffic-aware ETAs and present flood reports near each route. Provider access and geographic coverage determine availability. [Valhalla documentation](https://valhalla.github.io/valhalla/api/route/api-reference/) · [TomTom Routing API](https://docs.tomtom.com/routing-api/documentation/tomtom-maps/v1/calculate-route).
 
@@ -64,6 +66,8 @@ Edit `frontend/.env` to configure `VITE_API_BASE_URL` or the map extent (`VITE_P
 Open the map at <http://localhost:5173>. API documentation is at <http://127.0.0.1:8000/docs>; health status is <http://127.0.0.1:8000/api/health>. The basemap requires network access. Its CARTO and OpenStreetMap attribution is shown in the map.
 
 The existing optional Compose setup is `docker compose up --build`; it uses PostGIS. Local commands use the default SQLite-compatible app configuration and need no database service.
+
+The [production frontend](https://cityshield-fawn.vercel.app) builds `frontend/` on Vercel. Set `VITE_API_BASE_URL` at build time to the HTTPS FastAPI service and include the frontend origin in the backend’s `CORS_ORIGINS`. The existing API is hosted on Render. Verify `/api/health` and `/api/backtest` from the production frontend origin after updating the backend.
 
 ## Run the heat workflow
 

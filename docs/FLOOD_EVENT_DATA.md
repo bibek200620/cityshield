@@ -49,6 +49,12 @@ The user's two supplied `water_level_excess_over_drain_depth_pct` values match t
 
 These summaries may be used as cited, one-event case-study evidence. They are not sufficient for training or testing CityShield: sensor coordinates and model-network IDs are absent, rainfall is an event maximum rather than a matched time series, only one storm is represented, and one measured value is contradictory. Do not report the article's PCSWMM scores as CityShield scores. The detailed source search and calculation record is in [`ISSUE5_RESEARCH_BENCHMARK.md`](ISSUE5_RESEARCH_BENCHMARK.md).
 
+### Storm replay in the browser
+
+Open **Storm replay** to step through the five Table S3 snapshots in local time. The study's WSM6KF3-driven PCSWMM peaks from Table S6 are shown beside observations for the two matching sensor IDs. The model peaks have their own timestamps. At WLS 100003, the two tables give the same water depth at different times. At WLS 100021, they report different depths at the same time. The replay preserves these distinctions, skips the intervals between published snapshots, and shows the Table S5 gauge maximum as event context.
+
+Run `python scripts/build_storm_replay.py` to regenerate the browser data from the checked-in summary and the two transcribed Table S6 rows in the script. Source pages 8, 10 and 11 were checked against the CC BY 4.0 [published supplement](https://ndownloader.figshare.com/files/35248909), with MD5 `7e78fc9e0d9766566f1236e922a35cb4`. The app displays the study results as a published reference. The [storm importer](STORM_BUNDLE.md) can enable the separate drainage model comparison when eligible data and model output are installed. The [data request draft](STORM_DATA_REQUEST.md) describes what is still needed.
+
 The IFI subset is a third-party licensed district-scale event inventory. It has dates and district names but no coordinate geometry, local flood extent/depth, or matched event rainfall. It can support historical context and data provenance only; it is not used as a training label or for scoring the physics/GNN model. The Sphere India report remains a secondary narrative, not ground-verified street truth. The repository does not infer coordinates from locality names or treat city-level narrative as street-level ground truth. No physics or GNN score against observed flood events can currently be reported. Existing GNN labels come from the simplified physics baseline; agreement with those labels is surrogate agreement, not observed-event predictive performance.
 
 ## Verification
@@ -61,4 +67,4 @@ From `backend/` run:
 .venv/bin/python -m pytest tests/test_frontiers_2020_sensor_summary.py -q
 ```
 
-The tests validate the evidence manifest, the 53-row source subset, date normalization, exact district filtering, source event ID uniqueness, source checksum pinning, no-coordinate handling, evaluation exclusion, deterministic storm-group separation, and the five published sensor-summary records and derived ratios. Until localized outcomes and matched rainfall are mapped to the evaluated CityShield network, the backtest API remains unavailable (HTTP 501) and real-world CityShield flood-model validation remains unavailable.
+The tests validate the evidence manifest, the 53-row source subset, date normalization, exact district filtering, source event ID uniqueness, source checksum pinning, no-coordinate handling, evaluation exclusion, deterministic storm-group separation, and the five published sensor-summary records and derived ratios. The backtest API returns HTTP 501 for unconfigured events. No observed-event drainage model score is bundled with this release.

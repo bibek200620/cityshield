@@ -157,7 +157,7 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
   }
 
   const status = outlook === null ? "Checking the three-hour forecast…"
-    : outlook.status === "ready" ? "I’m watching the next three hours for modeled flood and heat conditions."
+    : outlook.status === "ready" ? "Open a forecast or check conditions along a route."
       : "The city outlook is unavailable right now.";
 
   function closeBubble() {
@@ -180,7 +180,7 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
         <div className="mascot-bubble-heading">
           {panel !== "home" && <button className="mascot-close" type="button" aria-label="Back to CX menu"
             onClick={() => setPanel("home")}><Icon name="back" /></button>}
-          <strong ref={heading} tabIndex={-1}>{panel === "report" ? "Forecast report" : panel === "traffic" ? "Traffic" : "CX"}</strong>
+          <strong ref={heading} tabIndex={-1}>{panel === "report" ? "Forecast report" : panel === "traffic" ? "Traffic" : "Forecast and route assistant"}</strong>
           <button className="mascot-close" type="button" aria-label="Close CX bubble" onClick={closeBubble}><Icon name="close" /></button>
         </div>
         {panel === "report" && <ForecastBrief onRead={read} autoSpeak={voiceOn} />}
@@ -191,10 +191,7 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
             <strong>{alert.title}</strong>
             <p>{alertText(alert, phrasing)}</p>
           </li>)}
-        </ul> : <>
-          {manualOpen && <p className="mascot-greeting">Hi. What would you like to check?</p>}
-          <p>{status}</p>
-        </>}
+        </ul> : <p>{status}</p>}
         <div className="mascot-menu">
           <button type="button" onClick={() => setPanel("report")}><Icon name="calendar" />Forecast report</button>
           <button type="button" onClick={() => setPanel("traffic")}><Icon name="route" />Traffic</button>
@@ -222,13 +219,16 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
               onChange={(event) => setPreviewIndex(Number(event.target.value))}>
               {expressions.map((expression, index) => <option key={expression.label} value={index}>{expression.label}</option>)}
             </select>
+            {previewIndex !== null && <div className="mascot-expression-preview">
+              <Suspense fallback={<p>Loading preview…</p>}><MascotModel pose={pose} /></Suspense>
+            </div>}
           </details>}
         </div>
         </>}
       </div>}
       <button ref={trigger} className="mascot-trigger" type="button" aria-label="CX assistant"
         aria-controls={bubbleOpen ? "mascot-bubble" : undefined} aria-expanded={bubbleOpen}
-        data-expression={pose.label} onClick={() => {
+        onClick={() => {
           if (automaticBubble && !manualOpen && panel === "home") setManualOpen(true);
           else if (bubbleOpen) closeBubble();
           else {
@@ -237,9 +237,7 @@ export default function MapMascot({ drive, outlook, cityFlood }: {
             read?.("Hi!");
           }
         }}>
-        <Suspense fallback={<span className="mascot-fallback" aria-hidden="true"><i /><b>CX</b></span>}>
-          <MascotModel pose={pose} />
-        </Suspense>
+        <Icon name="info" /><span>Assistant</span>
       </button>
     </aside>
   );
