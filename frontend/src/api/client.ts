@@ -1,3 +1,5 @@
+import { withOpenMeteoFallback } from "./openMeteoFallback";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export interface LatLng {
@@ -343,8 +345,10 @@ export const api = {
   getScenarios: () => request<ScenarioSummary[]>("/api/scenarios"),
   getScenarioDetail: (scenarioId: string, signal?: AbortSignal) => request<SimulateResponse>(`/api/scenarios/${scenarioId}`, { signal }),
   getCriticalInfrastructure: () => request<CriticalInfraItem[]>("/api/critical-infrastructure"),
-  getWeatherNowcast: (signal?: AbortSignal) => request<WeatherAvailabilityResponse>("/api/weather/nowcast", { signal }),
-  getWeatherReport: (signal?: AbortSignal) => request<TwoDayWeatherReportResponse>("/api/weather/report", { signal }),
+  getWeatherNowcast: async (signal?: AbortSignal): Promise<WeatherAvailabilityResponse> =>
+    withOpenMeteoFallback(await request<WeatherAvailabilityResponse>("/api/weather/nowcast", { signal }), "nowcast", signal),
+  getWeatherReport: async (signal?: AbortSignal): Promise<TwoDayWeatherReportResponse> =>
+    withOpenMeteoFallback(await request<TwoDayWeatherReportResponse>("/api/weather/report", { signal }), "report", signal),
   getAssistantOutlook: (signal: AbortSignal) => request<AssistantOutlook>("/api/assistant/outlook", { signal }),
   getAssistantPhrasing: (signal: AbortSignal) => request<AssistantPhrasing>("/api/assistant/phrasing", { signal }),
   refreshAssistantRoute: (coordinates: DrivingOption["coordinates"], tomtom: boolean, signal: AbortSignal) =>
