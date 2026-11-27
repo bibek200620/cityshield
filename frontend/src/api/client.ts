@@ -361,11 +361,11 @@ export const api = {
   getCriticalInfrastructure: () => request<CriticalInfraItem[]>("/api/critical-infrastructure"),
   getWeatherNowcast: async (signal?: AbortSignal, location?: LatLng): Promise<WeatherAvailabilityResponse> => {
     const query = location ? `?latitude=${location.lat}&longitude=${location.lng}` : "";
-    return withOpenMeteoFallback(await request<WeatherAvailabilityResponse>(`/api/weather/nowcast${query}`, { signal }), "nowcast", signal);
+    return withOpenMeteoFallback(await request<WeatherAvailabilityResponse>(`/api/weather/nowcast${query}`, { signal }), "nowcast", signal, location);
   },
   getWeatherReport: async (signal?: AbortSignal, location?: LatLng): Promise<TwoDayWeatherReportResponse> => {
     const query = location ? `?latitude=${location.lat}&longitude=${location.lng}` : "";
-    return withOpenMeteoFallback(await request<TwoDayWeatherReportResponse>(`/api/weather/report${query}`, { signal }), "report", signal);
+    return withOpenMeteoFallback(await request<TwoDayWeatherReportResponse>(`/api/weather/report${query}`, { signal }), "report", signal, location);
   },
   getAssistantOutlook: (signal: AbortSignal) => request<AssistantOutlook>("/api/assistant/outlook", { signal }),
   getAssistantPhrasing: (signal: AbortSignal) => request<AssistantPhrasing>("/api/assistant/phrasing", { signal }),

@@ -182,7 +182,7 @@ function Dashboard() {
           <img className="wordmark-icon" src="/cityshield.svg" alt="" width="40" height="40" />
           <span>CityShield</span>
         </a>
-        <PlaceSearch selected={place} onSelect={setPlace} placeholder="Search wards" />
+        <PlaceSearch selected={place} onSelect={setPlace} placeholder="City, town or landmark in India" />
         <button ref={toolsTrigger} className="tools-trigger" type="button"
           aria-label={toolsOpen ? "Close map tools" : "Open map tools"} aria-expanded={toolsOpen} aria-controls="map-tools"
           onClick={() => {

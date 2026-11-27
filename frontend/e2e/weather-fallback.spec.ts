@@ -48,3 +48,47 @@ for (const stale of [false, true]) {
     expect(providerCalls).toBe(1);
   });
 }
+
+test("Open-Meteo fallback follows a selected Indian city", async ({ page }) => {
+  await page.clock.setFixedTime(now);
+  const hours = Array.from({ length: 51 }, (_, index) => currentHour + (index - 2) * 3600);
+  await page.route("**/api/places/search?*", (route) => route.fulfill({ headers, json: {
+    status: "ready", results: [{ id: "mumbai", name: "Mumbai, Maharashtra, India", category: "city", lat: 19.076, lng: 72.8777 }],
+  } }));
+  await page.route("**/api/weather/nowcast*", (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    if (query.get("latitude") === "19.076") return route.fulfill({ headers, json: {
+      status: "unavailable", reason: "provider_error", message: "The weather provider could not be reached.",
+    } });
+    return route.fulfill({ headers, json: {
+      status: "ready", source: "Open-Meteo", air_temperature_c: 28, feels_like_c: 30,
+      weather_code: 3, hourly_forecast: [], valid_at: new Date(currentHour * 1000).toISOString(),
+      upcoming_rain_mm: 0, recent_rain_mm: 0,
+      provenance: { retrieved_at: new Date(currentHour * 1000).toISOString(), grid_cell_center: { latitude: 12.98, longitude: 77.59 } },
+    } });
+  });
+  await page.route("https://api.open-meteo.com/v1/forecast?*", (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    expect(query.get("latitude")).toBe("19.076");
+    expect(query.get("longitude")).toBe("72.8777");
+    return route.fulfill({ headers, json: {
+      latitude: 19.08, longitude: 72.88, elevation: 14, timezone: "UTC", utc_offset_seconds: 0,
+      current_units: { time: "unixtime", temperature_2m: "°C", apparent_temperature: "°C" },
+      hourly_units: units,
+      current: { time: currentHour, temperature_2m: 29, apparent_temperature: 31, weather_code: 3, is_day: 1 },
+      hourly: {
+        time: hours, temperature_2m: hours.map(() => 29), apparent_temperature: hours.map(() => 31),
+        relative_humidity_2m: hours.map(() => 70), precipitation: hours.map(() => 0),
+        weather_code: hours.map(() => 3), is_day: hours.map(() => 1),
+      },
+    } });
+  });
+  await page.goto("/");
+  const search = page.getByRole("searchbox", { name: "Search India" });
+  await search.fill("Mumbai");
+  await page.getByRole("button", { name: "Mumbai, Maharashtra, India" }).click();
+  const card = page.getByRole("button", { name: "Open next 3 hours forecast" });
+  await expect(card.getByLabel("Current estimate 29° Celsius")).toBeVisible();
+  await card.click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Mumbai forecast" })).toBeVisible();
+});

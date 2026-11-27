@@ -1,4 +1,4 @@
-import type { TwoDayWeatherReportResponse, WeatherAvailabilityResponse } from "./client";
+import type { LatLng, TwoDayWeatherReportResponse, WeatherAvailabilityResponse } from "./client";
 
 const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 const LOCATION = { latitude: 12.98, longitude: 77.59 };
@@ -35,7 +35,7 @@ function optionalCode(value: unknown, max: number): number | null {
 
 const iso = (seconds: number) => new Date(seconds * 1000).toISOString();
 
-function readForecast(value: unknown, now: number): { nowcast: Nowcast; report: Report } {
+function readForecast(value: unknown, now: number, location: LatLng): { nowcast: Nowcast; report: Report } {
   const payload = record(value);
   const current = record(payload.current);
   const hourly = record(payload.hourly);
@@ -83,7 +83,7 @@ function readForecast(value: unknown, now: number): { nowcast: Nowcast; report: 
       model_selection: "provider default Best Match (automatic)",
       cell_selection: "land", model_identifier: null, model_version: null,
       model_note: "The response does not identify the exact model or model run.",
-      requested_location: LOCATION,
+      requested_location: { latitude: location.lat, longitude: location.lng },
       grid_cell_center: {
         latitude: number(payload.latitude, -90, 90),
         longitude: number(payload.longitude, -180, 180),
@@ -119,13 +119,13 @@ function readForecast(value: unknown, now: number): { nowcast: Nowcast; report: 
   };
 }
 
-let pending: ReturnType<typeof fetchForecast> | undefined;
-let cached: { intervals: ReturnType<typeof readForecast>; expiresAt: number } | undefined;
+const pending = new Map<string, ReturnType<typeof fetchForecast>>();
+const cached = new Map<string, { intervals: ReturnType<typeof readForecast>; expiresAt: number }>();
 
-async function fetchForecast() {
+async function fetchForecast(location: LatLng) {
   const url = new URL(ENDPOINT);
   url.search = new URLSearchParams({
-    latitude: String(LOCATION.latitude), longitude: String(LOCATION.longitude),
+    latitude: String(location.lat), longitude: String(location.lng),
     current: "temperature_2m,apparent_temperature,weather_code,is_day",
     hourly: [...Object.keys(HOURLY_UNITS), "weather_code", "is_day"].join(","),
     timezone: "UTC", timeformat: "unixtime", cell_selection: "land",
@@ -135,11 +135,7 @@ async function fetchForecast() {
   if (!response.ok) throw new Error("Open-Meteo request failed");
   const payload: unknown = await response.json();
   const now = Date.now() / 1000;
-  const intervals = readForecast(payload, now);
-  cached = {
-    intervals,
-    expiresAt: Math.min(now + 300, (Math.floor(now / HOUR) + 1) * HOUR),
-  };
+  const intervals = readForecast(payload, now, location);
   return intervals;
 }
 
@@ -147,15 +143,26 @@ export async function withOpenMeteoFallback<K extends "nowcast" | "report">(
   backend: { nowcast: WeatherAvailabilityResponse; report: TwoDayWeatherReportResponse }[K],
   kind: K,
   signal?: AbortSignal,
+  location: LatLng = { lat: LOCATION.latitude, lng: LOCATION.longitude },
 ) {
   signal?.throwIfAborted();
   if (backend.status !== "unavailable" || !["provider_error", "timeout"].includes(backend.reason)) {
     return backend;
   }
+  const key = `${location.lat},${location.lng}`;
   try {
-    if (cached && Date.now() / 1000 < cached.expiresAt) return cached.intervals[kind];
-    pending ??= fetchForecast().finally(() => { pending = undefined; });
-    const intervals = await pending;
+    const existing = cached.get(key);
+    if (existing && Date.now() / 1000 < existing.expiresAt) return existing.intervals[kind];
+    let request = pending.get(key);
+    if (!request) {
+      request = fetchForecast(location).then((intervals) => {
+        const now = Date.now() / 1000;
+        cached.set(key, { intervals, expiresAt: Math.min(now + 300, (Math.floor(now / HOUR) + 1) * HOUR) });
+        return intervals;
+      }).finally(() => { pending.delete(key); });
+      pending.set(key, request);
+    }
+    const intervals = await request;
     signal?.throwIfAborted();
     return intervals[kind];
   } catch {
