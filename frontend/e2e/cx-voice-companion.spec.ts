@@ -4,8 +4,8 @@ const headers = { "access-control-allow-origin": "*" };
 const source = { lat: 12.9762, lng: 77.5929 };
 const destination = { lat: 12.9507, lng: 77.5848 };
 
-async function installVoice(page: Page) {
-  await page.addInitScript(({ lat, lng }) => {
+async function installVoice(page: Page, holdSpeech = "") {
+  await page.addInitScript(({ lat, lng, holdSpeech }) => {
     class Recognition {
       static active: Recognition | null = null;
       onstart?: () => void;
@@ -14,16 +14,19 @@ async function installVoice(page: Page) {
       onresult?: (event: { resultIndex: number; results: unknown[] }) => void;
       start() {
         Recognition.active = this;
+        document.body.dataset.recognizer = "active";
         setTimeout(() => this.onstart?.(), 0);
       }
       abort() {
         Recognition.active = null;
+        delete document.body.dataset.recognizer;
       }
     }
     window.addEventListener("cx-test-transcript", (event) => {
       const recognition = Recognition.active;
       if (!recognition) return;
       Recognition.active = null;
+      delete document.body.dataset.recognizer;
       const detail = (event as CustomEvent<string | string[]>).detail;
       const transcripts = Array.isArray(detail) ? detail : [detail];
       recognition.onresult?.({ resultIndex: 0, results: [{
@@ -32,9 +35,10 @@ async function installVoice(page: Page) {
       }] });
       recognition.onend?.();
     });
-    window.addEventListener("cx-test-interim", () => {
+    window.addEventListener("cx-test-interim", (event) => {
       const recognition = Recognition.active;
-      recognition?.onresult?.({ resultIndex: 0, results: [{ isFinal: false, 0: { transcript: "What is the weather in Mysuru" } }] });
+      const transcript = (event as CustomEvent<string>).detail ?? "What is the weather in Mysuru";
+      recognition?.onresult?.({ resultIndex: 0, results: [{ isFinal: false, 0: { transcript } }] });
     });
     window.addEventListener("cx-test-denial", () => Recognition.active?.onerror?.({ error: "not-allowed" }));
     Object.defineProperty(window, "SpeechRecognition", { value: Recognition });
@@ -42,11 +46,20 @@ async function installVoice(page: Page) {
       onend?: () => void;
       constructor(public text: string) {}
     } });
+    let held: { text: string; onend?: () => void } | null = null;
     Object.defineProperty(window, "speechSynthesis", { value: {
-      getVoices: () => [], cancel: () => {},
+      getVoices: () => [],
+      cancel: () => {
+        if (!held) return;
+        const cancelled = held;
+        held = null;
+        document.body.dataset.cancelledSpeech = cancelled.text;
+        setTimeout(() => cancelled.onend?.(), 0);
+      },
       speak: (utterance: { text: string; onend?: () => void }) => {
         document.body.dataset.spoken = utterance.text;
-        setTimeout(() => utterance.onend?.(), 0);
+        if (holdSpeech && utterance.text.startsWith(holdSpeech)) held = utterance;
+        else setTimeout(() => utterance.onend?.(), 0);
       },
     } });
     function location(latitude: number, longitude: number) {
@@ -69,7 +82,7 @@ async function installVoice(page: Page) {
         if (updateGps) window.removeEventListener("cx-test-gps", updateGps);
       },
     } });
-  }, source);
+  }, { ...source, holdSpeech });
   await page.route("**/api/assistant/outlook", (route) => route.fulfill({ json: { status: "unavailable" }, headers }));
   await page.goto("/");
   const cx = page.getByRole("button", { name: "CX assistant", exact: true });
@@ -83,6 +96,106 @@ async function say(page: Page, text: string) {
   await expect(page.locator(".voice-session-hint")).toContainText(/Listening|hello cx/i);
   await page.evaluate((detail) => window.dispatchEvent(new CustomEvent("cx-test-transcript", { detail })), text);
 }
+
+test("CX interrupts speech on C X and keeps the weather context for the follow-up", async ({ page }) => {
+  const now = new Date();
+  await page.route("**/api/weather/nowcast*", (route) => route.fulfill({ headers, json: {
+    status: "ready", air_temperature_c: 25, feels_like_c: 26, recent_rain_mm: 0, upcoming_rain_mm: 0,
+    valid_at: now.toISOString(),
+    hourly_forecast: [1, 2, 3].map((hour) => ({
+      valid_at: new Date(now.getTime() + hour * 3600_000).toISOString(),
+      air_temperature_c: 25, feels_like_c: 26, precipitation_mm: 0, relative_humidity_pct: 40,
+    })),
+    provenance: { retrieved_at: now.toISOString(), grid_cell_center: { latitude: 12.98, longitude: 77.59 } },
+  } }));
+  await installVoice(page, "Right now");
+  await say(page, "Hello CX, weather now");
+  const body = page.locator("body");
+  await expect(body).toHaveAttribute("data-spoken", /^Right now/);
+  await expect(body).toHaveAttribute("data-recognizer", "active");
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("cx-test-interim", { detail: "C X" })));
+  await expect(body).toHaveAttribute("data-cancelled-speech", /^Right now/);
+  await expect(page.locator(".voice-response")).toHaveText("Go ahead with your follow-up.");
+  await say(page, "C X, and for the next two hours?");
+  await expect(body).toHaveAttribute("data-spoken", /next 2 hours/);
+  await expect(page.getByRole("button", { name: "Stop listening" })).toBeVisible();
+});
+
+test("CX accepts C X alone while working and ignores the superseded response", async ({ page }) => {
+  let releaseResponse!: () => void;
+  const delay = new Promise<void>((resolve) => { releaseResponse = resolve; });
+  let requested = false;
+  await page.route("**/api/assistant/conversation", async (route) => {
+    requested = true;
+    await delay;
+    await route.fulfill({ headers, json: { status: "ready", reply: "This old answer should stay silent." } }).catch(() => {});
+  });
+  await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());
+  await installVoice(page);
+  await say(page, "Hello CX, how does the atlas work?");
+  await expect.poll(() => requested).toBe(true);
+  await expect(page.locator(".voice-session-hint")).toContainText("Working");
+  await expect(page.locator("body")).toHaveAttribute("data-recognizer", "active");
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("cx-test-transcript", { detail: "C X" })));
+  await expect(page.locator(".voice-session-hint")).toContainText("Listening for your follow-up");
+  releaseResponse();
+  await say(page, "Toggle heat");
+  await expect(page.getByRole("checkbox", { name: "Heat", exact: true })).toBeChecked();
+  await expect(page.locator(".voice-response")).toHaveText("The heat layer is on.");
+  await expect(page.locator("body")).toHaveAttribute("data-spoken", "The heat layer is on.");
+});
+
+test("CX pans the actual map and runs a custom rainfall scenario by command", async ({ page }) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({ json: { version: 8, layers: [], sources: {} } }));
+  await page.route("**/api/places/search?*", (route) => route.fulfill({ headers, json: { status: "ready", results: [
+    { id: "bengaluru", name: "Bengaluru, Karnataka", ...source },
+  ] } }));
+  let simulation: unknown;
+  let presetsUsed = 0;
+  await page.route("http://localhost:8000/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/scenarios") return route.fulfill({ headers, json: [{
+      scenario_id: "saved-moderate", label: "Moderate storm", rainfall_intensity_mm_hr: 60, duration_min: 90,
+    }] });
+    if (path === "/api/scenarios/saved-moderate") {
+      presetsUsed++;
+      return route.fulfill({ headers, json: { scenario_id: "saved-moderate", node_predictions: [], road_segments: [] } });
+    }
+    if (path === "/api/simulate") {
+      simulation = route.request().postDataJSON();
+      return route.fulfill({ headers, json: { scenario_id: "custom", node_predictions: [], road_segments: [] } });
+    }
+    if (path === "/api/places/search") return route.fallback();
+    return route.fulfill({ headers, json: path === "/api/critical-infrastructure"
+      ? [] : { status: "unavailable" } });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "CX assistant", exact: true }).click();
+  const input = page.getByRole("textbox", { name: "Type a request" });
+  const answer = page.locator(".voice-response");
+  async function command(text: string, expected: string | RegExp) {
+    await input.fill(text);
+    await input.press("Enter");
+    await expect(answer).toContainText(expected);
+  }
+  await command("Find Bengaluru", "Showing Bengaluru");
+  const marker = page.locator(".place-marker");
+  await expect(marker).toBeVisible();
+  const initialX = (await marker.boundingBox())!.x;
+  await command("Pan east", "Panned the map east.");
+  await expect.poll(async () => (await marker.boundingBox())!.x).toBeLessThan(initialX - 25);
+  await command("Zoom in two levels", "Zoomed in 2 levels.");
+  await command("Toggle heat layer", "The heat layer is on.");
+  await expect(page.getByRole("checkbox", { name: "Heat", exact: true })).toBeChecked();
+  await command("Toggle heat layer", "The heat layer is off.");
+  await command("Run a moderate storm", /90 millimetres over 90 minutes/);
+  expect(presetsUsed).toBe(1);
+  await command("Simulate seventy-five millimetres per hour for two hours", /150 millimetres over 120 minutes/);
+  expect(simulation).toEqual({ rainfall_intensity_mm_hr: 75, duration_min: 120 });
+  await command("Simulate 999 mm/hr for 1 hour", /5 to 150 millimetres per hour/);
+  expect(simulation).toEqual({ rainfall_intensity_mm_hr: 75, duration_min: 120 });
+});
 
 test("CX recovers a wake phrase and a map command from speech alternatives", async ({ page }) => {
   await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());
