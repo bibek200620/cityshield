@@ -6,11 +6,14 @@ import {
   RouteResponse,
   ScenarioSummary,
   SimulateResponse,
+  HeatWorkflowResponse,
+  ExposureResponse,
 } from "../api/client";
 
 export interface LayerVisibility {
   roads: boolean;
   floodDepth: boolean;
+  cityRunoff: boolean;
   pilotFlood: boolean;
   cityRoads: boolean;
   drainage: boolean;
@@ -18,6 +21,8 @@ export interface LayerVisibility {
   route: boolean;
   heat: boolean;
   surfaceTemperature: boolean;
+  cityHeat: boolean;
+  pilotExposure: boolean;
   combined: boolean;
 }
 
@@ -29,6 +34,11 @@ export interface AppliedRainfallScenario {
   rainfallMm: number;
   durationMin: number;
   floodDemo: boolean;
+}
+
+interface TemperatureOffsets {
+  air: number;
+  surface: number;
 }
 
 interface FloodStore {
@@ -44,7 +54,13 @@ interface FloodStore {
   simulationActive: boolean;
   appliedRainfall: AppliedRainfallScenario | null;
   heatOffsetC: number;
+  surfaceOffsetC: number;
   currentRainfall: { intensity: number; duration: number };
+  heatData: HeatWorkflowResponse | null;
+  combinedExposure: ExposureResponse | null;
+  combinedExposureError: string | null;
+  heatLoading: boolean;
+  heatError: string | null;
   layerVisibility: LayerVisibility;
   activeNav: string;
   searchQuery: string;
@@ -52,8 +68,9 @@ interface FloodStore {
   error: string | null;
 
   loadInitial: () => Promise<void>;
-  runScenario: (scenarioId: string, heatOffsetC?: number) => Promise<void>;
-  runCustomRainfall: (intensity: number, duration: number, heatOffsetC: number, floodDemo?: boolean) => Promise<void>;
+  loadHeat: () => Promise<void>;
+  runScenario: (scenarioId: string, offsets: TemperatureOffsets) => Promise<void>;
+  runCustomRainfall: (intensity: number, duration: number, offsets: TemperatureOffsets, floodDemo?: boolean) => Promise<void>;
   stopSimulation: () => void;
   computeRoute: (start: LatLng, end: LatLng, vehicle?: VehicleType) => Promise<void>;
   setVehicleType: (vt: VehicleType) => void;
@@ -69,7 +86,7 @@ export const useFloodStore = create<FloodStore>((set, get) => {
   let revision = 0;
 
   async function runRainfall(
-    intensity: number, duration: number, presetId: string | null, heatOffsetC: number | undefined,
+    intensity: number, duration: number, presetId: string | null, offsets: TemperatureOffsets,
     load: (signal: AbortSignal) => Promise<SimulateResponse>,
   ) {
     scenarioRequest?.abort();
@@ -80,7 +97,7 @@ export const useFloodStore = create<FloodStore>((set, get) => {
       const result = await load(request.signal);
       if (request.signal.aborted) return;
       const floodDemo = presetId === floodDemoPreset.id;
-      const appliedRainfall = heatOffsetC === undefined ? null : {
+      const appliedRainfall = {
         revision: ++revision, rainfallMm: intensity * duration / 60, durationMin: duration, floodDemo,
       };
       set((state) => ({
@@ -91,12 +108,23 @@ export const useFloodStore = create<FloodStore>((set, get) => {
         route: null,
         selectedPresetId: presetId,
         currentRainfall: { intensity, duration },
-        heatOffsetC: heatOffsetC ?? 0,
-        layerVisibility: heatOffsetC === undefined ? state.layerVisibility : {
-          ...state.layerVisibility,
+        heatOffsetC: offsets.air,
+        surfaceOffsetC: offsets.surface,
+        combinedExposure: null,
+        combinedExposureError: null,
+        layerVisibility: {
+          ...state.layerVisibility, cityRunoff: true, cityRoads: true,
           pilotFlood: floodDemo || state.layerVisibility.pilotFlood,
+          heat: offsets.air !== 0 || state.layerVisibility.heat,
+          cityHeat: offsets.surface !== 0 || state.layerVisibility.cityHeat,
         },
       }));
+      try {
+        const combinedExposure = await api.getCombinedExposure(result.scenario_id, request.signal);
+        if (!request.signal.aborted) set({ combinedExposure });
+      } catch (error) {
+        if (!request.signal.aborted) set({ combinedExposureError: (error as Error).message });
+      }
     } catch (error) {
       if (!request.signal.aborted) set({ error: (error as Error).message });
     } finally {
@@ -120,10 +148,17 @@ export const useFloodStore = create<FloodStore>((set, get) => {
     simulationActive: false,
     appliedRainfall: null,
     heatOffsetC: 0,
+    surfaceOffsetC: 0,
     currentRainfall: { intensity: 60, duration: 90 },
+    heatData: null,
+    combinedExposure: null,
+    combinedExposureError: null,
+    heatLoading: false,
+    heatError: null,
     layerVisibility: {
       roads: true,
       floodDepth: false,
+      cityRunoff: false,
       pilotFlood: false,
       cityRoads: false,
       drainage: true,
@@ -131,12 +166,26 @@ export const useFloodStore = create<FloodStore>((set, get) => {
       route: true,
       heat: false,
       surfaceTemperature: false,
+      cityHeat: false,
+      pilotExposure: false,
       combined: false,
     },
     activeNav: "Dashboard",
     searchQuery: "",
     loading: false,
     error: null,
+
+    loadHeat: async () => {
+      set({ heatLoading: true, heatError: null });
+      try {
+        const heatData = await api.getHeatWorkflow();
+        set({ heatData });
+      } catch (e) {
+        set({ heatData: null, heatError: (e as Error).message });
+      } finally {
+        set({ heatLoading: false });
+      }
+    },
 
     loadInitial: async () => {
       set({ loading: true, error: null });
@@ -146,6 +195,7 @@ export const useFloodStore = create<FloodStore>((set, get) => {
           api.getCriticalInfrastructure(),
         ]);
         set({ scenarios, criticalInfra: infra });
+        void get().loadHeat();
       } catch (error) {
         set({ error: (error as Error).message });
       } finally {
@@ -153,15 +203,15 @@ export const useFloodStore = create<FloodStore>((set, get) => {
       }
     },
 
-    runScenario: async (scenarioId, heatOffsetC) => {
+    runScenario: async (scenarioId, offsets) => {
       const scenario = get().scenarios.find((item) => item.scenario_id === scenarioId);
       if (!scenario) return;
-      await runRainfall(scenario.rainfall_intensity_mm_hr, scenario.duration_min, scenarioId, heatOffsetC,
+      await runRainfall(scenario.rainfall_intensity_mm_hr, scenario.duration_min, scenarioId, offsets,
         (signal) => api.getScenarioDetail(scenarioId, signal));
     },
 
-    runCustomRainfall: (intensity, duration, heatOffsetC, floodDemo = false) => runRainfall(
-      intensity, duration, floodDemo ? floodDemoPreset.id : null, heatOffsetC,
+    runCustomRainfall: (intensity, duration, offsets, floodDemo = false) => runRainfall(
+      intensity, duration, floodDemo ? floodDemoPreset.id : null, offsets,
       (signal) => api.simulate(intensity, duration, signal)),
 
     stopSimulation: () => {
@@ -171,12 +221,15 @@ export const useFloodStore = create<FloodStore>((set, get) => {
         simulationActive: false,
         appliedRainfall: null,
         heatOffsetC: 0,
+        surfaceOffsetC: 0,
         simulateResult: null,
         activeScenarioId: null,
+        combinedExposure: null,
+        combinedExposureError: null,
         route: null,
         loading: false,
         error: null,
-        layerVisibility: { ...state.layerVisibility, pilotFlood: false, cityRoads: false },
+        layerVisibility: { ...state.layerVisibility, cityRunoff: false, pilotFlood: false, cityRoads: false, pilotExposure: false },
       }));
     },
 

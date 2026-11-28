@@ -24,6 +24,7 @@ import { summarizeWardRunoff, type WardEvidenceIndex } from "./map/wardEvidence"
 import UncertaintyPanel from "./components/UncertaintyPanel";
 import { useFloodStore } from "./store/useFloodStore";
 import { loadIndiaCities } from "./map/indiaCities";
+import { isBengaluruWard } from "./map/places";
 
 const layers = [
   { key: "floodDepth", name: "Flood", icon: "flood", description: "24-hour rainfall screening proxy" },
@@ -222,7 +223,7 @@ function Dashboard() {
   }, [rainfallMm, showCityFlood, reloadCount]);
 
   const displayedFlood = cityFlood?.rainfallMm === rainfallMm ? cityFlood.value : null;
-  const selectedWard = place?.corporation ? place : null;
+  const selectedWard = isBengaluruWard(place) ? place : null;
   const selectedWardId = selectedWard?.id;
   const selectedWardEvidence = selectedWard ? wardIndex?.[selectedWard.id] ?? null : null;
   const wardSummary: WardSummary | null = useMemo(() => {
@@ -249,7 +250,10 @@ function Dashboard() {
     if (!selectedWardId || simulationActive) return;
     const presets = useFloodStore.getState().scenarios;
     const defaultScenario = presets.find((scenario) => scenario.scenario_id === "moderate") ?? presets[1] ?? presets[0];
-    if (defaultScenario) void useFloodStore.getState().runScenario(defaultScenario.scenario_id);
+    if (defaultScenario) {
+      const state = useFloodStore.getState();
+      void state.runScenario(defaultScenario.scenario_id, { air: state.heatOffsetC, surface: state.surfaceOffsetC });
+    }
   }, [selectedWardId, simulationActive]);
 
   return (
@@ -380,7 +384,7 @@ function Dashboard() {
             }} />
           </div>}
           {panel === "data" && <div className="tool-content">
-            <SourceHealthPanel flood={displayedFlood} retry={() => {
+            <SourceHealthPanel location={weatherLocation} flood={displayedFlood} retry={() => {
               setReloadCount((count) => count + 1);
             }} />
             <HistoricalFloodTimeline />

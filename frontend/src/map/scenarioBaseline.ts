@@ -5,6 +5,7 @@ export interface ScenarioInputs {
   intensity: number;
   duration: number;
   heatOffset: number;
+  airOffset?: number;
 }
 
 export interface ScenarioBaseline extends ScenarioInputs {
@@ -26,6 +27,7 @@ function readBaseline(): ScenarioBaseline | null {
     if (value && Number.isFinite(value.intensity) && value.intensity >= 5 && value.intensity <= 150 &&
       Number.isFinite(value.duration) && value.duration >= 15 && value.duration <= 180 &&
       Number.isFinite(value.heatOffset) && Math.abs(value.heatOffset) <= 20 &&
+      (value.airOffset === undefined || Number.isFinite(value.airOffset) && Math.abs(value.airOffset) <= 20) &&
       typeof value.label === "string" && value.label.length <= 120 &&
       typeof value.savedAt === "string" && Number.isFinite(Date.parse(value.savedAt))) return value;
   } catch {

@@ -1,4 +1,4 @@
-import type { CityFloodResponse } from "../api/client";
+import type { CityFloodResponse, LatLng } from "../api/client";
 import { useFloodStore } from "../store/useFloodStore";
 import { useWeatherNowcast } from "../map/weatherNowcast";
 
@@ -13,11 +13,12 @@ function timestamp(value: string) {
   return Number.isFinite(date.valueOf()) ? <time dateTime={value}>{sourceTime.format(date)} IST</time> : null;
 }
 
-export default function SourceHealthPanel({ flood, retry }: {
+export default function SourceHealthPanel({ location, flood, retry }: {
+  location: LatLng;
   flood: CityFloodResponse | null;
   retry: () => void;
 }) {
-  const nowcast = useWeatherNowcast();
+  const nowcast = useWeatherNowcast(location);
   const pilot = useFloodStore((s) => s.simulateResult);
   const active = useFloodStore((s) => s.simulationActive);
   const loading = useFloodStore((s) => s.loading);

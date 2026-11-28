@@ -25,6 +25,8 @@ test("flood demo updates an existing trip, alerts CX, and moves the car without 
       },
     } });
   });
+  await page.route("**/api/weather/nowcast*", (route) => route.fulfill({ json: { status: "unavailable", reason: "stale_data" }, headers }));
+  await page.route("**/api/weather/point-forecast*", (route) => route.fulfill({ status: 503, json: { detail: "Forecast unavailable" }, headers }));
   await page.route("**/api/assistant/outlook", (route) => route.fulfill({ json: { status: "unavailable" }, headers }));
   await page.route("**/api/scenarios", (route) => route.fulfill({ json: [], headers }));
   await page.route("**/api/critical-infrastructure", (route) => route.fulfill({ json: [], headers }));

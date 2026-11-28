@@ -33,7 +33,7 @@ test("nationwide combined layer screens rain and heat without enabling either so
 
   const flood = page.getByRole("checkbox", { name: "Flood" });
   const heat = page.getByRole("checkbox", { name: "Heat" });
-  const combined = page.getByRole("checkbox", { name: "Combined" });
+  const combined = page.getByRole("checkbox", { name: "Combined", exact: true });
   await expect(flood).toBeVisible();
   await expect(flood).not.toBeChecked();
   await expect(heat).not.toBeChecked();

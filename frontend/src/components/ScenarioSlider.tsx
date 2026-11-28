@@ -17,6 +17,7 @@ export default function ScenarioSlider({ selectedPlace, onSelectPlace }: {
   const applied = useFloodStore((s) => s.appliedRainfall);
   const stopSimulation = useFloodStore((s) => s.stopSimulation);
   const heatOffset = useFloodStore((s) => s.heatOffsetC);
+  const surfaceOffset = useFloodStore((s) => s.surfaceOffsetC);
   const showRoads = useFloodStore((s) => s.layerVisibility.cityRoads);
   const toggleLayer = useFloodStore((s) => s.toggleLayer);
   const [draft, setDraft] = useState<{ intensity: string; duration: string; preset: string; temperature: string } | null>(null);
@@ -29,12 +30,13 @@ export default function ScenarioSlider({ selectedPlace, onSelectPlace }: {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const offsets = { air: Number(values.temperature), surface: surfaceOffset };
     if (values.preset === floodDemoPreset.id) {
-      void runCustomRainfall(floodDemoPreset.intensity, floodDemoPreset.duration, Number(values.temperature), true);
+      void runCustomRainfall(floodDemoPreset.intensity, floodDemoPreset.duration, offsets, true);
     } else if (values.preset) {
-      void runScenario(values.preset, Number(values.temperature));
+      void runScenario(values.preset, offsets);
     } else {
-      void runCustomRainfall(Number(values.intensity), Number(values.duration), Number(values.temperature));
+      void runCustomRainfall(Number(values.intensity), Number(values.duration), offsets);
     }
   }
 

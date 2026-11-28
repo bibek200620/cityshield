@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { api, type NearbyFacilitiesResponse } from "../api/client";
-import type { MapPlace } from "./PlaceSearch";
+import type { MapPlace } from "../map/places";
 
 interface LocalFloodReport {
   id: string;

@@ -320,7 +320,8 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
           <strong ref={heading} tabIndex={-1}>{panel === "report" ? "Forecast report" : panel === "traffic" ? "Traffic" : "CX"}</strong>
           <button className="mascot-close" type="button" aria-label="Close CX bubble" onClick={closeBubble}><Icon name="close" /></button>
         </div>
-        {panel === "report" && <ForecastBrief onRead={speakInPanel} autoSpeak={voiceOn && !talking} />}
+        {panel === "report" && <ForecastBrief key={`${weatherLatitude},${weatherLongitude}`} onRead={speakInPanel} autoSpeak={voiceOn && !talking}
+          location={weatherLocation} locationName={weatherLocationName} />}
         {panel === "traffic" && <TrafficBrief drive={drive} onRead={speakInPanel} />}
         {panel === "home" && <>
         {alerts.length ? <ul className="mascot-alerts">

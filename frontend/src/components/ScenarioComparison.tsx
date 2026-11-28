@@ -5,7 +5,7 @@ import { scenarioRainfall, useScenarioBaseline } from "../map/scenarioBaseline";
 import { countHighRunoffCells, summarizeWardRunoff } from "../map/wardEvidence";
 import { floodDemoPreset, useFloodStore } from "../store/useFloodStore";
 import type { CityHeat } from "./MapView";
-import type { BengaluruPlace } from "./PlaceSearch";
+import type { BengaluruPlace } from "../map/places";
 import type { WardSummary } from "./WardInspector";
 
 const savedTime = new Intl.DateTimeFormat("en-IN", {
@@ -45,11 +45,12 @@ export default function ScenarioComparison({ currentFlood, place, ward, heat, on
 }) {
   const rainfall = useFloodStore((s) => s.currentRainfall);
   const active = useFloodStore((s) => s.simulationActive);
+  const airOffset = useFloodStore((s) => s.heatOffsetC);
+  const heatOffset = useFloodStore((s) => s.surfaceOffsetC);
   const presets = useFloodStore((s) => s.scenarios);
   const selectedPreset = useFloodStore((s) => s.selectedPresetId);
-  const heatOffset = useFloodStore((s) => s.heatOffsetC);
   const [baselinePreset, setBaselinePreset] = useState("");
-  const currentInputs = { ...rainfall, heatOffset };
+  const currentInputs = { ...rainfall, heatOffset, airOffset };
   const currentTotal = active ? scenarioRainfall(currentInputs) : null;
   const activeScreen = active ? currentFlood : null;
   const { baseline, save, storageError, flood, retry } = useScenarioBaseline(currentTotal, activeScreen);
@@ -93,7 +94,10 @@ export default function ScenarioComparison({ currentFlood, place, ward, heat, on
       active: activeScreen?.status === "ready" ? countHighRunoffCells(activeScreen) : null,
     });
   }
-  metrics.push({ label: "Surface temperature offset", unit: "°C", digits: 1, baseline: baseline?.heatOffset ?? null, active: active ? heatOffset : null });
+  metrics.push(
+    { label: "Landsat surface-temperature offset", unit: "°C", digits: 1, baseline: baseline?.heatOffset ?? null, active: active ? heatOffset : null },
+    { label: "Air-temperature offset", unit: "°C", digits: 1, baseline: baseline ? baseline.airOffset ?? 0 : null, active: active ? airOffset : null },
+  );
 
   function exportComparison() {
     if (!baseline || activeScreen?.status !== "ready" || flood?.status !== "ready") return;
