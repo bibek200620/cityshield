@@ -4,7 +4,7 @@ import { isWithinNavigationArea, type useDrivingPlanner } from "../../map/drivin
 import { distanceSpoken, parseVoiceCommand, readCXWakePhrase, selectCXTranscript, spokenWeather, upcomingDirection, weatherFollowup, type CXSiteAction } from "./cxCommands";
 import { type VoiceOutput, type VoiceSession, useCXListening } from "./useCXListening";
 
-const help = "Try open scenarios, run flood demo, show road flood risk, find Bengaluru, weather in Mysuru, or navigate to Lalbagh.";
+const help = "Try pan east, zoom in, toggle road flood risk, or simulate 60 millimetres per hour for 90 minutes. You can also ask for weather or directions.";
 const CONVERSATION_IDLE_MS = 45_000;
 
 function greetingReply(text: string): string | null {
@@ -82,6 +82,14 @@ export function useCXCompanion(
     setTextBusy(false);
   }
 
+  function interruptTurn() {
+    typedTurn.current += 1;
+    request.current?.abort();
+    request.current = null;
+    keepConversationOpen();
+    setResponse("Go ahead with your follow-up.");
+  }
+
   async function onCommand(transcript: string, session: VoiceSession, mode: "voice" | "text" = "voice") {
     const turn = typedTurn.current;
     inputMode.current = mode;
@@ -114,7 +122,12 @@ export function useCXCompanion(
     switch (command.kind) {
       case "workspace":
       case "layer":
+      case "pan":
+      case "zoom":
+      case "reset-map":
       case "flood-demo":
+      case "simulation":
+      case "simulation-help":
       case "stop-simulation":
         choice.current = null;
         reply(await onSiteCommand(command));
@@ -389,7 +402,7 @@ export function useCXCompanion(
         session.reply(message);
       },
     });
-  }, stopSession, ["locating", "routing", "active", "rerouting"].includes(navigationMode),
+  }, stopSession, interruptTurn, ["locating", "routing", "active", "rerouting"].includes(navigationMode),
   language, (candidates) => selectCXTranscript(candidates, Date.now() < conversation.current.expiresAt));
   const { phase, speak } = listener;
   const waitingForChoice = Boolean(choice.current && Date.now() <= choice.current.expiresAt);

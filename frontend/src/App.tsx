@@ -11,7 +11,7 @@ import KpiStatsRow from "./components/KpiStatsRow";
 import { useDrivingPlanner, type Endpoint } from "./map/drivingPlanner";
 import MapView from "./components/MapView";
 import MapMascot from "./components/mascot/MapMascot";
-import type { CXSiteAction } from "./components/mascot/cxCommands";
+import type { CXCameraAction, CXSiteAction } from "./components/mascot/cxCommands";
 import PlaceSearch, { type MapPlace } from "./components/PlaceSearch";
 import RouteComparisonPanel from "./components/RouteComparisonPanel";
 import ScenarioComparison from "./components/ScenarioComparison";
@@ -23,7 +23,7 @@ import TwoDayWeatherReport from "./components/TwoDayWeatherReport";
 import WardInspector, { type WardSummary } from "./components/WardInspector";
 import { summarizeWardRunoff, type WardEvidenceIndex } from "./map/wardEvidence";
 import UncertaintyPanel from "./components/UncertaintyPanel";
-import { floodDemoPreset, useFloodStore } from "./store/useFloodStore";
+import { floodDemoPreset, rainfallLimits, useFloodStore } from "./store/useFloodStore";
 import { loadIndiaCities } from "./map/indiaCities";
 import { isBengaluruWard, supportsBengaluruSimulation } from "./map/places";
 
@@ -134,6 +134,7 @@ function Dashboard() {
   const [reloadCount, setReloadCount] = useState(0);
   const [picking, setPicking] = useState<Endpoint | null>(null);
   const drive = useDrivingPlanner();
+  const cameraControl = useRef<((action: CXCameraAction) => void) | null>(null);
   const weatherLocation = drive.navigationLocation ?? (place
     ? { lat: place.center[1], lng: place.center[0] } : currentArea?.location ?? BENGALURU_DEFAULT);
   const weatherLocationName = drive.navigationLocation ? "Current location"
@@ -234,19 +235,47 @@ function Dashboard() {
     if (useFloodStore.getState().layerVisibility.cityRoads && !place) selectPlace(BENGALURU_ROAD_VIEW);
   }
   async function performCXAction(action: CXSiteAction) {
-    if (action.kind === "flood-demo") {
+    if (action.kind === "pan" || action.kind === "zoom" || action.kind === "reset-map") {
+      if (drive.navigationMode !== "idle" && drive.navigationMode !== "error") {
+        return "The map is following your trip. Stop navigation or the car demo before moving it with CX.";
+      }
+      if (!cameraControl.current) return "The map is unavailable right now.";
+      cameraControl.current(action);
+      if (action.kind === "reset-map") return "Showing all of India.";
+      if (action.kind === "pan") return `Panned the map ${action.direction}.`;
+      return `Zoomed ${action.steps > 0 ? "in" : "out"} ${Math.abs(action.steps)} ${Math.abs(action.steps) === 1 ? "level" : "levels"}.`;
+    }
+    if (action.kind === "simulation-help") {
+      return "Say run a moderate storm, run flood demo, or simulate 60 millimetres per hour for 90 minutes.";
+    }
+    if (action.kind === "flood-demo" || action.kind === "simulation") {
       const store = useFloodStore.getState();
+      const preset = action.kind === "simulation" && "preset" in action
+        ? store.scenarios.find((item) => item.label.toLowerCase().startsWith(action.preset))
+        : undefined;
+      if (action.kind === "simulation" && "preset" in action && !preset) {
+        return `The ${action.preset} rainfall preset is unavailable. Try again or give me a rainfall intensity and duration.`;
+      }
+      const custom = action.kind === "simulation" && "intensity" in action ? action : floodDemoPreset;
+      const { intensity, duration } = rainfallLimits;
+      const valid = custom.intensity >= intensity.min && custom.intensity <= intensity.max
+        && custom.duration >= duration.min && custom.duration <= duration.max;
+      if (!preset && !valid) {
+        return `Use ${intensity.min} to ${intensity.max} millimetres per hour and a duration of ${duration.min} to ${duration.max} minutes.`;
+      }
       const previous = store.appliedRainfall?.revision;
       if (!supportsBengaluruSimulation(place)) selectPlace(BENGALURU_ROAD_VIEW);
-      await store.runCustomRainfall(floodDemoPreset.intensity, floodDemoPreset.duration,
-        { air: store.heatOffsetC, surface: store.surfaceOffsetC }, true);
+      const offsets = { air: store.heatOffsetC, surface: store.surfaceOffsetC };
+      if (preset) await store.runScenario(preset.scenario_id, offsets);
+      else await store.runCustomRainfall(custom.intensity, custom.duration, offsets, action.kind === "flood-demo");
       const applied = useFloodStore.getState().appliedRainfall;
-      return applied?.floodDemo && applied.revision !== previous
-        ? "The Bengaluru flood demo is running with 200 millimetres of hypothetical rainfall over two hours."
-        : "The flood demo didn’t start. Check the Scenarios panel and try again.";
+      if (!applied || applied.revision === previous) return "The rainfall simulation didn’t start. Check Scenarios and try again.";
+      return action.kind === "flood-demo" ? "The Bengaluru flood demo is running with 200 millimetres of hypothetical rainfall over two hours."
+        : `Applied a Bengaluru rainfall simulation of ${Number(applied.rainfallMm.toFixed(1))} millimetres over ${applied.durationMin} minutes. The map shows modeled runoff.`;
     }
     if (action.kind === "stop-simulation") {
-      if (!useFloodStore.getState().simulationActive) return "There’s no rainfall simulation running.";
+      const store = useFloodStore.getState();
+      if (!store.simulationActive && !store.hasPendingRainfall()) return "There’s no rainfall simulation running.";
       stopSimulation();
       return "Stopped the rainfall simulation.";
     }
@@ -256,11 +285,13 @@ function Dashboard() {
       return `Showing ${name} on the map.`;
     }
     if (action.kind === "layer") {
-      if (useFloodStore.getState().layerVisibility[action.layer] !== action.enabled) toggleLayer(action.layer);
-      if (action.layer === "cityRoads" && action.enabled && !supportsBengaluruSimulation(place)) {
+      const current = useFloodStore.getState().layerVisibility[action.layer];
+      const enabled = action.enabled ?? !current;
+      if (current !== enabled) toggleLayer(action.layer);
+      if (action.layer === "cityRoads" && enabled && !supportsBengaluruSimulation(place)) {
         selectPlace(BENGALURU_ROAD_VIEW);
       }
-      return `The ${action.label} layer is ${action.enabled ? "on" : "off"}.`;
+      return `The ${action.label} layer is ${enabled ? "on" : "off"}.`;
     }
     setPicking(null);
     setWeatherOpen(action.panel === "outlook");
@@ -343,7 +374,7 @@ function Dashboard() {
 
       <main id="atlas" className="atlas" aria-label="India map" tabIndex={-1}>
         <section className="map-workspace" aria-labelledby="map-title">
-          <MapView place={place} onCurrentLocation={handleCurrentLocation}
+          <MapView place={place} onCurrentLocation={handleCurrentLocation} cameraControl={cameraControl}
             assistant={<MapMascot drive={drive} cityFlood={displayedFlood} weatherLocation={weatherLocation}
               weatherLocationName={weatherLocationName} onSiteCommand={performCXAction} />}
             weatherWidget={<ThreeHourOutlook open={weatherOpen} location={weatherLocation} locationName={weatherLocationName} onOpen={() => setWeatherOpen(true)}

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
+import type { CXCameraAction } from "./mascot/cxCommands";
 import type { Layer } from "@deck.gl/core";
 import { PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -147,7 +148,7 @@ type CityFloodHover = HexSummary & { weather: IndiaWeatherHex | null };
 
 export default function MapView({
   place, cityFlood, scenarioRoadError, onReset, onCurrentLocation, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
-  navigation, assistant, weatherWidget, scenarioRoute, trafficSegments,
+  navigation, assistant, weatherWidget, scenarioRoute, trafficSegments, cameraControl,
 }: {
   place: MapPlace | null;
   cityFlood: Extract<CityFloodResponse, { status: "ready" }> | null;
@@ -163,6 +164,7 @@ export default function MapView({
   weatherWidget: ReactNode;
   scenarioRoute?: ScenarioRouteExposure;
   trafficSegments?: DrivingOption["traffic_segments"];
+  cameraControl: MutableRefObject<((action: CXCameraAction) => void) | null>;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -341,6 +343,27 @@ export default function MapView({
       return;
     }
     map.current = instance;
+    cameraControl.current = (action) => {
+      const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 300;
+      if (action.kind === "reset-map") {
+        instance.fitBounds(INDIA_BOUNDS, { ...INDIA_VIEW, duration });
+      } else if (action.kind === "zoom") {
+        instance.zoomTo(instance.getZoom() + action.steps, { duration });
+      } else {
+        const canvas = instance.getCanvas();
+        const x = canvas.clientWidth / 2;
+        const y = canvas.clientHeight / 2;
+        const directions = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1],
+          east: [1, 0], west: [-1, 0], north: [0, -1], south: [0, 1] };
+        const [horizontal, vertical] = directions[action.direction];
+        const screenRelative = ["left", "right", "up", "down"].includes(action.direction);
+        const bearing = screenRelative ? 0 : instance.getBearing() * Math.PI / 180;
+        const step = Math.min(x, y) / 2;
+        const dx = (horizontal * Math.cos(bearing) + vertical * Math.sin(bearing)) * step;
+        const dy = (-horizontal * Math.sin(bearing) + vertical * Math.cos(bearing)) * step;
+        instance.easeTo({ center: instance.unproject([x + dx, y + dy]), duration });
+      }
+    };
     const updateView = () => {
       setViewBounds(instance.getBounds().toArray() as MapBounds);
       setViewZoom(instance.getZoom());
@@ -451,8 +474,9 @@ export default function MapView({
       instance.remove();
       overlay.current = null;
       map.current = null;
+      cameraControl.current = null;
     };
-  }, [onCurrentLocation]);
+  }, [onCurrentLocation, cameraControl]);
 
   useEffect(() => {
     const instance = map.current;

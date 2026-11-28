@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { floodDemoPreset, useFloodStore } from "../store/useFloodStore";
+import { floodDemoPreset, rainfallLimits, useFloodStore } from "../store/useFloodStore";
 import IndiaCitySelect from "./IndiaCitySelect";
 import type { MapPlace } from "./PlaceSearch";
 
@@ -68,12 +68,12 @@ export default function ScenarioSlider({ selectedPlace, onSelectPlace }: {
         <div className="scenario-fields">
           <label>
             Intensity <span>(mm/hr)</span>
-            <input type="number" min="5" max="150" step="any" required value={values.intensity}
+            <input type="number" min={rainfallLimits.intensity.min} max={rainfallLimits.intensity.max} step="any" required value={values.intensity}
               onChange={(event) => setDraft({ ...values, intensity: event.target.value, preset: "" })} />
           </label>
           <label>
             Duration <span>(min)</span>
-            <input type="number" min="15" max="180" step="any" required value={values.duration}
+            <input type="number" min={rainfallLimits.duration.min} max={rainfallLimits.duration.max} step="any" required value={values.duration}
               onChange={(event) => setDraft({ ...values, duration: event.target.value, preset: "" })} />
           </label>
         </div>

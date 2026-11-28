@@ -80,7 +80,8 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
   });
   const { active: talking, canAnnounce, speak, transcript } = companion;
   const voiceStatus = companion.phase === "listening" ? (companion.awake ? "Listening for your request" : "Listening · say “Hello CX”")
-    : companion.phase === "working" ? "Working on your request…"
+    : companion.phase === "follow-up" ? "Listening for your follow-up"
+      : companion.phase === "working" ? "Working on your request…"
       : companion.phase === "speaking" ? "CX is speaking…" : "Starting the microphone…";
 
   useEffect(() => {
@@ -378,8 +379,14 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
           {!companion.supported && <p>Voice is unavailable in this browser. You can type a request.</p>}
           {talking && <>
             <p className="voice-session-hint" role="status">{voiceStatus}{companion.phase === "listening" && !companion.awake
-              ? " to begin. Then ask for weather, rain, or directions." : ""}</p>
+              ? " to begin. Then ask for weather, rain, or directions."
+              : companion.phase === "working" || companion.phase === "speaking" ? " Say “C X” to interrupt." : ""}</p>
             {transcript && <p className="voice-transcript"><strong>Heard:</strong> {transcript}</p>}
+            {(companion.phase === "speaking" || companion.phase === "working") &&
+              <button type="button" className="mascot-voice" onClick={() => {
+                stopVoiceButton.current?.focus();
+                companion.interrupt();
+              }}>Interrupt CX</button>}
             <button ref={stopVoiceButton} type="button" className="mascot-voice mascot-stop" aria-label="Stop listening"
               onClick={companion.stop}><Icon name="close" />Stop listening</button>
           </>}
@@ -394,7 +401,7 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
             </select>
           </details>}
           <p id="cx-mic-help" className="mascot-voice-help">{companion.supported
-            ? "Say “Hello CX” to begin. Try “show road flood risk” or “weather in Mysuru.” Your browser may process microphone audio online. Say “Stop listening” to end."
+            ? "Say “Hello CX” to begin. Try “pan east” or “toggle road flood risk.” Say “C X” to interrupt a reply, or “Stop listening” to end. Your browser may process microphone audio online."
             : "Try “show road flood risk” or “weather in Mysuru.”"}</p>
         </section>
         <div className="mascot-menu">
