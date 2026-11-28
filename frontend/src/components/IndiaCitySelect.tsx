@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { loadIndiaCities, type IndiaCity } from "../map/indiaCities";
 import { supportsBengaluruSimulation, type MapPlace } from "../map/places";
 
+const normalize = (value: string) => value.trim().toLocaleLowerCase("en-IN");
+
 function placeForCity(city: IndiaCity): MapPlace {
   const delta = 0.08;
   return {
@@ -17,7 +19,7 @@ export default function IndiaCitySelect({ selectedPlace, onSelect }: {
   onSelect: (place: MapPlace) => void;
 }) {
   const [cities, setCities] = useState<IndiaCity[]>([]);
-  const [selectedId, setSelectedId] = useState("");
+  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,40 +30,67 @@ export default function IndiaCitySelect({ selectedPlace, onSelect }: {
     return () => controller.abort();
   }, []);
 
+  const search = normalize(query).replace(/\bbangalore\b/g, "bengaluru");
+  const matches = useMemo(() => {
+    if (!search) return cities;
+    const terms = search.split(/[\s,]+/).filter(Boolean);
+    return cities.filter((city) => terms.every((term) => normalize(`${city.name} ${city.state}`).includes(term)));
+  }, [cities, search]);
+
   const grouped = useMemo(() => {
     const groups = new Map<string, IndiaCity[]>();
-    for (const city of cities) {
+    for (const city of matches) {
       const group = groups.get(city.state);
       if (group) group.push(city);
       else groups.set(city.state, [city]);
     }
     return [...groups].sort(([left], [right]) => left.localeCompare(right, "en-IN"));
-  }, [cities]);
-  const selectedName = selectedPlace?.name.split(",")[0].trim().toLocaleLowerCase();
-  const placeCity = selectedName ? cities.find((item) => item.name.toLocaleLowerCase() === selectedName)
-    ?? cities.find((item) => selectedName.includes(item.name.toLocaleLowerCase()) && item.name.length > 3) : null;
-  const effectiveId = selectedPlace ? placeCity?.id ?? "" : selectedId;
-  const selectedCity = cities.find((city) => city.id === effectiveId);
+  }, [matches]);
+  const selectedName = normalize(selectedPlace?.name.split(",")[0] ?? "");
+  const selectedCity = cities.find((city) => selectedPlace?.id === `geonames:${city.id}`)
+    ?? cities.find((city) => normalize(city.name) === selectedName)
+    ?? cities.find((city) => city.name.length > 3 && selectedName.includes(normalize(city.name)));
+  const selectedOutsideSearch = selectedCity && !matches.includes(selectedCity);
   const supportsCurrentModel = supportsBengaluruSimulation(selectedPlace);
+
+  function chooseCity(city: IndiaCity) {
+    setQuery("");
+    onSelect(placeForCity(city));
+  }
 
   return (
     <div className="simulation-location">
+      <label htmlFor="simulation-city-search">Search cities</label>
+      <input id="simulation-city-search" type="search" placeholder="City or state" value={query} autoComplete="off"
+        disabled={!cities.length || Boolean(error)} aria-controls="simulation-city" aria-describedby="simulation-city-help"
+        onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" || !search) return;
+          event.preventDefault();
+          const exact = matches.filter((city) => normalize(city.name) === search);
+          if (matches.length === 1) chooseCity(matches[0]);
+          else if (exact.length === 1) chooseCity(exact[0]);
+          else if (matches.length) document.getElementById("simulation-city")?.focus();
+        }} />
       <label htmlFor="simulation-city">Simulation area</label>
-      <select id="simulation-city" value={effectiveId} disabled={!cities.length || Boolean(error)}
+      <select id="simulation-city" value={selectedCity?.id ?? ""} disabled={!matches.length || Boolean(error)}
         aria-describedby="simulation-city-help simulation-city-status"
         onChange={(event) => {
-          const city = cities.find((item) => item.id === event.target.value);
-          setSelectedId(city?.id ?? "");
-          if (city) onSelect(placeForCity(city));
+          const city = matches.find((item) => item.id === event.target.value);
+          if (city) chooseCity(city);
         }}>
-        {!effectiveId && <option value="">Choose a city</option>}
+        {!selectedCity && <option value="" disabled>Choose a city</option>}
+        {selectedOutsideSearch && <option value={selectedCity.id} disabled>{selectedCity.name} · {selectedCity.state} (selected)</option>}
         {grouped.map(([state, entries]) => <optgroup label={state} key={state}>
           {entries.map((city) => <option value={city.id} key={city.id}>{city.name} · {city.population.toLocaleString("en-IN")}</option>)}
         </optgroup>)}
       </select>
+      {search && <p className="scenario-result" role="status">{matches.length
+        ? `${matches.length} matching ${matches.length === 1 ? "city" : "cities"}`
+        : "No cities match your search."}</p>}
       <p id="simulation-city-help" className="scenario-result">
-        Type a city name in the open list or scroll by state. City list:
-        {" "}<a href="https://www.geonames.org/">GeoNames</a> (CC BY 4.0).
+        Search by city or state, or browse the list. Press Enter to select a single match.
+        {" "}City data from <a href="https://www.geonames.org/">GeoNames</a> (CC BY 4.0).
       </p>
       <p id="simulation-city-status" className="scenario-result" role={error ? "alert" : "status"}>
         {error ?? (cities.length === 0 ? "Loading Indian cities…" : supportsCurrentModel

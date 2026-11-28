@@ -138,9 +138,9 @@ function Dashboard() {
   const weatherLocationName = drive.navigationLocation ? "Current location"
     : place?.id === "device-location" ? currentArea?.name ?? "Current location"
       : place?.name.split(",")[0] ?? currentArea?.name ?? "Bengaluru";
-  const selectPlace = useCallback((nextPlace: MapPlace | null) => {
+  const selectPlace = useCallback((nextPlace: MapPlace | null, keepPanelOpen = false) => {
     setPlace(nextPlace);
-    if (nextPlace && toolsOpen) {
+    if (nextPlace && toolsOpen && !keepPanelOpen) {
       setPanel(null);
       setToolsOpen(false);
     }
@@ -379,7 +379,7 @@ function Dashboard() {
             <p className="research-note"><Icon name="info" /><span>Research prototype. Follow official alerts for flood and heat warnings.</span></p>
           </div>}
           <div className="tool-content" hidden={panel !== "rainfall"}>
-            <ScenarioSlider selectedPlace={place} onSelectPlace={selectPlace} />
+            <ScenarioSlider selectedPlace={place} onSelectPlace={(city) => selectPlace(city, true)} />
           </div>
           {panel === "compare" && <div className="tool-content">
             <ScenarioComparison currentFlood={displayedFlood} place={selectedWard} ward={wardSummary} heat={null}
