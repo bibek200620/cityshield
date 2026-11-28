@@ -209,6 +209,11 @@ export type CityFloodResponse =
   | { status: "unavailable"; message: string }
   | { status: "ready"; rainfall_mm: number; grid_m: number; source: string; model: string; cells: CityFloodCell[] };
 
+export type RoadRunoffForecast =
+  | { status: "unavailable"; message: string }
+  | { status: "ready"; forecast_through: string; forecast_points: number; grid_m: number;
+      cells: Pick<CityFloodCell, "rings" | "screen_mm">[] };
+
 export interface GeoLineString {
   type: "LineString";
   coordinates: [number, number][];
@@ -515,6 +520,8 @@ export const api = {
     request<PlaceSearchResponse>(`/api/places/search?query=${encodeURIComponent(query)}`, { signal }),
   getCityFlood: (rainfallMm: number, signal: AbortSignal) =>
     request<CityFloodResponse>(`/api/flood/city?rainfall_mm=${rainfallMm}`, { signal }),
+  getRoadRunoffForecast: (signal: AbortSignal) =>
+    request<RoadRunoffForecast>("/api/weather/road-runoff", { signal }),
   listStormBacktests: (signal: AbortSignal) =>
     request<{ events: StormBacktestEvent[] }>("/api/backtest", { signal }),
   getStormBacktest: (eventId: string, signal: AbortSignal) =>

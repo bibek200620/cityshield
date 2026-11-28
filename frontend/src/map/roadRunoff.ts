@@ -3,10 +3,20 @@ import type { MapGeoJSONFeature } from "maplibre-gl";
 import type { CityFloodCell } from "../api/client";
 
 type Point = [number, number];
-type Cell = { cell: CityFloodCell; bounds: [number, number, number, number] };
+type RunoffCell = Pick<CityFloodCell, "rings" | "screen_mm">;
+type Cell = { cell: RunoffCell; bounds: [number, number, number, number] };
 export type RoadRunoff = { path: [Point, Point]; runoffMm: number; name: string };
 
 export const ROAD_SCREEN_MIN_ZOOM = 9;
+export const ROAD_RUNOFF_BANDS = [
+  { maxMm: 5, label: "Lower", range: "1–5 mm", color: [202, 137, 18], width: 3 },
+  { maxMm: 20, label: "Moderate", range: ">5–20 mm", color: [202, 77, 17], width: 4 },
+  { maxMm: Infinity, label: "Higher", range: ">20 mm", color: [150, 27, 73], width: 5 },
+] satisfies { maxMm: number; label: string; range: string; color: [number, number, number]; width: number }[];
+
+export function roadRunoffBand(runoffMm: number) {
+  return ROAD_RUNOFF_BANDS.find((band) => runoffMm <= band.maxMm) ?? ROAD_RUNOFF_BANDS[2];
+}
 const bucketSize = 0.005;
 const epsilon = 1e-8;
 
@@ -59,7 +69,7 @@ function clipSegment(a: Position, b: Position, rings: CityFloodCell["rings"]): [
   return covered;
 }
 
-export function createRoadRunoffScreen(cells: CityFloodCell[]) {
+export function createRoadRunoffScreen(cells: RunoffCell[]) {
   const grid = new Map<string, Cell[]>();
   for (const cell of cells) {
     if (cell.screen_mm === null || cell.screen_mm < 1 || !cell.rings[0]?.length) continue;
@@ -82,17 +92,18 @@ export function createRoadRunoffScreen(cells: CityFloodCell[]) {
     if (grid.size === 0) return [];
     const result = new Map<string, RoadRunoff>();
     for (const { geometry, properties } of features) {
-      if (properties.is_bridge || properties.is_tunnel) continue;
+      if ([properties.is_bridge, properties.is_tunnel].some((tag) => tag === true || tag === 1 || tag === "true" || tag === "yes")) continue;
       const lines = geometry.type === "LineString" ? [geometry.coordinates]
         : geometry.type === "MultiLineString" ? geometry.coordinates : [];
-      const name = typeof properties.name === "string" ? properties.name : "Mapped road";
+      const name = [properties.name, properties["name:en"], properties.ref]
+        .find((label): label is string => typeof label === "string" && Boolean(label.trim())) ?? "Unnamed mapped road";
       for (const line of lines) {
         for (let i = 1; i < line.length; i++) {
           const a = line[i - 1];
           const b = line[i];
           if (a[0] === b[0] && a[1] === b[1]) continue;
           const bounds = boundsFor(a, b);
-          const visited = new Set<CityFloodCell>();
+          const visited = new Set<RunoffCell>();
           for (const bucket of buckets(bounds)) {
             for (const entry of grid.get(bucket) ?? []) {
               const { cell, bounds: [west, south, east, north] } = entry;
@@ -101,7 +112,11 @@ export function createRoadRunoffScreen(cells: CityFloodCell[]) {
               for (const path of clipSegment(a, b, cell.rings)) {
                 const id = path.map((point) => point.map((value) => value.toFixed(6)).join(",")).sort().join(":");
                 const runoffMm = cell.screen_mm ?? 0;
-                if ((result.get(id)?.runoffMm ?? 0) < runoffMm) result.set(id, { path, runoffMm, name });
+                const existing = result.get(id);
+                if (!existing || existing.runoffMm < runoffMm
+                  || (existing.runoffMm === runoffMm && existing.name === "Unnamed mapped road" && name !== existing.name)) {
+                  result.set(id, { path, runoffMm, name });
+                }
               }
             }
           }

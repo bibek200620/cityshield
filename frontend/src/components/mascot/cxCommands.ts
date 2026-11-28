@@ -1,8 +1,27 @@
-import { api, type DrivingOption, type LatLng } from "../../api/client";
+import { api, type DrivingOption, type LatLng, type PlaceSearchResult } from "../../api/client";
 import { summarizeHourly } from "../../map/weatherReport";
 
 export type WeatherPeriod = { hours: number; atEnd?: boolean } | { day: "today" | "tomorrow" };
+const workspaces = {
+  map: "map", scenarios: "rainfall", "rainfall scenario": "rainfall", "rainfall scenarios": "rainfall",
+  routes: "drive", "car routes": "drive", "route planner": "drive", weather: "weatherReport",
+  "weather report": "weatherReport", "next three hours": "outlook", "next 3 hours": "outlook",
+  "storm replay": "replay", "data sources": "data", "compare scenarios": "compare",
+} as const;
+const layers = {
+  flood: "floodDepth", heat: "heat", "road flood risk": "cityRoads",
+  "surface temperature": "surfaceTemperature", combined: "combined",
+} as const;
+export type CXSiteCommand =
+  | { kind: "workspace"; panel: typeof workspaces[keyof typeof workspaces] }
+  | { kind: "layer"; layer: typeof layers[keyof typeof layers]; label: string; enabled: boolean }
+  | { kind: "flood-demo" }
+  | { kind: "stop-simulation" }
+  | { kind: "show-place"; query: string };
+export type CXSiteAction = Exclude<CXSiteCommand, { kind: "show-place" }> | { kind: "select-place"; place: PlaceSearchResult };
+
 export type VoiceCommand =
+  | CXSiteCommand
   | { kind: "alerts-on" | "alerts-off" }
   | { kind: "weather"; period?: WeatherPeriod; location?: string; rainProbability?: boolean }
   | { kind: "destination"; query: string }
@@ -26,13 +45,14 @@ function spokenNumber(value: string) {
 }
 
 export function readCXWakePhrase(transcript: string): string | undefined {
-  const match = /^(?:(?:hello|hey|hi)[\s,]+c[ .-]*x(?:\s+agent)?|c[ .-]*x\s+agent)\b[\s,.!?:-]*/i.exec(transcript.trim());
+  const match = /^(?:(?:hello|hey|hi)[\s,]+(?:c[ .-]*x|see\s+ex)(?:\s+agent)?|c[ .-]*x\s+agent)\b[\s,.!?:-]*/i.exec(transcript.trim());
   return match ? transcript.trim().slice(match[0].length).trim() : undefined;
 }
 
 export function parseVoiceCommand(transcript: string): VoiceCommand {
   const text = transcript.trim().replace(/[’']/g, "'").replace(/[.!?,]+$/, "")
-    .replace(/^(?:(?:hey|hi)[ ,]+)?c[ .-]*x\b[ ,:]*/i, "").replace(/^(?:please\s+)/i, "").trim();
+    .replace(/^(?:(?:hey|hi)[ ,]+)?c[ .-]*x\b[ ,:]*/i, "")
+    .replace(/^(?:(?:can|could|would) you\s+)?(?:please\s+)?/i, "").replace(/,?\s+please$/i, "").trim();
   const lower = text.toLowerCase();
   if (/^(?:stop listening|mute microphone|end voice(?: mode| session)?|goodbye)$/.test(lower)) return { kind: "stop" };
   if (/^(?:stand by|standby|go to sleep|that's all|that is all)$/.test(lower)) return { kind: "standby" };
@@ -45,6 +65,19 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
   if (/^(?:help|what can you do|what can i say)$/.test(lower)) return { kind: "help" };
   if (/^(?:(?:turn|switch) )?alerts? (?:on|enable)$/.test(lower)) return { kind: "alerts-on" };
   if (/^(?:(?:turn|switch) )?alerts? (?:off|disable)$/.test(lower)) return { kind: "alerts-off" };
+  if (/^(?:run|start) (?:the )?flood demo$/.test(lower)) return { kind: "flood-demo" };
+  if (/^(?:stop|end) (?:the )?(?:flood demo|simulation)$/.test(lower)) return { kind: "stop-simulation" };
+  const workspace = /^(?:open|go to|switch to|show) (?:the )?(.+?)(?: tab| panel)?$/.exec(lower)?.[1];
+  if (workspace && Object.prototype.hasOwnProperty.call(workspaces, workspace)) {
+    return { kind: "workspace", panel: workspaces[workspace as keyof typeof workspaces] };
+  }
+  const visibility = /^(?:(?:turn|switch) (on|off)|(show|hide)) (?:the )?(.+?)(?: layer)?$/.exec(lower);
+  const trailing = /^(?:turn|switch) (?:the )?(.+?)(?: layer)? (on|off)$/.exec(lower);
+  const layer = visibility?.[3] ?? trailing?.[1];
+  if (layer && Object.prototype.hasOwnProperty.call(layers, layer)) {
+    const action = visibility?.[1] ?? visibility?.[2] ?? trailing?.[2];
+    return { kind: "layer", layer: layers[layer as keyof typeof layers], label: layer, enabled: action === "on" || action === "show" };
+  }
   if (/\b(?:next turn|next step|next direction|which way|where do i turn)\b/.test(lower)) return { kind: "direction" };
   if (/\b(?:eta|e t a|how far|how long (?:until|to get|left|remaining)|time (?:left|remaining)|when (?:will|do) (?:we|i) (?:get there|arrive))\b/.test(lower)) return { kind: "eta" };
   const destination = /^(?:(?:can|could|would) you )?(?:(?:(?:navigate|drive|take me|go|route|(?:get |give me )?directions|show me the way) to)|(?:set (?:my |the )?destination to)|(?:how (?:do|can) i get to)|i(?:'d like| want) to go to)\s+(.+)$/i.exec(text);
@@ -52,6 +85,8 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
     const query = destination[1].replace(/\s+please$/i, "").trim();
     return query.length >= 2 && query.length <= 120 ? { kind: "destination", query } : { kind: "unknown" };
   }
+  const place = /^(?:find (?:the city of )?|search for |show )(.*?)\s*(?: on (?:the )?map)?$/i.exec(text)?.[1].trim();
+  if (place && place.length >= 2 && place.length <= 120) return { kind: "show-place", query: place };
   const rainProbability = /^(?:what(?:'s| is)\s+)?(?:the\s+)?(?:chances?|probability)\s+of\s+rain(?: .+)?\??$/i.test(lower);
   const weatherRequest = rainProbability || /^(?:what(?:'s| is)\s+(?:the\s+)?(?:weather|temperature|forecast)(?: .+)?|weather(?: .+)?|forecast(?: .+)?|is it (?:raining|going to rain)(?: .+)?|will it rain(?: .+)?|rain(?: .+))\??$/i.test(lower);
   if (weatherRequest) {
@@ -83,6 +118,25 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
     return weatherCommand(forecast ? { hours: 3 } : undefined);
   }
   return { kind: "unknown" };
+}
+
+export function selectCXTranscript(candidates: string[], awake: boolean): string {
+  const first = candidates[0] ?? "";
+  const firstWake = readCXWakePhrase(first);
+  const safeAlternative = (text: string) => ["workspace", "layer", "weather", "help"].includes(parseVoiceCommand(text).kind);
+  if (!awake && firstWake === undefined && parseVoiceCommand(first).kind !== "stop") {
+    const alternative = candidates.slice(1).find((candidate) => readCXWakePhrase(candidate) !== undefined);
+    if (!alternative) return first;
+    return safeAlternative(readCXWakePhrase(alternative) ?? "") ? alternative : "Hello CX";
+  }
+  if (parseVoiceCommand(firstWake ?? first).kind !== "unknown") return first;
+  // Use alternatives for explicit map controls and weather queries. Location
+  // navigation and confirmations must come from the primary transcript.
+  return candidates.slice(1).find((candidate) => {
+    const wake = readCXWakePhrase(candidate);
+    if (!awake && wake === undefined) return false;
+    return safeAlternative(wake ?? candidate);
+  }) ?? first;
 }
 
 export function weatherFollowup(text: string): VoiceCommand | null {

@@ -229,7 +229,7 @@ export const useFloodStore = create<FloodStore>((set, get) => {
         route: null,
         loading: false,
         error: null,
-        layerVisibility: { ...state.layerVisibility, cityRunoff: false, pilotFlood: false, cityRoads: false, pilotExposure: false },
+        layerVisibility: { ...state.layerVisibility, cityRunoff: false, pilotFlood: false, pilotExposure: false },
       }));
     },
 
