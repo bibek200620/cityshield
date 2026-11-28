@@ -11,6 +11,7 @@ import ForecastBrief from "./ForecastBrief";
 import TrafficBrief from "./TrafficBrief";
 import { useCXVoice } from "./cxVoice";
 import { useCXCompanion } from "./useCXCompanion";
+import type { CXSiteAction } from "./cxCommands";
 import "./mascot.css";
 
 const MascotModel = lazy(() => import("./MascotModel"));
@@ -27,10 +28,11 @@ function alertKey(alert: MascotAlert) {
   return alert.key ?? `${alert.kind}:${alert.face}`;
 }
 
-export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLocationName }: {
+export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLocationName, onSiteCommand }: {
   drive: ReturnType<typeof useDrivingPlanner>; cityFlood: CityFloodResponse | null;
   weatherLocation: { lat: number; lng: number };
   weatherLocationName: string;
+  onSiteCommand: (command: CXSiteAction) => string | Promise<string>;
 }) {
   const weatherLatitude = weatherLocation.lat;
   const weatherLongitude = weatherLocation.lng;
@@ -46,6 +48,8 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
   const [scanError, setScanError] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [panel, setPanel] = useState<MascotPanel>("home");
+  const [recognitionLanguage, setRecognitionLanguage] = useState("en-IN");
+  const [typedCommand, setTypedCommand] = useState("");
   const [dismissed, setDismissed] = useState("");
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [refreshResult, setRefreshResult] = useState<{
@@ -54,6 +58,7 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
   const trigger = useRef<HTMLButtonElement>(null);
   const startVoiceButton = useRef<HTMLButtonElement>(null);
   const stopVoiceButton = useRef<HTMLButtonElement>(null);
+  const commandInput = useRef<HTMLInputElement>(null);
   const wasTalking = useRef(false);
   const heading = useRef<HTMLElement>(null);
   const spoken = useRef(new Map<string, number>());
@@ -70,7 +75,7 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
       ? `24-hour weather and voice alerts are on for ${weatherLocationName}.`
       : "Weather alerts are off.";
   }
-  const companion = useCXCompanion(drive, route, distances, read, weatherLocation, (enabled) => {
+  const companion = useCXCompanion(drive, route, distances, read, weatherLocation, recognitionLanguage, onSiteCommand, (enabled) => {
     return setAlertMonitoring(enabled);
   });
   const { active: talking, canAnnounce, speak, transcript } = companion;
@@ -295,7 +300,7 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
   const status = locationAlertStatus;
 
   function closeBubble() {
-    if (talking) companion.stop();
+    companion.stop();
     setManualOpen(false);
     setDismissed(kinds);
     setPanel("home");
@@ -303,6 +308,10 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
   }
 
   const speakInPanel = talking ? (text: string) => { if (canAnnounce) speak(text); } : read;
+  function respondToPlace(index?: number) {
+    (talking ? stopVoiceButton.current : commandInput.current)?.focus();
+    companion.respondToPlace(index);
+  }
 
   return (
     <aside className="map-mascot" aria-label="CX map assistant" onKeyDown={(event) => {
@@ -333,25 +342,60 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
           {manualOpen && <p className="mascot-greeting">Hi. What would you like to check?</p>}
           <p>{status}</p>
         </>}
-        <section className="mascot-voice-panel" aria-label="Voice assistant">
+        <section className="mascot-voice-panel" aria-label="Ask CX">
           <div className="mascot-voice-panel-heading">
-            <strong>{talking ? voiceStatus : "Talk to CX"}</strong>
+            <strong>{talking ? voiceStatus : "Ask CX"}</strong>
             {talking && <span className="voice-live-indicator" aria-hidden="true" />}
           </div>
+          <form className="mascot-command" onSubmit={(event) => {
+            event.preventDefault();
+            if (!typedCommand.trim()) return;
+            void companion.submitText(typedCommand);
+            setTypedCommand("");
+          }}>
+            <label htmlFor="cx-command">Type a request</label>
+            <div>
+              <input ref={commandInput} id="cx-command" value={typedCommand} onChange={(event) => setTypedCommand(event.target.value)}
+                maxLength={500} disabled={talking} readOnly={companion.textBusy} placeholder="Open scenarios" />
+              <button type="submit" className="mascot-voice" disabled={talking || companion.textBusy || !typedCommand.trim()}>Send</button>
+            </div>
+          </form>
+          {companion.textBusy && <p role="status">Working on your request…</p>}
+          <p className="voice-response" role="status" aria-atomic="true">{companion.response}</p>
+          {companion.placeOptions.length > 0 && <div className="mascot-place-options" role="group" aria-label="Confirm a place">
+            {companion.placeOptions.map((name, index) => <button key={index} type="button" className="mascot-voice"
+              disabled={companion.textBusy || companion.phase === "working"} onClick={() => respondToPlace(index)}>
+              {name}
+            </button>)}
+            <button type="button" className="mascot-voice" disabled={companion.textBusy || companion.phase === "working"}
+              onClick={() => respondToPlace()}>Cancel place selection</button>
+          </div>}
           {companion.supported && !talking && <button ref={startVoiceButton} className="mascot-voice mascot-talk" type="button"
+            disabled={companion.textBusy}
             aria-describedby="cx-mic-help" onClick={companion.start}>
             <Icon name="microphone" />{companion.error ? "Try voice again" : "Start talking"}
           </button>}
-          {!companion.supported && <p role="status">Voice input or speech playback is not available in this browser. You can still use the map and forecast controls.</p>}
+          {!companion.supported && <p>Voice is unavailable in this browser. You can type a request.</p>}
           {talking && <>
-            <p className="voice-session-hint">{voiceStatus}{companion.phase === "listening" && !companion.awake
+            <p className="voice-session-hint" role="status">{voiceStatus}{companion.phase === "listening" && !companion.awake
               ? " to begin. Then ask for weather, rain, or directions." : ""}</p>
-            {transcript && <p className="voice-transcript" aria-live="polite"><strong>Heard:</strong> {transcript}</p>}
+            {transcript && <p className="voice-transcript"><strong>Heard:</strong> {transcript}</p>}
             <button ref={stopVoiceButton} type="button" className="mascot-voice mascot-stop" aria-label="Stop listening"
               onClick={companion.stop}><Icon name="close" />Stop listening</button>
           </>}
           {companion.error && <p className="mascot-voice-error" role="alert">{companion.error}</p>}
-          <p id="cx-mic-help" className="mascot-voice-help">Say “Hello CX,” then ask one thing. Try “weather in Mysuru” or “navigate to Lalbagh.” Your browser may process microphone audio online; CityShield receives recognized words. Say “Stop listening” to end.</p>
+          {companion.supported && !talking && <details className="mascot-expressions mascot-voice-settings">
+            <summary>Voice input settings</summary>
+            <label htmlFor="cx-listening-language">Recognition language</label>
+            <select id="cx-listening-language" value={recognitionLanguage} onChange={(event) => setRecognitionLanguage(event.target.value)}>
+              <option value="en-IN">English (India)</option>
+              <option value="en-GB">English (UK)</option>
+              <option value="en-US">English (US)</option>
+            </select>
+          </details>}
+          <p id="cx-mic-help" className="mascot-voice-help">{companion.supported
+            ? "Say “Hello CX” to begin. Try “show road flood risk” or “weather in Mysuru.” Your browser may process microphone audio online. Say “Stop listening” to end."
+            : "Try “show road flood risk” or “weather in Mysuru.”"}</p>
         </section>
         <div className="mascot-menu">
           <button type="button" onClick={() => setPanel("report")}><Icon name="calendar" />Forecast report</button>

@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
+type SpeechResult = { isFinal: boolean; length?: number; [index: number]: { transcript: string } };
 type TranscriptEvent = {
   resultIndex: number;
-  results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }>;
+  results: ArrayLike<SpeechResult>;
 };
 
 interface Recognition {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  maxAlternatives: number;
+  phrases?: { push: (phrase: unknown) => void };
   onstart: (() => void) | null;
   onend: (() => void) | null;
   onerror: ((event: { error: string }) => void) | null;
@@ -38,20 +41,26 @@ export function useCXListening(
   onCommand: (transcript: string, session: VoiceSession) => Promise<void>,
   onStop: () => void,
   keepListening: boolean,
+  language: string,
+  chooseTranscript: (candidates: string[]) => string,
 ) {
   const [phase, setPhase] = useState<Phase>("off");
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
-  const latest = useRef({ read, onCommand, onStop, keepListening });
-  latest.current = { read, onCommand, onStop, keepListening };
+  const latest = useRef({ read, onCommand, onStop, keepListening, language, chooseTranscript });
+  latest.current = { read, onCommand, onStop, keepListening, language, chooseTranscript };
   const state = useRef<{
     enabled: boolean;
     recognizer?: Recognition;
     timer?: number;
     lastInput: number;
     speaking: boolean;
+    working: boolean;
     emptyEnds: number;
-  }>({ enabled: false, lastInput: 0, speaking: false, emptyEnds: 0 }).current;
+    retryWithoutPhrases: boolean;
+    generation: number;
+    speechId: number;
+  }>({ enabled: false, lastInput: 0, speaking: false, working: false, emptyEnds: 0, retryWithoutPhrases: false, generation: 0, speechId: 0 }).current;
 
   function releaseMic() {
     const recognizer = state.recognizer;
@@ -63,10 +72,12 @@ export function useCXListening(
 
   function releaseSession() {
     state.enabled = false;
+    state.generation += 1;
     window.clearTimeout(state.timer);
     releaseMic();
     if (state.speaking) window.speechSynthesis?.cancel();
     state.speaking = false;
+    state.working = false;
     latest.current.onStop();
   }
 
@@ -82,20 +93,24 @@ export function useCXListening(
     setPhase("error");
   }
 
-  function resume() {
+  function resume(delay = 350) {
     if (!state.enabled) return;
+    state.working = false;
     setPhase("starting");
-    state.timer = window.setTimeout(listen, 350);
+    window.clearTimeout(state.timer);
+    state.timer = window.setTimeout(listen, delay);
   }
 
   function speak(text: string) {
     if (!state.enabled || state.speaking || !latest.current.read) return false;
     window.clearTimeout(state.timer);
     releaseMic();
+    state.working = false;
     state.speaking = true;
+    const speechId = ++state.speechId;
     setPhase("speaking");
     const finish = () => {
-      if (!state.enabled || !state.speaking) return;
+      if (!state.enabled || !state.speaking || state.speechId !== speechId) return;
       state.speaking = false;
       window.clearTimeout(state.timer);
       resume();
@@ -108,6 +123,34 @@ export function useCXListening(
     return true;
   }
 
+  function execute(transcript: string, fromSpeech = true) {
+    if (!state.enabled || state.working) return;
+    state.working = true;
+    window.clearTimeout(state.timer);
+    releaseMic();
+    if (state.speaking) {
+      state.speechId += 1;
+      state.speaking = false;
+      window.speechSynthesis?.cancel();
+    }
+    if (fromSpeech) setTranscript(transcript);
+    setPhase("working");
+    const generation = state.generation;
+    const current = () => state.enabled && state.generation === generation;
+    const session: VoiceSession = {
+      reply: (text) => {
+        if (!current()) return;
+        state.lastInput = Date.now();
+        speak(text);
+      },
+      wait: () => { if (current()) resume(); },
+      stop: () => { if (current()) stop(); },
+    };
+    void latest.current.onCommand(transcript, session).catch(() => {
+      if (current()) session.reply("I couldn’t finish that request. Please try again.");
+    });
+  }
+
   function listen() {
     if (!state.enabled) return;
     if (document.hidden || (!latest.current.keepListening && Date.now() - state.lastInput > 5 * 60_000)) {
@@ -118,11 +161,22 @@ export function useCXListening(
     if (!RecognitionClass) return;
     const recognition = new RecognitionClass();
     state.recognizer = recognition;
-    recognition.lang = "en-IN";
+    recognition.lang = latest.current.language;
     recognition.continuous = false;
     recognition.interimResults = true;
-    let transcript = "";
-    let noSpeech = false;
+    recognition.maxAlternatives = 3;
+    const Phrase = (window as Window & { SpeechRecognitionPhrase?: new (text: string, boost: number) => unknown }).SpeechRecognitionPhrase;
+    if (Phrase && recognition.phrases && !state.retryWithoutPhrases) {
+      try {
+        for (const hint of ["Hello CX", "Bengaluru", "Mysuru", "Lalbagh", "road flood risk", "storm replay"]) {
+          recognition.phrases.push(new Phrase(hint, 2));
+        }
+      } catch {
+        state.retryWithoutPhrases = true;
+      }
+    }
+    let candidates: string[] = [];
+    let recoverableError = "";
     recognition.onstart = () => {
       if (state.recognizer === recognition) setPhase("listening");
     };
@@ -131,13 +185,26 @@ export function useCXListening(
       const results = Array.from(event.results);
       const heard = results.map((result) => result[0]?.transcript.trim() ?? "").filter(Boolean).join(" ");
       if (heard) setTranscript(heard);
-      transcript = results.filter((result) => result.isFinal)
-        .map((result) => result[0]?.transcript.trim() ?? "").filter(Boolean).join(" ").trim();
+      const finals = results.filter((result) => result.isFinal && result[0]?.transcript.trim());
+      const primary = finals.map((result) => result[0].transcript.trim());
+      const alternatives = finals.flatMap((result, index) =>
+        Array.from({ length: Math.min(result.length ?? 1, 3) - 1 }, (_, alternate) => {
+          const parts = [...primary];
+          parts[index] = result[alternate + 1]?.transcript.trim() || parts[index];
+          return parts.join(" ");
+        }));
+      candidates = primary.length ? [primary.join(" "), ...new Set(alternatives)] : [];
     };
     recognition.onerror = ({ error }) => {
       if (state.recognizer !== recognition) return;
-      if (error === "no-speech") {
-        noSpeech = true;
+      if (error === "phrases-not-supported" && !state.retryWithoutPhrases) {
+        state.retryWithoutPhrases = true;
+        releaseMic();
+        resume();
+        return;
+      }
+      if (["no-speech", "network", "aborted"].includes(error)) {
+        recoverableError = error;
         return;
       }
       fail(error === "not-allowed" || error === "service-not-allowed"
@@ -148,27 +215,16 @@ export function useCXListening(
     recognition.onend = () => {
       if (state.recognizer !== recognition) return;
       state.recognizer = undefined;
-      if (!transcript) {
+      if (!candidates.length) {
         state.emptyEnds += 1;
-        if (state.emptyEnds >= 2) fail(noSpeech
+        if (state.emptyEnds >= (recoverableError === "network" ? 3 : 4)) fail(recoverableError === "no-speech"
           ? "I didn’t hear a request. Check your microphone, then try again."
-          : "Speech recognition stopped. Start a new voice session to try again.");
-        else resume();
+          : "Speech recognition stopped. Try voice again or type your request.");
+        else resume(recoverableError === "network" ? 700 * state.emptyEnds : 350);
         return;
       }
       state.emptyEnds = 0;
-      setPhase("working");
-      const session: VoiceSession = {
-        reply: (text) => {
-          state.lastInput = Date.now();
-          speak(text);
-        },
-        wait: resume,
-        stop,
-      };
-      void latest.current.onCommand(transcript, session).catch(() => {
-        if (state.enabled) session.reply("I couldn’t finish that request. Please try again.");
-      });
+      execute(latest.current.chooseTranscript(candidates));
     };
     try {
       recognition.start();
@@ -182,6 +238,7 @@ export function useCXListening(
     window.speechSynthesis?.cancel();
     state.lastInput = Date.now();
     state.emptyEnds = 0;
+    state.retryWithoutPhrases = false;
     state.enabled = true;
     setTranscript("");
     setError("");
@@ -201,5 +258,5 @@ export function useCXListening(
   }, []);
 
   const active = phase !== "off" && phase !== "error";
-  return { active, phase, error, transcript, supported: Boolean(read && recognitionConstructor()), start, stop, speak };
+  return { active, phase, error, transcript, supported: Boolean(read && recognitionConstructor()), start, stop, speak, execute };
 }

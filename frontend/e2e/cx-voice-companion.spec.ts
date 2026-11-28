@@ -24,8 +24,12 @@ async function installVoice(page: Page) {
       const recognition = Recognition.active;
       if (!recognition) return;
       Recognition.active = null;
-      const transcript = (event as CustomEvent<string>).detail;
-      recognition.onresult?.({ resultIndex: 0, results: [{ isFinal: true, 0: { transcript } }] });
+      const detail = (event as CustomEvent<string | string[]>).detail;
+      const transcripts = Array.isArray(detail) ? detail : [detail];
+      recognition.onresult?.({ resultIndex: 0, results: [{
+        isFinal: true, length: transcripts.length,
+        ...Object.fromEntries(transcripts.map((transcript, index) => [index, { transcript }])),
+      }] });
       recognition.onend?.();
     });
     window.addEventListener("cx-test-interim", () => {
@@ -79,6 +83,52 @@ async function say(page: Page, text: string) {
   await expect(page.locator(".voice-session-hint")).toContainText(/Listening|hello cx/i);
   await page.evaluate((detail) => window.dispatchEvent(new CustomEvent("cx-test-transcript", { detail })), text);
 }
+
+test("CX recovers a wake phrase and a map command from speech alternatives", async ({ page }) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());
+  await installVoice(page);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("cx-test-transcript", {
+    detail: ["Hello eggs show road flood risk", "Hello CX, show road flood risk"],
+  })));
+  await expect(page.getByRole("checkbox", { name: "Road flood risk", exact: true })).toBeChecked();
+  await expect(page.locator(".voice-response")).toHaveText("The road flood risk layer is on.");
+  await expect(page.locator(".voice-transcript")).toContainText("Hello CX");
+  await expect(page.locator("body")).not.toHaveAttribute("data-gps");
+});
+
+test("CX can run and stop a rainfall demo by keyboard with voice unavailable", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "SpeechRecognition", { value: undefined });
+    Object.defineProperty(window, "webkitSpeechRecognition", { value: undefined });
+  });
+  await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());
+  await page.route("http://localhost:8000/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (["/api/scenarios", "/api/critical-infrastructure"].includes(path)) return route.fulfill({ json: [], headers });
+    if (path === "/api/simulate") {
+      return route.fulfill({ headers, json: {
+        scenario_id: "cx-demo", node_predictions: [], road_segments: [], at_risk_infra_ids: [],
+      } });
+    }
+    return route.fulfill({ json: { status: "unavailable" }, headers });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "CX assistant", exact: true }).press("Enter");
+  const entry = page.getByRole("textbox", { name: "Type a request" });
+  const answer = page.locator(".voice-response");
+  await entry.fill("Could you open the scenarios tab, please?");
+  await entry.press("Enter");
+  await expect(page.getByRole("heading", { name: "Rainfall scenario" })).toBeFocused();
+  await expect(answer).toHaveText("Opened rainfall scenario.");
+  await entry.fill("Run flood demo");
+  await entry.press("Enter");
+  await expect(answer).toContainText("The Bengaluru flood demo is running");
+  await expect(page.getByRole("checkbox", { name: "Road flood risk", exact: true })).toBeChecked();
+  await entry.fill("Stop simulation");
+  await entry.press("Enter");
+  await expect(answer).toHaveText("Stopped the rainfall simulation.");
+  await expect(page.getByText("Road flood risk · next 3 hours")).toBeVisible();
+});
 
 test("CX wakes on request, speaks conversational replies, and clears context on standby", async ({ page }) => {
   const requests: unknown[] = [];
@@ -194,7 +244,7 @@ test("CX plans between named places and starts GPS for an explicit current-locat
   });
   await installVoice(page);
   await say(page, "CX agent, can you set a route from Majestic to Lalbagh?");
-  await expect(page.locator("body")).toHaveAttribute("data-spoken", /Finding a route from Majestic.*Lalbagh/);
+  await expect(page.locator("body")).toHaveAttribute("data-spoken", /Route ready from Majestic.*Lalbagh/);
   expect(requests[0]).toMatchObject({ source: plannedOrigin, destination });
   await expect(page.locator("body")).not.toHaveAttribute("data-gps");
 
@@ -289,7 +339,8 @@ test("CX confirms ambiguous places before starting GPS navigation and reads prov
   await expect(page.locator("body")).toHaveAttribute("data-spoken", /Say an option number/);
   expect(routeCalls).toBe(0);
   await expect(page.locator("body")).not.toHaveAttribute("data-gps");
-  await say(page, "Option two");
+  await page.getByRole("group", { name: "Confirm a place" }).getByRole("button", { name: "Lalbagh Botanical Garden, Bengaluru" }).press("Enter");
+  await expect(page.getByRole("button", { name: "Stop listening" })).toBeFocused();
   await expect(page.locator("body")).toHaveAttribute("data-spoken", /Navigation started.*10 minutes/);
   await expect(page.getByRole("img", { name: "Your current GPS location" })).toBeVisible();
   await say(page, "What's the next turn?");

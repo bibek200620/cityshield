@@ -11,6 +11,7 @@ import KpiStatsRow from "./components/KpiStatsRow";
 import { useDrivingPlanner, type Endpoint } from "./map/drivingPlanner";
 import MapView from "./components/MapView";
 import MapMascot from "./components/mascot/MapMascot";
+import type { CXSiteAction } from "./components/mascot/cxCommands";
 import PlaceSearch, { type MapPlace } from "./components/PlaceSearch";
 import RouteComparisonPanel from "./components/RouteComparisonPanel";
 import ScenarioComparison from "./components/ScenarioComparison";
@@ -22,7 +23,7 @@ import TwoDayWeatherReport from "./components/TwoDayWeatherReport";
 import WardInspector, { type WardSummary } from "./components/WardInspector";
 import { summarizeWardRunoff, type WardEvidenceIndex } from "./map/wardEvidence";
 import UncertaintyPanel from "./components/UncertaintyPanel";
-import { useFloodStore } from "./store/useFloodStore";
+import { floodDemoPreset, useFloodStore } from "./store/useFloodStore";
 import { loadIndiaCities } from "./map/indiaCities";
 import { isBengaluruWard, supportsBengaluruSimulation } from "./map/places";
 
@@ -232,6 +233,48 @@ function Dashboard() {
     toggleLayer("cityRoads");
     if (useFloodStore.getState().layerVisibility.cityRoads && !place) selectPlace(BENGALURU_ROAD_VIEW);
   }
+  async function performCXAction(action: CXSiteAction) {
+    if (action.kind === "flood-demo") {
+      const store = useFloodStore.getState();
+      const previous = store.appliedRainfall?.revision;
+      if (!supportsBengaluruSimulation(place)) selectPlace(BENGALURU_ROAD_VIEW);
+      await store.runCustomRainfall(floodDemoPreset.intensity, floodDemoPreset.duration,
+        { air: store.heatOffsetC, surface: store.surfaceOffsetC }, true);
+      const applied = useFloodStore.getState().appliedRainfall;
+      return applied?.floodDemo && applied.revision !== previous
+        ? "The Bengaluru flood demo is running with 200 millimetres of hypothetical rainfall over two hours."
+        : "The flood demo didn’t start. Check the Scenarios panel and try again.";
+    }
+    if (action.kind === "stop-simulation") {
+      if (!useFloodStore.getState().simulationActive) return "There’s no rainfall simulation running.";
+      stopSimulation();
+      return "Stopped the rainfall simulation.";
+    }
+    if (action.kind === "select-place") {
+      const { id, name, lat, lng } = action.place;
+      selectPlace({ id, name, center: [lng, lat], bounds: [lng - 0.08, lat - 0.08, lng + 0.08, lat + 0.08] });
+      return `Showing ${name} on the map.`;
+    }
+    if (action.kind === "layer") {
+      if (useFloodStore.getState().layerVisibility[action.layer] !== action.enabled) toggleLayer(action.layer);
+      if (action.layer === "cityRoads" && action.enabled && !supportsBengaluruSimulation(place)) {
+        selectPlace(BENGALURU_ROAD_VIEW);
+      }
+      return `The ${action.label} layer is ${action.enabled ? "on" : "off"}.`;
+    }
+    setPicking(null);
+    setWeatherOpen(action.panel === "outlook");
+    if (action.panel === "map" || action.panel === "outlook") {
+      setToolsOpen(false);
+      setPanel(null);
+    } else {
+      workspaceTrigger.current = null;
+      setPanel(action.panel);
+      setToolsOpen(true);
+    }
+    const label = toolOptions.find((option) => option.id === action.panel)?.label ?? "map";
+    return `Opened ${label.toLowerCase()}.`;
+  }
   const selectedWard = isBengaluruWard(place) ? place : null;
   const selectedWardId = selectedWard?.id;
   const selectedWardEvidence = selectedWard ? wardIndex?.[selectedWard.id] ?? null : null;
@@ -301,7 +344,8 @@ function Dashboard() {
       <main id="atlas" className="atlas" aria-label="India map" tabIndex={-1}>
         <section className="map-workspace" aria-labelledby="map-title">
           <MapView place={place} onCurrentLocation={handleCurrentLocation}
-            assistant={<MapMascot drive={drive} cityFlood={displayedFlood} weatherLocation={weatherLocation} weatherLocationName={weatherLocationName} />}
+            assistant={<MapMascot drive={drive} cityFlood={displayedFlood} weatherLocation={weatherLocation}
+              weatherLocationName={weatherLocationName} onSiteCommand={performCXAction} />}
             weatherWidget={<ThreeHourOutlook open={weatherOpen} location={weatherLocation} locationName={weatherLocationName} onOpen={() => setWeatherOpen(true)}
               onClose={() => setWeatherOpen(false)} />}
             cityFlood={displayedFlood?.status === "ready" ? displayedFlood : null}

@@ -136,6 +136,14 @@
 .mascot-voice-panel .mascot-stop { justify-content: center; width: 100%; min-height: 38px; color: #842d32; background: #fff0f0; }
 .voice-live-indicator { width: 8px; height: 8px; border-radius: 50%; background: #22865f; box-shadow: 0 0 0 3px #22865f24; }
 .voice-transcript { padding: 7px 8px; border-radius: 7px; background: white; overflow-wrap: anywhere; }
+.mascot-command { display: grid; gap: 4px; }
+.mascot-command label { color: #173e79; font-size: 12px; font-weight: 700; }
+.mascot-command > div { display: flex; gap: 6px; }
+.mascot-command input { flex: 1; min-width: 0; min-height: 36px; padding: 6px 8px; border: 1px solid #a4b7d1; border-radius: 7px; background: white; color: #173e79; font-size: 16px; }
+.mascot-command button:disabled { opacity: .65; }
+.voice-response:not(:empty) { padding: 7px 8px; border-radius: 7px; background: white; overflow-wrap: anywhere; }
+.mascot-place-options { display: grid; gap: 5px; }
+.mascot-place-options button { justify-content: flex-start; text-align: left; min-height: 36px; }
 .voice-session-hint, .mascot-voice-help { font-size: 11px !important; line-height: 1.45 !important; }
 .mascot-voice-error { color: #8c332f !important; font-size: 11px !important; }
 .mascot-mic-state {

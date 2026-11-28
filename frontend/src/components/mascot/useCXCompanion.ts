@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type CXConversationAction, type CXConversationTurn, type DrivingOption, type PlaceSearchResult } from "../../api/client";
 import { isWithinNavigationArea, type useDrivingPlanner } from "../../map/drivingPlanner";
-import { distanceSpoken, parseVoiceCommand, readCXWakePhrase, spokenWeather, upcomingDirection, weatherFollowup } from "./cxCommands";
+import { distanceSpoken, parseVoiceCommand, readCXWakePhrase, selectCXTranscript, spokenWeather, upcomingDirection, weatherFollowup, type CXSiteAction } from "./cxCommands";
 import { type VoiceOutput, type VoiceSession, useCXListening } from "./useCXListening";
 
-const help = "Ask for weather or a forecast in any Indian city, or say navigate to a place. On a route, ask for the next turn or how far is left. Say stop listening to turn off the microphone.";
+const help = "Try open scenarios, run flood demo, show road flood risk, find Bengaluru, weather in Mysuru, or navigate to Lalbagh.";
 const CONVERSATION_IDLE_MS = 45_000;
 
 function greetingReply(text: string): string | null {
@@ -30,10 +30,16 @@ export function useCXCompanion(
   distances: number[],
   read: VoiceOutput | undefined,
   selectedWeatherLocation: { lat: number; lng: number },
+  language: string,
+  onSiteCommand: (command: CXSiteAction) => string | Promise<string>,
   onAlertsCommand?: (enabled: boolean) => string,
 ) {
-  const choice = useRef<{ results: PlaceSearchResult[]; expiresAt: number } | null>(null);
+  const choice = useRef<{ results: PlaceSearchResult[]; expiresAt: number; purpose: "navigate" | "map"; origin?: PlaceSearchResult } | null>(null);
   const [awake, setAwake] = useState(false);
+  const [response, setResponse] = useState("");
+  const [textBusy, setTextBusy] = useState(false);
+  const typedTurn = useRef(0);
+  const inputMode = useRef<"voice" | "text">("voice");
   const conversation = useRef<{
     expiresAt: number; timer?: number; weather: boolean; history: CXConversationTurn[];
     weatherLocation?: { lat: number; lng: number };
@@ -72,9 +78,13 @@ export function useCXCompanion(
     resetConversation();
     startingTrip.current = false;
     announced.current = null;
+    typedTurn.current += 1;
+    setTextBusy(false);
   }
 
-  async function onCommand(transcript: string, session: VoiceSession) {
+  async function onCommand(transcript: string, session: VoiceSession, mode: "voice" | "text" = "voice") {
+    const turn = typedTurn.current;
+    inputMode.current = mode;
     const wakeCommand = readCXWakePhrase(transcript);
     const text = wakeCommand ?? transcript;
     let command = parseVoiceCommand(text);
@@ -82,7 +92,7 @@ export function useCXCompanion(
       session.stop();
       return;
     }
-    if (wakeCommand === undefined && Date.now() >= conversation.current.expiresAt) {
+    if (mode === "voice" && wakeCommand === undefined && Date.now() >= conversation.current.expiresAt) {
       session.wait();
       return;
     }
@@ -95,12 +105,20 @@ export function useCXCompanion(
     }
     if (command.kind === "unknown" && conversation.current.weather) command = weatherFollowup(text) ?? command;
     function reply(text: string) {
+      if (typedTurn.current !== turn) return;
       keepConversationOpen();
       lastReply.current = text;
       session.reply(text);
     }
     if (choice.current && Date.now() > choice.current.expiresAt) choice.current = null;
     switch (command.kind) {
+      case "workspace":
+      case "layer":
+      case "flood-demo":
+      case "stop-simulation":
+        choice.current = null;
+        reply(await onSiteCommand(command));
+        return;
       case "alerts-on":
         reply(onAlertsCommand?.(true) ?? "Weather alerts are on for this location.");
         return;
@@ -109,28 +127,37 @@ export function useCXCompanion(
         return;
       case "standby":
         resetConversation();
-        session.reply("Standing by. Say hello C X when you need me.");
+        session.reply(mode === "voice" ? "Standing by. Say hello C X when you need me." : "Standing by. Type your next request when ready.");
         return;
       case "repeat":
         reply(lastReply.current || help);
         return;
       case "decline":
         choice.current = null;
-        reply("Okay. No destination changed.");
+        reply("Okay. I cancelled that request.");
         return;
       case "confirm":
       case "choose": {
-        const candidates = choice.current?.results;
-        if (!candidates) {
-          reply("There’s no destination waiting for confirmation. Say navigate to, followed by the place name.");
+        const pending = choice.current;
+        if (!pending) {
+          reply("There’s no place waiting for confirmation. Try asking me to find a place or navigate to it.");
           return;
         }
+        const candidates = pending.results;
         const result = command.kind === "choose" ? candidates[command.index] : candidates.length === 1 ? candidates[0] : undefined;
         if (!result) {
           reply(`Say ${candidates.length === 1 ? "yes" : `an option number from one to ${candidates.length}`}, or say cancel.`);
           return;
         }
         choice.current = null;
+        if (pending.purpose === "map") {
+          reply(await onSiteCommand({ kind: "select-place", place: result }));
+          return;
+        }
+        if (pending.origin) {
+          reply(await compareNamedRoute(pending.origin, result));
+          return;
+        }
         startingTrip.current = true;
         drive.navigateTo(result);
         reply(`Getting your GPS location for the route to ${placeLabel(result)}.`);
@@ -161,9 +188,10 @@ export function useCXCompanion(
         return;
       }
       case "destination":
+      case "show-place":
       case "weather": {
         conversation.current.weather = command.kind === "weather";
-        if (command.kind === "destination") choice.current = null;
+        if (command.kind !== "weather") choice.current = null;
         const controller = new AbortController();
         request.current = controller;
         const timer = window.setTimeout(() => controller.abort(), 18_000);
@@ -197,10 +225,12 @@ export function useCXCompanion(
             const results = response.results.filter((item) => isWithinNavigationArea(item) && item.name.trim()).slice(0, 3);
             if (!results.length) {
               answer = "I couldn’t find that place in India. Try a more specific place name or neighbourhood.";
+            } else if (command.kind === "show-place" && results.length === 1) {
+              answer = await onSiteCommand({ kind: "select-place", place: results[0] });
             } else {
-              choice.current = { results, expiresAt: Date.now() + 45_000 };
+              choice.current = { results, expiresAt: Date.now() + 45_000, purpose: command.kind === "show-place" ? "map" : "navigate" };
               answer = results.length === 1 ? `Navigate to ${placeLabel(results[0])}? Say yes or cancel.`
-                : `I found ${results.length} places. ${results.map((item, index) => `Option ${index + 1}, ${placeLabel(item)}.`).join(" ")} Say the option number, or cancel.`;
+                : `I found ${results.length} places. ${results.map((item, index) => `Option ${index + 1}, ${placeLabel(item)}.`).join(" ")} Reply with the option number, or cancel.`;
             }
           }
         } catch {
@@ -235,6 +265,7 @@ export function useCXCompanion(
         request.current = controller;
         const timer = window.setTimeout(() => controller.abort(), 14_000);
         let answer = "I couldn’t reach conversation mode just now. You can still ask me for weather or navigation.";
+        let handledAction = false;
         try {
           const result = await api.askCX(text, conversation.current.history, controller.signal);
           if (controller.signal.aborted) return;
@@ -246,6 +277,7 @@ export function useCXCompanion(
             conversation.current.history = turns.slice(-4);
             if (result.action) {
               await handleConversationAction(result.action, session, controller.signal);
+              handledAction = true;
               return;
             }
           } else if (result.status === "unavailable" && result.reason === "disabled") {
@@ -259,12 +291,22 @@ export function useCXCompanion(
           window.clearTimeout(timer);
           if (request.current === controller) {
             request.current = null;
-            reply(answer);
+            if (!handledAction) reply(answer);
           }
         }
         return;
       }
     }
+  }
+
+  async function compareNamedRoute(origin: PlaceSearchResult, destination: PlaceSearchResult) {
+    drive.setPoint("source", { ...origin, name: placeLabel(origin) });
+    drive.setPoint("destination", { ...destination, name: placeLabel(destination) });
+    const result = await drive.compare();
+    if (!result) return "I couldn’t get a route between those places right now.";
+    const route = result.routes[0];
+    return `Route ready from ${placeLabel(origin)} to ${placeLabel(destination)}.${route
+      ? ` About ${Math.max(1, Math.round(route.eta_seconds / 60))} minutes. Open Routes to see the options.` : ""}`;
   }
 
   async function handleConversationAction(action: CXConversationAction, session: VoiceSession, signal: AbortSignal) {
@@ -308,38 +350,75 @@ export function useCXCompanion(
       session.reply(lastReply.current);
       return;
     }
-    if (places.some((matches) => matches.length > 1)) {
-      const results = places.flat();
-      choice.current = { results, expiresAt: Date.now() + 45_000 };
-      lastReply.current = `I found a few matching places. ${results.map((place, index) => `Option ${index + 1}, ${placeLabel(place)}.`).join(" ")} Say an option number for the destination, or repeat the route with a more specific starting place.`;
+    if (!currentOrigin && places[0].length > 1) {
+      lastReply.current = "I found several matches for the starting place. Repeat the route with a more specific origin, such as the city or neighbourhood.";
       session.reply(lastReply.current);
       return;
     }
-    const destination = places[currentOrigin ? 0 : 1][0];
+    const destinations = places[currentOrigin ? 0 : 1];
+    if (destinations.length > 1) {
+      choice.current = { results: destinations, expiresAt: Date.now() + 45_000, purpose: "navigate", origin: currentOrigin ? undefined : places[0][0] };
+      lastReply.current = `I found several destinations. ${destinations.map((place, index) => `Option ${index + 1}, ${placeLabel(place)}.`).join(" ")} Reply with the option number, or cancel.`;
+      session.reply(lastReply.current);
+      return;
+    }
+    const destination = destinations[0];
     if (currentOrigin) {
+      if (!action.source) {
+        choice.current = { results: [destination], expiresAt: Date.now() + 45_000, purpose: "navigate" };
+        lastReply.current = `Navigate to ${placeLabel(destination)}? Reply yes or cancel.`;
+        session.reply(lastReply.current);
+        return;
+      }
       lastReply.current = `Starting a route from your current location to ${placeLabel(destination)}.`;
       startingTrip.current = true;
       drive.navigateTo(destination);
     } else {
-      lastReply.current = `Finding a route from ${placeLabel(places[0][0])} to ${placeLabel(destination)}.`;
-      drive.setPoint("source", { ...places[0][0], name: placeLabel(places[0][0]) });
-      drive.setPoint("destination", { ...destination, name: placeLabel(destination) });
-      const route = await drive.compare();
-      if (!route && !signal.aborted) lastReply.current = "I couldn’t get a route between those places right now.";
+      const answer = await compareNamedRoute(places[0][0], destination);
+      if (!signal.aborted) lastReply.current = answer;
     }
     if (!signal.aborted) session.reply(lastReply.current);
   }
 
-  const listener = useCXListening(read, onCommand, stopSession,
-    ["locating", "routing", "active", "rerouting"].includes(navigationMode));
+  const listener = useCXListening(read, (text, session) => {
+    const turn = typedTurn.current;
+    return onCommand(text, {
+      ...session,
+      reply: (message) => {
+        if (typedTurn.current === turn) setResponse(message);
+        session.reply(message);
+      },
+    });
+  }, stopSession, ["locating", "routing", "active", "rerouting"].includes(navigationMode),
+  language, (candidates) => selectCXTranscript(candidates, Date.now() < conversation.current.expiresAt));
   const { phase, speak } = listener;
   const waitingForChoice = Boolean(choice.current && Date.now() <= choice.current.expiresAt);
 
+  async function submitText(value: string) {
+    const text = value.trim();
+    if (!text || listener.active || textBusy) return;
+    const turn = ++typedTurn.current;
+    setTextBusy(true);
+    try {
+      await onCommand(text, {
+        reply: (message) => { if (typedTurn.current === turn) setResponse(message); },
+        wait: () => {},
+        stop: () => { stopSession(); setResponse("The assistant session ended."); },
+      }, "text");
+    } catch {
+      if (typedTurn.current === turn) setResponse("I couldn’t finish that request. Please try again.");
+    } finally {
+      if (typedTurn.current === turn) setTextBusy(false);
+    }
+  }
+
   useEffect(() => {
-    if (phase !== "listening" || waitingForChoice || !startingTrip.current) return;
+    const typed = inputMode.current === "text" && (phase === "off" || phase === "error");
+    if ((!typed && phase !== "listening") || waitingForChoice || !startingTrip.current) return;
     if (navigationMode === "error") {
       const text = navigationNotice || "I couldn’t start the route. Check your GPS and try again.";
-      if (speak(text)) {
+      if (typed || speak(text)) {
+        setResponse(text);
         lastReply.current = text;
         startingTrip.current = false;
       }
@@ -347,7 +426,8 @@ export function useCXCompanion(
     if (navigationMode === "active" && route) {
       const minutes = Math.max(1, Math.round(route.eta_seconds / 60));
       const text = `Navigation started. The route is ${distanceSpoken(route.distance_km * 1000)}, about ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
-      if (speak(text)) {
+      if (typed || speak(text)) {
+        setResponse(text);
         lastReply.current = text;
         startingTrip.current = false;
       }
@@ -368,5 +448,13 @@ export function useCXCompanion(
     }
   }, [distances, phase, navigationLocation, route, routeMatch, speak, tracking, waitingForChoice]);
 
-  return { ...listener, awake, canAnnounce: phase === "listening" && !waitingForChoice };
+  const placeOptions = waitingForChoice ? choice.current?.results.map(placeLabel) ?? [] : [];
+  function respondToPlace(index?: number) {
+    const command = index === undefined ? "Cancel" : `Option ${index + 1}`;
+    if (listener.active) listener.execute(command, false);
+    else void submitText(command);
+  }
+
+  return { ...listener, awake, response, textBusy, submitText, placeOptions, respondToPlace,
+    canAnnounce: phase === "listening" && !waitingForChoice };
 }
