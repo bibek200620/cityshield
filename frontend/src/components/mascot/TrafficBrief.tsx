@@ -15,12 +15,12 @@ function tripBrief(response: DrivingResponse, route: DrivingOption) {
   const delay = delta && Math.round(Math.abs(delta) / 60) > 0
     ? ` About ${Math.round(Math.abs(delta) / 60)} minutes ${delta > 0 ? "above" : "below"} the provider’s no-traffic estimate.` : "";
   const traffic = level + delay;
-  const weather = response.weather;
-  const forecast = weather.status === "ready"
-    ? `Bengaluru’s city forecast shows ${weather.upcoming_rain_mm.toFixed(1)} mm of precipitation over the next three hours.`
-    : "The Bengaluru precipitation forecast is unavailable.";
+  const weatherWindow = route.weather_window;
+  const forecast = weatherWindow?.status === "ready"
+    ? `The next ${weatherWindow.horizon_minutes} minutes, including a 30-minute buffer, show ${weatherWindow.forecast_rain_mm?.toFixed(1) ?? "unavailable"} mm of forecast rainfall sampled at the route start.`
+    : "The rainfall forecast does not cover this route’s estimated travel time plus a 30-minute buffer.";
   const exposure = route.runoff
-    ? `Modeled runoff exposure is ${route.runoff.current_km.toFixed(2)} km with recent rain and ${route.runoff.forecast_km.toFixed(2)} km with forecast rain, across ${route.runoff.covered_km.toFixed(2)} km of screened route. The route estimate can change with traffic coverage.`
+    ? `Runoff screening covers ${route.runoff.covered_km.toFixed(2)} km: ${route.runoff.current_km.toFixed(2)} km with recent rain and ${route.runoff.forecast_km === null ? "forecast screen unavailable" : `${route.runoff.forecast_km.toFixed(2)} km with route-window rain`}. This is a screening estimate, not a flood probability or observed water depth.`
     : "Modeled runoff exposure is unavailable for this route.";
   const reports = response.flood_reports.status === "ready" && route.nearby_flood_reports !== undefined
     ? `${route.nearby_flood_reports} nearby flood ${route.nearby_flood_reports === 1 ? "report" : "reports"} in the provider feed.`

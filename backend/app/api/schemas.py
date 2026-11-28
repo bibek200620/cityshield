@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SimulateRequest(BaseModel):
@@ -94,6 +94,7 @@ class RouteResponse(BaseModel):
     critical_access_risk: CriticalAccessRiskSchema | None = None
     routes: list[RouteOption] = []
     active_vehicle: str = "ambulance"
+    routing_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class CriticalInfraSchema(BaseModel):

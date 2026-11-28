@@ -15,6 +15,7 @@ import requests
 
 from fastapi import APIRouter, HTTPException, Query
 from app.core.config import settings
+from app.routing.google_maps import get_nearby_facilities as get_google_nearby_facilities
 
 router = APIRouter()
 _provider_lock = Lock()
@@ -240,6 +241,13 @@ def nearby_facilities(
     radius_m: int = Query(3000, ge=250, le=10000),
 ) -> dict:
     lat, lng = round(latitude, 5), round(longitude, 5)
+    if settings.GOOGLE_MAPS_API_KEY is not None:
+        try:
+            return get_google_nearby_facilities(lat, lng, radius_m, int(monotonic() // 3600))
+        except HTTPException:
+            # Keep nearby listings available from the free mapped-data fallback
+            # when the optional place search is not enabled for this key.
+            pass
     results = list(_nearby_facilities_cached(lat, lng, radius_m, int(monotonic() // 3600)))
     return {
         "status": "ready" if results else "empty",

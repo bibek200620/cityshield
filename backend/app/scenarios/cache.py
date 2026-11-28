@@ -111,9 +111,10 @@ class ScenarioCache:
             generated_at_utc=datetime.now(timezone.utc),
         )
 
-    def compute_live(self, rainfall_intensity_mm_hr, duration_min, label="Custom") -> CachedScenario:
+    def compute_live(self, rainfall_intensity_mm_hr, duration_min, label="Custom", *, cache_result=True) -> CachedScenario:
         scenario = self._compute_scenario(label, rainfall_intensity_mm_hr, duration_min)
-        self.scenarios[scenario.scenario_id] = scenario
+        if cache_result:
+            self.scenarios[scenario.scenario_id] = scenario
         return scenario
 
     def get(self, scenario_id: str) -> CachedScenario | None:

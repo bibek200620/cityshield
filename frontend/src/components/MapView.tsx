@@ -36,6 +36,7 @@ const ROAD_COLORS = {
   flooded: [175, 45, 48],
 } satisfies Record<RoadSegment["state"], [number, number, number]>;
 const RUNOFF_COLORS: [number, number, number][] = [[119, 66, 179], [145, 28, 145], [97, 18, 85]];
+const ROAD_RUNOFF_COLORS: [number, number, number][] = [[238, 191, 106], [219, 111, 61], [139, 39, 46]];
 const RAINFALL_PROXY_COLORS: [number, number, number][] = [
   [29, 119, 143], [52, 146, 139], [109, 174, 151], [165, 194, 151],
   [214, 217, 153], [218, 180, 107], [193, 128, 75], [143, 88, 61],
@@ -148,12 +149,13 @@ type CityFloodHover = HexSummary & { weather: IndiaWeatherHex | null };
 
 export default function MapView({
   place, cityFlood, scenarioRoadError, onReset, onCurrentLocation, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
-  navigation, assistant, weatherWidget, scenarioRoute, trafficSegments, cameraControl,
+  onViewBengaluru, navigation, assistant, weatherWidget, scenarioRoute, trafficSegments, cameraControl,
 }: {
   place: MapPlace | null;
   cityFlood: Extract<CityFloodResponse, { status: "ready" }> | null;
   scenarioRoadError: string | null;
   onReset: () => void;
+  onViewBengaluru: () => void;
   onCurrentLocation?: (location: LatLng) => void;
   drivePoints: Waypoints;
   drivingRoutes?: DrivingOption[];
@@ -265,6 +267,51 @@ export default function MapView({
       window.clearTimeout(nextRefresh);
     };
   }, [forecastActive]);
+  const roadRiskPoints = useMemo(() => {
+    const candidates: { point: [number, number]; runoffMm: number }[] = [];
+    const unique = new Set<string>();
+    for (const segment of roadSegments ?? []) {
+      if (segment.runoffMm < 1) continue;
+      const point: [number, number] = [
+        (segment.path[0][0] + segment.path[1][0]) / 2,
+        (segment.path[0][1] + segment.path[1][1]) / 2,
+      ];
+      const key = `${point[0].toFixed(6)}:${point[1].toFixed(6)}`;
+      if (unique.has(key)) continue;
+      unique.add(key);
+      candidates.push({ point, runoffMm: segment.runoffMm });
+    }
+    const minimumDistanceM = viewZoom < 10.5 ? 350 : viewZoom < 12 ? 220
+      : viewZoom < 13.5 ? 140 : viewZoom < 15 ? 90 : 55;
+    const buckets = new Map<string, { x: number; y: number }[]>();
+    const accepted: [number, number][] = [];
+    const minimumDistanceSquared = minimumDistanceM ** 2;
+    candidates.sort((left, right) => right.runoffMm - left.runoffMm);
+    for (const { point: [lng, lat] } of candidates) {
+      const x = lng * 111_320 * Math.cos(lat * Math.PI / 180);
+      const y = lat * 110_574;
+      const bucketX = Math.floor(x / minimumDistanceM);
+      const bucketY = Math.floor(y / minimumDistanceM);
+      let tooClose = false;
+      for (let dx = -1; dx <= 1 && !tooClose; dx++) {
+        for (let dy = -1; dy <= 1 && !tooClose; dy++) {
+          for (const nearby of buckets.get(`${bucketX + dx}:${bucketY + dy}`) ?? []) {
+            if ((nearby.x - x) ** 2 + (nearby.y - y) ** 2 < minimumDistanceSquared) {
+              tooClose = true;
+              break;
+            }
+          }
+        }
+      }
+      if (tooClose) continue;
+      accepted.push([lng, lat]);
+      const key = `${bucketX}:${bucketY}`;
+      const bucket = buckets.get(key);
+      if (bucket) bucket.push({ x, y });
+      else buckets.set(key, [{ x, y }]);
+    }
+    return accepted;
+  }, [roadSegments, viewZoom]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -823,6 +870,21 @@ export default function MapView({
         },
       }));
     }
+    if (roadRiskPoints.length) {
+      layers.push(new ScatterplotLayer<[number, number]>({
+        id: "city-road-risk-points",
+        data: roadRiskPoints,
+        getPosition: (point) => point,
+        getRadius: 5,
+        radiusMinPixels: 4,
+        radiusMaxPixels: 7,
+        getFillColor: [139, 39, 46, 235],
+        getLineColor: [255, 255, 255, 245],
+        lineWidthMinPixels: 1,
+        stroked: true,
+        pickable: false,
+      }));
+    }
     if (visibility.pilotFlood && result) {
       layers.push(new PathLayer<RoadSegment>({
         id: "flood-roads",
@@ -932,16 +994,24 @@ export default function MapView({
     nationalWeatherLoading,
     result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments,
     scenarioRoute, trafficSegments, selectNode, simulationActive, selectedRoad, onPickPoint]);
+    result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments, roadRiskPoints,
+    scenarioRoute, trafficSegments, selectNode, simulationActive, selectedRoad, onPickPoint]);
 
   return (
     <>
       <div className="map-frame">
         <div ref={container} className="map-canvas" aria-label="Interactive India map" />
         {mapError && <p className="map-status" role="status">Basemap unavailable. Check your connection or browser graphics support.</p>}
-        <button className="map-reset" type="button" aria-label="View all India" title="View all India"
-          onClick={() => { onReset(); map.current?.fitBounds(INDIA_BOUNDS, INDIA_VIEW); }}>
-          <Icon name="extent" /><span>View all India</span>
-        </button>
+        <div className="map-view-controls" aria-label="Map views">
+          <button className="map-reset" type="button" aria-label="View Bengaluru" title="View Bengaluru"
+            onClick={onViewBengaluru}>
+            <Icon name="location" /><span>View Bengaluru</span>
+          </button>
+          <button className="map-reset" type="button" aria-label="View all India" title="View all India"
+            onClick={() => { onReset(); map.current?.fitBounds(INDIA_BOUNDS, INDIA_VIEW); }}>
+            <Icon name="extent" /><span>View all India</span>
+          </button>
+        </div>
       </div>
       <div className="map-footer">{assistant}</div>
       <aside className="map-info-rail" aria-label="Forecast and map information">
@@ -1005,6 +1075,7 @@ export default function MapView({
               <strong>{selectedRoad.name}</strong> · {roadRunoffBand(selectedRoad.runoffMm).label} · {selectedRoad.runoffMm.toFixed(1)} mm
             </p>}
             <p className="coverage-note">Colors show modeled runoff in 300 m cells. Road depth and passability are unverified.</p>
+            {roadRiskPoints.length > 0 && <span><i className="road-risk-dot" /> Potential hotspots · markers spaced by zoom</span>}
           </div>}
           {selectedDrivingRoute && <div className="flood-legend">
             <strong>Selected route traffic</strong>

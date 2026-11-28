@@ -13,6 +13,7 @@ from app.routing.conditions import (
     get_weather, nearest_forecast_points,
 )
 from app.routing.air_quality import get_air_quality
+from app.routing.google_maps import get_point_air_quality, get_point_weather
 from app.routing.meteoblue import get_meteoblue_forecast
 from app.routing.noaa_gfs import get_national_weather_grid
 
@@ -115,9 +116,15 @@ def get_selected_location_forecast(
     longitude: float = Query(..., ge=68, le=98),
 ) -> dict:
     lat, lng = round(latitude, 4), round(longitude, 4)
+    forecast: dict | None = None
     if settings.METEOBLUE_API_KEY is not None:
         forecast = get_meteoblue_forecast(lat, lng, int(time() // 300))
-    else:
+    elif settings.GOOGLE_MAPS_API_KEY is not None:
+        try:
+            forecast = get_point_weather(lat, lng, int(time() // 300))
+        except HTTPException:
+            pass
+    if forecast is None:
         fallback = get_two_day_forecast(lat, lng)
         if fallback.get("status") != "ready":
             raise HTTPException(status_code=503, detail=fallback.get("message", "The point forecast is unavailable."))
@@ -147,6 +154,13 @@ def get_selected_location_air_quality(
     latitude: float = Query(..., ge=6, le=38),
     longitude: float = Query(..., ge=68, le=98),
 ) -> dict:
+    if settings.GOOGLE_MAPS_API_KEY is not None:
+        try:
+            return _public_forecast_payload(get_point_air_quality(
+                round(latitude, 3), round(longitude, 3), int(time() // 1800),
+            ))
+        except HTTPException:
+            pass
     return _public_forecast_payload(get_air_quality(
         round(latitude, 3), round(longitude, 3), int(time() // 1800),
     ))

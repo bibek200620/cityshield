@@ -80,10 +80,15 @@ export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
           <p>{drive.result.traffic.message} · {drive.result.source}</p>
           {weather?.status === "ready" ? <>
             <p>{weather.air_temperature_c} °C air · feels like {weather.feels_like_c} °C · {indiaTime.format(new Date(weather.valid_at))} IST</p>
-            <p>{weather.recent_rain_mm} mm over two model hours ending {indiaTime.format(new Date(weather.recent_through))} IST. {weather.upcoming_rain_mm} mm for the following three model hours.</p>
-            <p>Weather estimate for the route start, retrieved from the model grid.</p>
+            <p>{weather.recent_rain_mm} mm over the two most recent model hours ending {indiaTime.format(new Date(weather.recent_through))} IST.</p>
+            <p>Flood screening uses recent and forecast rainfall. Each route uses its own travel time plus a 30-minute buffer, sampled at the route start; temperature is context only.</p>
           </> : <p>{weather?.message ?? "Weather data unavailable."}</p>}
           {drive.result.flood_reports.status === "unavailable" && <p>Current road flood reports unavailable.</p>}
+          {drive.result.historical_flood_context && <p>
+            {drive.result.historical_flood_context.status === "ready"
+              ? `${drive.result.historical_flood_context.event_records} historical flood records for ${drive.result.historical_flood_context.location}; ${drive.result.historical_flood_context.limitation}`
+              : drive.result.historical_flood_context.limitation}
+          </p>}
           <p>Car routes and weather forecasts work across India. Flood screening is available only in the Bengaluru study area; outside it, route choices use road-network estimates and available traffic.</p>
         </div>
         {drive.scenario && <div className="route-conditions route-scenario" aria-label="Rainfall scenario impact">
@@ -100,6 +105,9 @@ export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
             aria-pressed={drive.selectedId === option.id} onClick={() => drive.setSelectedId(option.id)}>
             <strong>{option.labels.join(" · ")}</strong>
             <span className="block">{Math.max(1, Math.round(option.eta_seconds / 60))} min current route estimate · {option.distance_km.toFixed(1)} km</span>
+            {option.weather_window?.status === "ready" ? <span className="block route-detail">
+              Next {option.weather_window.horizon_minutes} min incl. 30 min buffer: {option.weather_window.forecast_rain_mm} mm forecast rainfall at route start
+            </span> : <span className="block route-detail">Forecast does not cover this route's travel time plus 30-minute buffer.</span>}
             {scenario && <span className="block route-scenario-estimate">
               {scenario.covered_km > 0 ? <>
                 <b>{Math.max(1, Math.round(scenario.demoEtaSeconds / 60))} min demo ETA</b>
@@ -115,7 +123,7 @@ export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
               {option.nearby_flood_reports} nearby flood reports from {drive.result?.flood_reports.source}
             </span>}
             {option.runoff && <span className="block route-detail">
-              Screened runoff: {option.runoff.current_km.toFixed(2)} km recent · {option.runoff.forecast_km.toFixed(2)} km with upcoming rain
+              Screened runoff: {option.runoff.current_km.toFixed(2)} km from recent rain · {option.runoff.forecast_km == null ? "forecast screen unavailable" : `${option.runoff.forecast_km.toFixed(2)} km with route-window rain`}
               <span className="block">{option.runoff.covered_km.toFixed(2)} km within the model grid</span>
             </span>}
           </button>

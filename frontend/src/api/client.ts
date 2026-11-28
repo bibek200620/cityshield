@@ -130,7 +130,15 @@ export interface DrivingOption {
   traffic_time_delta_seconds?: number | null;
   traffic_segments?: { start_index: number; end_index: number; level: TrafficLevel }[] | null;
   nearby_flood_reports?: number;
-  runoff?: { covered_km: number; current_km: number; forecast_km: number };
+  weather_window?: {
+    status: "ready" | "unavailable";
+    horizon_minutes: number;
+    through?: string;
+    forecast_rain_mm?: number;
+    forecast_hours_used?: number;
+    sample_location?: "route_start";
+  };
+  runoff?: { covered_km: number; current_km: number; forecast_km: number | null };
   forecast_runoff_spans?: { start: number; end: number }[];
 }
 
@@ -159,6 +167,16 @@ export interface DrivingResponse {
   traffic: { status: "ready" | "unavailable"; message: string; checked_at?: string };
   runoff_available: boolean;
   flood_reports: { status: "ready" | "unavailable"; source: string; checked_at?: string };
+  historical_flood_context?: {
+    status: "ready" | "unavailable";
+    location?: string;
+    location_precision?: string;
+    event_records?: number;
+    daily_time_of_day_available?: boolean;
+    road_level_data_available?: boolean;
+    used_for_route_ranking?: boolean;
+    limitation: string;
+  };
 }
 
 export type AssistantAlertKind = "city_flood" | "route_rain" | "traffic";
@@ -298,6 +316,28 @@ export interface RouteResponse {
   critical_access_risk: CriticalAccessRisk | null;
   routes?: RouteOption[];
   active_vehicle?: string;
+  routing_context?: {
+    weather_status: "ready" | "unavailable";
+    route_weather_window?: {
+      status: "ready" | "unavailable";
+      horizon_minutes: number;
+      forecast_rain_mm?: number;
+      through?: string;
+    };
+    current_air_temperature_c?: number | null;
+    current_feels_like_c?: number | null;
+    recent_rain_mm?: number | null;
+    forecast_road_state_used?: boolean;
+    recent_rain_road_state_used?: boolean;
+    historical_flood_context?: {
+      status: "ready" | "unavailable";
+      event_records?: number;
+      daily_time_of_day_available?: boolean;
+      road_level_data_available?: boolean;
+      used_for_route_ranking?: boolean;
+      limitation: string;
+    } | null;
+  };
 }
 
 export type WeatherAvailabilityResponse =
