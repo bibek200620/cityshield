@@ -57,3 +57,38 @@ test("road flood risk opens the Bengaluru forecast without running a scenario", 
   await risk.uncheck();
   await expect(page.getByText("Road flood risk · next 3 hours")).toHaveCount(0);
 });
+
+test("road risk falls back to the central forecast and municipal model", async ({ page }) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({ json: { version: 8, layers: [], sources: {} } }));
+  const headers = { "access-control-allow-origin": "*" };
+  let rainfall: string | null = null;
+  const now = new Date();
+  await page.route("http://localhost:8000/api/**", (route) => {
+    const url = new URL(route.request().url());
+    switch (url.pathname) {
+      case "/api/scenarios":
+      case "/api/critical-infrastructure":
+        return route.fulfill({ headers, json: [] });
+      case "/api/weather/nowcast":
+        return route.fulfill({ headers, json: {
+          status: "ready", valid_at: now.toISOString(), recent_rain_mm: 10, upcoming_rain_mm: 42,
+          air_temperature_c: 25, feels_like_c: 26, hourly_forecast: [],
+          forecast_through: new Date(now.getTime() + 10_800_000).toISOString(),
+          provenance: { retrieved_at: now.toISOString(), grid_cell_center: { latitude: 12.98, longitude: 77.59 } },
+        } });
+      case "/api/flood/city":
+        rainfall = url.searchParams.get("rainfall_mm");
+        return route.fulfill({ headers, json: {
+          status: "ready", grid_m: 300, cells: [{ screen_mm: 0, rings: [] }],
+        } });
+      default:
+        return route.fulfill({ headers, json: { status: "unavailable", message: "Weather upstream failed." } });
+    }
+  });
+  await page.goto("/");
+  await page.getByRole("checkbox", { name: "Road flood risk", exact: true }).check();
+  await expect(page.getByText("No Bengaluru cells reach 1 mm of modeled runoff in this forecast.")).toBeVisible();
+  await expect(page.getByText(/1 forecast point · includes recent rain/)).toBeVisible();
+  expect(rainfall).toBe("52");
+});

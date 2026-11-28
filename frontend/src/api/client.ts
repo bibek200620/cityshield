@@ -520,8 +520,33 @@ export const api = {
     request<PlaceSearchResponse>(`/api/places/search?query=${encodeURIComponent(query)}`, { signal }),
   getCityFlood: (rainfallMm: number, signal: AbortSignal) =>
     request<CityFloodResponse>(`/api/flood/city?rainfall_mm=${rainfallMm}`, { signal }),
-  getRoadRunoffForecast: (signal: AbortSignal) =>
-    request<RoadRunoffForecast>("/api/weather/road-runoff", { signal }),
+  getRoadRunoffForecast: async (signal: AbortSignal): Promise<RoadRunoffForecast> => {
+    const forecast = await request<RoadRunoffForecast>("/api/weather/road-runoff", { signal }).catch(() => {
+      signal.throwIfAborted();
+      return { status: "unavailable" as const, message: "Could not load the Bengaluru road forecast." };
+    });
+    if (forecast.status === "ready") return forecast;
+
+    // Use the central Bengaluru hourly forecast and the existing municipal
+    // model while the multi-point weather endpoint is unavailable.
+    try {
+      const weather = await api.getWeatherNowcast(signal);
+      if (weather.status !== "ready" || weather.is_stale || !(Date.parse(weather.forecast_through) > Date.now())) return forecast;
+      const rainfall = Number((weather.recent_rain_mm + weather.upcoming_rain_mm).toFixed(2));
+      if (!(rainfall >= 0 && rainfall <= 500)) return forecast;
+      const result = await api.getCityFlood(rainfall, signal);
+      if (result.status === "ready") return {
+        status: "ready",
+        forecast_points: 1,
+        forecast_through: weather.forecast_through,
+        grid_m: result.grid_m,
+        cells: result.cells.filter((cell) => cell.screen_mm !== null && cell.screen_mm >= 1),
+      };
+    } catch {
+      signal.throwIfAborted();
+    }
+    return forecast;
+  },
   listStormBacktests: (signal: AbortSignal) =>
     request<{ events: StormBacktestEvent[] }>("/api/backtest", { signal }),
   getStormBacktest: (eventId: string, signal: AbortSignal) =>
