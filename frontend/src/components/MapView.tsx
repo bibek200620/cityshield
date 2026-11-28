@@ -4,10 +4,10 @@ import { PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import maplibregl from "maplibre-gl";
 import type { FillExtrusionLayerSpecification } from "maplibre-gl";
-import type { CityFloodCell, CityFloodResponse, DrivingOption, LatLng, NodePrediction, RoadSegment, ScenarioRouteExposure, TrafficLevel } from "../api/client";
+import { api, type CityFloodCell, type CityFloodResponse, type DrivingOption, type LatLng, type NodePrediction, type RoadRunoffForecast, type RoadSegment, type ScenarioRouteExposure, type TrafficLevel } from "../api/client";
 import { createIndiaHexGrid, getMapDetail, summarizeHexes, type HexCell, type HexGrids, type HexSummary, type IndiaBoundary, type IndiaGridCell, type MapBounds, type MapDetail } from "../map/hexGrid";
 import { loadIndiaHexWeather, type IndiaHexWeather } from "../map/nationalHexWeather";
-import { createRoadRunoffScreen, ROAD_SCREEN_MIN_ZOOM, type RoadRunoff } from "../map/roadRunoff";
+import { createRoadRunoffScreen, ROAD_RUNOFF_BANDS, ROAD_SCREEN_MIN_ZOOM, roadRunoffBand, type RoadRunoff } from "../map/roadRunoff";
 import { useFloodStore } from "../store/useFloodStore";
 import type { MapPlace } from "./PlaceSearch";
 import { pathForFraction, routeVertexDistances, type LiveLocation, type NavigationMode, type RouteMatch, type Waypoints } from "../map/drivingPlanner";
@@ -26,6 +26,8 @@ const BASEMAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.
 const AREA_VIEW = { padding: 48, maxZoom: 14.2 };
 const INDIA_BOUNDS: maplibregl.LngLatBoundsLike = [[68, 6], [98, 38]];
 const INDIA_VIEW = { padding: 30, duration: 0 };
+const roadForecastTime = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
+const roadForecastRefreshMs = 5 * 60_000;
 const SURFACE_TEMPERATURE_TILES = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_L3_Land_Surface_Temp_Daily_Day/default/default/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png";
 const ROAD_COLORS = {
   clear: [80, 124, 179],
@@ -144,11 +146,12 @@ type IndiaWeatherHex = IndiaGridCell & Omit<IndiaHexWeather, "id">;
 type CityFloodHover = HexSummary & { weather: IndiaWeatherHex | null };
 
 export default function MapView({
-  place, cityFlood, onReset, onCurrentLocation, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
+  place, cityFlood, scenarioRoadError, onReset, onCurrentLocation, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
   navigation, assistant, weatherWidget, scenarioRoute, trafficSegments,
 }: {
   place: MapPlace | null;
   cityFlood: Extract<CityFloodResponse, { status: "ready" }> | null;
+  scenarioRoadError: string | null;
   onReset: () => void;
   onCurrentLocation?: (location: LatLng) => void;
   drivePoints: Waypoints;
@@ -176,14 +179,19 @@ export default function MapView({
   const [nationalWeather, setNationalWeather] = useState<IndiaHexWeather[]>([]);
   const [nationalWeatherLoading, setNationalWeatherLoading] = useState(false);
   const [nationalWeatherError, setNationalWeatherError] = useState<string | null>(null);
+  const [roadForecast, setRoadForecast] = useState<RoadRunoffForecast | null>(null);
   const [roadScreen, setRoadScreen] = useState<{
-    source: typeof cityFlood; segments: RoadRunoff[]; status: "ready" | "zoom" | "unavailable";
+    source: Extract<RoadRunoffForecast, { status: "ready" }>["cells"];
+    segments: RoadRunoff[];
+    status: "ready" | "unavailable";
   } | null>(null);
+  const [pickedRoad, setPickedRoad] = useState<RoadRunoff | null>(null);
   const result = useFloodStore((s) => s.simulateResult);
   const route = useFloodStore((s) => s.route);
   const selectedRoute = useFloodStore((s) => s.selectedRouteId);
   const selectNode = useFloodStore((s) => s.selectNode);
   const visibility = useFloodStore((s) => s.layerVisibility);
+  const simulationActive = useFloodStore((s) => s.simulationActive);
   const currentSurfaceTemperature = useRef(visibility.surfaceTemperature);
   currentSurfaceTemperature.current = visibility.surfaceTemperature;
   const heatOffset = useFloodStore((s) => s.heatOffsetC);
@@ -194,6 +202,12 @@ export default function MapView({
   const centerLat = viewBounds ? (viewBounds[0][1] + viewBounds[1][1]) / 2 : null;
   const inBengaluruView = viewZoom >= 10.5 && centerLng !== null && centerLat !== null
     && centerLng >= 77.39 && centerLng <= 77.85 && centerLat >= 12.57 && centerLat <= 13.21;
+  const roadCoverageVisible = Boolean(viewBounds && viewBounds[0][0] <= 77.85 && viewBounds[1][0] >= 77.39
+    && viewBounds[0][1] <= 13.21 && viewBounds[1][1] >= 12.57);
+  const canScreenRoads = visibility.cityRoads && roadCoverageVisible && viewZoom >= ROAD_SCREEN_MIN_ZOOM;
+  const forecastActive = canScreenRoads && !simulationActive;
+  const readyRoadForecast = roadForecast?.status === "ready" ? roadForecast : null;
+  const roadCells = simulationActive ? cityFlood?.cells : readyRoadForecast?.cells;
   const localFloodReady = visibility.floodDepth && Boolean(cityFlood);
   const bellandurDetailActive = Boolean(inBengaluruView && localFloodReady);
   const indiaGrid = useMemo(() => viewBounds && indiaBoundary && nationalLayerActive
@@ -222,8 +236,33 @@ export default function MapView({
   const selectedDrivingRoute = drivingRoutes?.find((option) => option.id === selectedDrivingId) ?? null;
   const navigationActive = navigation.mode !== "idle" && navigation.mode !== "error";
   const simulatedDrive = navigation.mode === "simulating" || navigation.mode === "arrived";
-  const currentRoadScreen = visibility.cityRoads && roadScreen?.source === cityFlood ? roadScreen : null;
+  const currentRoadScreen = canScreenRoads && roadScreen?.source === roadCells ? roadScreen : null;
   const roadSegments = currentRoadScreen?.segments;
+  const selectedRoad = pickedRoad && roadSegments?.includes(pickedRoad) ? pickedRoad : null;
+
+  useEffect(() => {
+    if (!forecastActive) {
+      setRoadForecast(null);
+      return;
+    }
+    const controller = new AbortController();
+    let nextRefresh: number;
+    async function refresh() {
+      try {
+        const next = await api.getRoadRunoffForecast(controller.signal);
+        if (!controller.signal.aborted) setRoadForecast(next);
+      } catch {
+        if (!controller.signal.aborted) setRoadForecast({ status: "unavailable", message: "Could not load the Bengaluru road forecast." });
+      } finally {
+        if (!controller.signal.aborted) nextRefresh = window.setTimeout(refresh, roadForecastRefreshMs);
+      }
+    }
+    void refresh();
+    return () => {
+      controller.abort();
+      window.clearTimeout(nextRefresh);
+    };
+  }, [forecastActive]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -335,8 +374,9 @@ export default function MapView({
             return `Simulated depth: ${(object.depth_m_mean * 100).toFixed(1)} cm\nModel spread: ±${(object.depth_m_std * 100).toFixed(1)} cm`;
           case "flood-roads":
             return `Simulated road class: ${String(object.state).replace("_", " ")}`;
-          case "city-road-runoff":
-            return `${object.name}\nCell runoff screen: ${object.runoffMm.toFixed(1)} mm\nScenario exposure on a 300 m grid`;
+          case "forecast-road-runoff":
+          case "scenario-road-runoff":
+            return `${object.name}\n${roadRunoffBand(object.runoffMm).label} · ${object.runoffMm.toFixed(1)} mm of modeled runoff\n${layer.id === "forecast-road-runoff" ? "Forecast-based" : "Rainfall scenario"} · 300 m grid`;
           case "driving-traffic":
             return TRAFFIC_LABELS[object.level as TrafficLevel];
           case "driving-scenario":
@@ -638,8 +678,9 @@ export default function MapView({
 
   useEffect(() => {
     const instance = map.current;
-    if (!instance || !visibility.cityRoads || !cityFlood) return;
-    const screen = createRoadRunoffScreen(cityFlood.cells);
+    if (!instance || !canScreenRoads || !roadCells?.length) return;
+    const cells = roadCells;
+    const screen = createRoadRunoffScreen(cells);
     let lastView = "";
     function updateScreen() {
       if (!instance || !instance.isStyleLoaded() || !instance.areTilesLoaded() || instance.isMoving()) return;
@@ -651,14 +692,13 @@ export default function MapView({
           (layer["source-layer"] === "roads" && /^road_.*_case/.test(layer.id)) ||
           layer["source-layer"] === "transportation"
         )).map((layer) => layer.id);
-      const status = instance.getZoom() < ROAD_SCREEN_MIN_ZOOM ? "zoom" : roadLayers.length ? "ready" : "unavailable";
-      const segments = status === "ready" ? screen(instance.queryRenderedFeatures({ layers: roadLayers })) : [];
-      setRoadScreen({ source: cityFlood, segments, status });
+      const roads = roadLayers.length ? instance.queryRenderedFeatures({ layers: roadLayers }) : [];
+      setRoadScreen({ source: cells, segments: screen(roads), status: roads.length ? "ready" : "unavailable" });
     }
     updateScreen();
     instance.on("idle", updateScreen);
     return () => { instance.off("idle", updateScreen); };
-  }, [cityFlood, visibility.cityRoads]);
+  }, [canScreenRoads, roadCells]);
 
   useEffect(() => {
     const layers: Layer[] = [];
@@ -737,13 +777,26 @@ export default function MapView({
     }
     if (roadSegments?.length) {
       layers.push(new PathLayer<RoadRunoff>({
-        id: "city-road-runoff",
+        id: "road-runoff-outline",
         data: roadSegments,
         getPath: (segment) => segment.path,
-        getColor: (segment) => RUNOFF_COLORS[segment.runoffMm > 20 ? 2 : segment.runoffMm > 5 ? 1 : 0],
-        getWidth: 3,
+        getColor: [255, 255, 255, 225],
+        getWidth: (segment) => roadRunoffBand(segment.runoffMm).width + 2,
+        widthUnits: "pixels",
+      }), new PathLayer<RoadRunoff>({
+        id: simulationActive ? "scenario-road-runoff" : "forecast-road-runoff",
+        data: roadSegments,
+        getPath: (segment) => segment.path,
+        getColor: (segment) => roadRunoffBand(segment.runoffMm).color,
+        getWidth: (segment) => roadRunoffBand(segment.runoffMm).width + (segment === selectedRoad ? 2 : 0),
+        updateTriggers: { getWidth: selectedRoad },
         widthUnits: "pixels",
         pickable: true,
+        onClick: ({ object }) => {
+          if (!object || onPickPoint) return false;
+          setPickedRoad(object);
+          return true;
+        },
       }));
     }
     if (visibility.pilotFlood && result) {
@@ -854,7 +907,7 @@ export default function MapView({
   }, [cityFlood, floodHexes, indiaGrid, indiaHeatHexes, indiaRainHexes, indiaCompoundHexes, nationalLayerActive, nationalWeather,
     nationalWeatherLoading,
     result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments,
-    scenarioRoute, trafficSegments, selectNode]);
+    scenarioRoute, trafficSegments, selectNode, simulationActive, selectedRoad, onPickPoint]);
 
   return (
     <>
@@ -869,7 +922,7 @@ export default function MapView({
       <div className="map-footer">{assistant}</div>
       <aside className="map-info-rail" aria-label="Forecast and map information">
         <div className="map-weather">{weatherWidget}</div>
-        <section className="map-legend" aria-labelledby="legend-title">
+        <section className="map-legend" aria-labelledby="legend-title" data-road-runoff={visibility.cityRoads || undefined}>
           <div className="legend-heading">
             <h3 id="legend-title">Map legend</h3>
             {hasMapOverlay && <strong className="map-detail" role="status">
@@ -908,14 +961,26 @@ export default function MapView({
             <span><i style={{ background: "#b16720" }} /> 15–30 cm</span>
             <span><i style={{ background: "#af2d30" }} /> &gt;30 cm</span>
           </>}
-          {visibility.cityRoads && <div className="flood-legend">
-            <strong>Mapped roads in screened cells</strong>
-            {roadSegments?.length ? RUNOFF_COLORS.map((color, index) => <span key={index}>
-              <i style={{ background: `rgb(${color.join(",")})` }} />{["1–5 mm", ">5–20 mm", ">20 mm"][index]}
-            </span>) : <span>{mapError || currentRoadScreen?.status === "unavailable" ? "Road geometry unavailable."
-              : currentRoadScreen?.status === "zoom" ? "Zoom in to see road screening."
-                : currentRoadScreen?.status === "ready" ? "No mapped road crossings above the screening threshold in this view."
-                  : cityFlood ? "Screening visible roads…" : "Waiting for city runoff data…"}</span>}
+          {visibility.cityRoads && <div className="flood-legend road-runoff-legend">
+            <strong>{simulationActive ? "Road runoff · rainfall scenario" : "Road flood risk · next 3 hours"}</strong>
+            {roadSegments?.length ? ROAD_RUNOFF_BANDS.map(({ label, range, color }) => <span key={label}>
+              <i style={{ background: `rgb(${color.join(",")})` }} />{label} · {range}
+            </span>) : <span role="status">{mapError ? "Road geometry unavailable."
+              : !roadCoverageVisible ? "Move the map to Bengaluru."
+                : !canScreenRoads ? "Zoom in to see Bengaluru road segments."
+                  : simulationActive && scenarioRoadError ? scenarioRoadError
+                    : !simulationActive && roadForecast?.status === "unavailable" ? roadForecast.message
+                      : roadCells?.length === 0 ? "No Bengaluru cells reach 1 mm of modeled runoff in this forecast."
+                        : currentRoadScreen?.status === "unavailable" ? "No road geometry at this zoom. Try zooming in."
+                          : currentRoadScreen?.status === "ready" ? "No mapped roads cross flagged cells in this view."
+                            : roadCells ? "Screening visible roads…" : simulationActive ? "Loading scenario runoff…" : "Loading Bengaluru road forecast…"}</span>}
+            {!simulationActive && readyRoadForecast && <p className="coverage-note">
+              Through {roadForecastTime.format(new Date(readyRoadForecast.forecast_through))} IST · {readyRoadForecast.forecast_points} forecast {readyRoadForecast.forecast_points === 1 ? "point" : "points"} · includes recent rain
+            </p>}
+            {selectedRoad && <p className="coverage-note" role="status">
+              <strong>{selectedRoad.name}</strong> · {roadRunoffBand(selectedRoad.runoffMm).label} · {selectedRoad.runoffMm.toFixed(1)} mm
+            </p>}
+            <p className="coverage-note">Colors show modeled runoff in 300 m cells. Road depth and passability are unverified.</p>
           </div>}
           {selectedDrivingRoute && <div className="flood-legend">
             <strong>Selected route traffic</strong>

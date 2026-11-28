@@ -13,13 +13,14 @@ from urllib.request import Request, urlopen
 
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString
 from shapely.ops import transform
 
 from app.api.routes_city_flood import load_grid, screen_values
 from app.api.routes_driving import traffic_segments
 from app.core.config import settings
 from app.routing.conditions import PROJECT, PROVIDER_ERRORS, annotate_runoff, fetch_json, get_alert_weather, get_weather, iso_utc
+from app.routing.conditions import nearest_forecast_points as _nearest_forecast_points
 
 router = APIRouter(prefix="/api/assistant")
 ALERT_KINDS = ("city_flood", "route_rain", "traffic")
@@ -173,17 +174,6 @@ def assistant_outlook() -> dict:
         "flood_screen_available": flood_screen_available,
         "heat": heat,
     }
-
-
-@lru_cache(maxsize=8)
-def _nearest_forecast_points(locations: tuple[tuple[float, float], ...]) -> tuple[int, ...]:
-    projected = [PROJECT(*location) for location in locations]
-    zones = []
-    for _, rings, *_ in load_grid()["cells"]:
-        centroid = Polygon(rings[0], rings[1:]).centroid
-        x, y = PROJECT(centroid.x, centroid.y)
-        zones.append(min(range(len(projected)), key=lambda i: (projected[i][0] - x) ** 2 + (projected[i][1] - y) ** 2))
-    return tuple(zones)
 
 
 def _gemini_config() -> tuple[str, str] | None:

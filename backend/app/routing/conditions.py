@@ -267,6 +267,18 @@ def get_alert_weather() -> list[dict]:
         return [fallback] if fallback["status"] == "ready" else []
 
 
+@lru_cache(maxsize=8)
+def nearest_forecast_points(locations: tuple[tuple[float, float], ...]) -> tuple[int, ...]:
+    """Assign each municipal grid cell to the nearest forecast grid point."""
+    projected = [PROJECT(*location) for location in locations]
+    zones = []
+    for _, rings, *_ in load_grid()["cells"]:
+        centroid = Polygon(rings[0], rings[1:]).centroid
+        x, y = PROJECT(centroid.x, centroid.y)
+        zones.append(min(range(len(projected)), key=lambda i: (projected[i][0] - x) ** 2 + (projected[i][1] - y) ** 2))
+    return tuple(zones)
+
+
 @lru_cache(maxsize=128)
 def weather_report_snapshot(latitude: float, longitude: float, _five_minute_slot: int) -> dict:
     """Fetch enough hourly forecast output for the next 48 complete hours."""

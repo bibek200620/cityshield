@@ -28,6 +28,7 @@ CityShield is an India-wide weather and road-routing map with a research workspa
 | **Flood**, **Heat**, and **Combined** | India forecast grid, where the provider supplies values | Forecast rain over 24 hours, forecast air temperature at 2 m, and cells that cross both illustrative thresholds. Map hexagons change size with zoom. The underlying forecast grid stays at 0.25°. |
 | **Surface temperature** | India map, where the satellite product has imagery | Daily daytime MODIS land-surface-temperature imagery served through NASA GIBS. Look for gaps from clouds and acquisition timing. |
 | **Bengaluru runoff** and mapped road runoff | 2025 Greater Bengaluru Authority (GBA) municipal polygon | Estimated runoff in terrain depressions for a supplied rainfall scenario. Visible mapped roads can be highlighted where they cross a screened 300 m cell. |
+| **Road flood risk** | Mapped roads within the Bengaluru municipal runoff grid | Color-coded road segments based on runoff from recent rain and the next three hourly forecasts. An active local rainfall scenario supplies the rainfall while it runs. |
 | **Bengaluru Landsat** and ward analysis | Bundled data for the 2025 GBA boundary | Modeled land-surface temperature from the April 1, 2026 Landsat acquisition. Ward analysis lists area-weighted runoff and surface temperature where valid data overlap the ward. |
 | Bellandur pilot and **Bellandur combined exposure** | Configured pilot network and Landsat study area | Simulated node depths, road classes, facility access risk, pilot routes, and a 30 m flood/heat overlap layer when compatible heat inputs are installed. |
 | Storm replay and comparison | Published Bengaluru case study and any authorized, installed event bundles | Published 20–21 October 2020 drain readings and study model peaks. A compatible surveyed drainage run enables paired depth and timing comparisons for an imported event. |
@@ -43,6 +44,7 @@ The India services accept coordinates in a bounding rectangle of 6–38°N and 6
 2. Open **Next 3 hours** in the overview or the map tools menu. The forecast follows the selected place or active navigation location. Values show air temperature, feels-like temperature, rainfall, and humidity when supplied. Times in the dashboard use India Standard Time.
 3. Open **Weather** or **Two-day weather report** for the next 48 hourly estimates. Use **Refresh report** to request an update and **Export CSV** to save the hourly readings, valid times in UTC and IST, grid coordinates, and retrieval time.
 4. Turn on **Flood**, **Heat**, or **Combined** to look across the map. The combined screen highlights cells with at least 20 mm of forecast rain in 24 hours and at least 35 °C at 2 m. Read each layer's legend for its units and coverage. The report and CX city scan use a separate 24-hour threshold of 64.5 mm for heavy rain and 40 °C for high temperature.
+5. Turn on **Road flood risk** and zoom into Bengaluru. Amber marks 1–5 mm of modeled runoff, orange marks more than 5 through 20 mm, and burgundy marks more than 20 mm. Hover over or tap a marked section for its road name and model value. Colors represent estimated runoff in a 300 m cell. Road depth and passability are unverified.
 
 ### Run and compare Bengaluru scenarios
 
@@ -182,6 +184,7 @@ FastAPI publishes Swagger UI at `/docs` and its machine-readable schema at `/ope
 | `GET /api/explain/{node_id}`, `GET /api/critical-infrastructure`, `POST /api/route` | Inspect pilot explanations, facilities, and scenario-specific routing on the pilot road graph. |
 | `GET /api/heat`, `GET /api/exposure/{scenario_id}` | Retrieve local Landsat model and pixel data or aligned pilot flood/heat cells when artifacts are compatible. |
 | `GET /api/weather/nowcast`, `GET /api/weather/report` | Get current and three-hour estimates, or a 48-hour report. Coordinates default to Bengaluru. |
+| `GET /api/weather/road-runoff` | Get flagged Bengaluru runoff cells, the forecast cutoff, and the number of weather points used for the road overlay. |
 | `POST /api/weather/grid`, `GET /api/weather/point-forecast`, `GET /api/weather/air-quality` | Batch forecast-grid queries, selected-point forecast, and separate selected-point modeled AQI. |
 | `GET /api/places/search`, `GET /api/places/nearby` | Find Indian places by text or query mapped nearby community facilities by coordinates and radius. |
 | `POST /api/drive/routes`, `POST /api/drive/traffic-flow`, `POST /api/drive/scenario` | Compare car routes, sample current traffic, or screen route geometry against a local rainfall scenario. |

@@ -217,7 +217,7 @@ button:enabled, summary { cursor: pointer; }
 .map-weather .weather-preview { pointer-events: auto; }
 
 /* Keep the map legend out of forecast hover cards while the pointer is on the map. */
-.atlas:has(.map-canvas:hover) .map-legend { visibility: hidden; }
+.atlas:has(.map-canvas:hover) .map-legend:not([data-road-runoff]) { visibility: hidden; }
 
 .map-legend { position: relative; z-index: 1; min-width: 0; max-width: none; max-height: min(42vh, 360px); overflow: auto; pointer-events: none; display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 11px; background: #f8fbffff; box-shadow: var(--map-shadow); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .legend-heading { flex-basis: 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }

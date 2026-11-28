@@ -95,7 +95,7 @@ export default function ScenarioSlider({ selectedPlace, onSelectPlace }: {
         {active ? <label className="pilot-layer-option">
           <input type="checkbox" checked={showRoads} onChange={() => toggleLayer("cityRoads")} />
           Show local road runoff
-        </label> : <p className="scenario-result" role="status">Simulation stopped. Run a scenario to show its layers again.</p>}
+        </label> : <p className="scenario-result" role="status">Run a scenario to use its rainfall for road screening.</p>}
       </div>
       {result && (
         <p className="scenario-result" aria-live="polite">
