@@ -7,7 +7,9 @@ async function respond(route: Route, body: unknown) {
 test("daily surface temperature is a separate imagery layer from the forecast hexes", async ({ page }) => {
   let imageryRequested = false;
   let weatherGridRequested = false;
-  await page.route("**/api/**", async (route) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({ json: { version: 8, layers: [], sources: {} } }));
+  await page.route("http://localhost:8000/api/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/scenarios") return respond(route, []);
     if (url.pathname === "/api/critical-infrastructure") return respond(route, []);
