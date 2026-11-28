@@ -20,9 +20,11 @@ router = APIRouter()
 _provider_lock = Lock()
 _next_provider_call = 0.0
 _INDIA_WEST, _INDIA_SOUTH, _INDIA_EAST, _INDIA_NORTH = 68.0, 6.0, 98.0, 38.0
+_PHOTON_SEARCH_URL = "https://photon.komoot.io/api/"
+_SEARCH_ERRORS = (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError)
 
 
-def _limited_provider_get(url: str) -> list[dict]:
+def _limited_provider_json(url: str) -> object:
     global _next_provider_call
     request = Request(url, headers={
         "User-Agent": "CityShield/0.1 (India weather and routing)",
@@ -32,7 +34,11 @@ def _limited_provider_get(url: str) -> list[dict]:
         sleep(max(0, _next_provider_call - monotonic()))
         _next_provider_call = monotonic() + 1.1
         with urlopen(request, timeout=8) as response:
-            payload = json.load(response)
+            return json.load(response)
+
+
+def _limited_provider_get(url: str) -> list[dict]:
+    payload = _limited_provider_json(url)
     if not isinstance(payload, list):
         raise ValueError("Invalid place search response")
     return payload
@@ -50,7 +56,7 @@ def _search_cached(provider_url: str, query: str) -> tuple[dict, ...]:
     })
     try:
         payload = _limited_provider_get(f"{provider_url}?{params}")
-    except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError) as exc:
+    except _SEARCH_ERRORS as exc:
         raise HTTPException(503, "Place search is temporarily unavailable.") from exc
 
     results: list[dict] = []
@@ -79,15 +85,59 @@ def _search_cached(provider_url: str, query: str) -> tuple[dict, ...]:
     return tuple(results)
 
 
+@lru_cache(maxsize=128)
+def _search_photon_cached(query: str) -> tuple[dict, ...]:
+    params = urlencode({"q": query, "limit": 5, "countrycode": "IN", "lang": "en"})
+    payload = _limited_provider_json(f"{_PHOTON_SEARCH_URL}?{params}")
+    if not isinstance(payload, dict) or not isinstance(payload.get("features"), list):
+        raise ValueError("Invalid Photon search response")
+    results = []
+    for feature in payload["features"]:
+        if not isinstance(feature, dict):
+            continue
+        properties, geometry = feature.get("properties"), feature.get("geometry")
+        if not isinstance(properties, dict) or not isinstance(geometry, dict) or geometry.get("type") != "Point":
+            continue
+        country = properties.get("countrycode")
+        name = properties.get("name")
+        osm_type, osm_id = properties.get("osm_type"), properties.get("osm_id")
+        if country != "IN" or not isinstance(name, str) or not name.strip() or not osm_type or not osm_id:
+            continue
+        try:
+            lng, lat = map(float, geometry["coordinates"][:2])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not (_INDIA_SOUTH <= lat <= _INDIA_NORTH and _INDIA_WEST <= lng <= _INDIA_EAST):
+            continue
+        label = dict.fromkeys(part.strip() for part in (name, properties.get("city"), properties.get("state"))
+                              if isinstance(part, str) and part.strip())
+        results.append({
+            "id": f"{osm_type}/{osm_id}", "name": ", ".join(label), "lat": lat, "lng": lng,
+            "category": str(properties.get("osm_value") or geometry["type"]),
+        })
+    return tuple(results)
+
+
 @router.get("/api/places/search")
 def search_places(query: str = Query(min_length=2, max_length=120)) -> dict:
     normalized = " ".join(query.split())
     if len(normalized) < 2:
         raise HTTPException(422, "Enter at least two characters to search.")
-    results = _search_cached(settings.PLACE_SEARCH_URL.rstrip("/"), normalized.casefold())
+    query_key = normalized.casefold()
+    source = "OpenStreetMap Nominatim"
+    try:
+        results = _search_cached(settings.PLACE_SEARCH_URL.rstrip("/"), query_key)
+    except HTTPException as exc:
+        if exc.status_code != 503:
+            raise
+        try:
+            results = _search_photon_cached(query_key)
+            source = "OpenStreetMap Photon"
+        except _SEARCH_ERRORS:
+            raise exc from None
     return {
         "status": "ready",
-        "source": "OpenStreetMap Nominatim",
+        "source": source,
         "attribution": "© OpenStreetMap contributors",
         "results": list(results),
     }
