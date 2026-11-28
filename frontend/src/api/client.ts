@@ -307,7 +307,7 @@ export type WeatherAvailabilityResponse =
       model_note: string;
       cell_selection: string;
       requested_location: { latitude: number; longitude: number };
-      grid_cell_center: { latitude: number; longitude: number; elevation_m: number };
+      grid_cell_center: { latitude: number; longitude: number; elevation_m: number | null };
       spatial_resolution_m: number | null;
       spatial_resolution_note: string;
       timezone: string;

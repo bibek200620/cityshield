@@ -224,3 +224,22 @@ def test_conversation_returns_unavailable_on_provider_failure(conversation_clien
     monkeypatch.setattr(routes_assistant, "urlopen", timeout)
     response = conversation_client.post("/api/assistant/conversation", json={"message": "Hello"})
     assert response.json() == {"status": "unavailable", "reason": "upstream"}
+
+
+def test_conversation_retries_a_temporary_provider_failure(conversation_client, monkeypatch):
+    from urllib.error import HTTPError
+
+    attempts = []
+
+    def provider(request, timeout):
+        attempts.append(timeout)
+        if len(attempts) == 1:
+            raise HTTPError(request.full_url, 503, "Unavailable", {}, None)
+        parts = [{"text": json.dumps({"kind": "reply", "reply": "Ask me about weather and travel."})}]
+        return io.BytesIO(json.dumps({"candidates": [{"content": {"parts": parts}}]}).encode())
+
+    monkeypatch.setattr(routes_assistant, "urlopen", provider)
+    response = conversation_client.post("/api/assistant/conversation", json={"message": "How can you help me?"})
+    assert response.json() == {"status": "ready", "reply": "Ask me about weather and travel."}
+    assert len(attempts) == 2
+    assert max(attempts) <= 5

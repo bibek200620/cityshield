@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from fastapi import HTTPException
 from pyproj import Transformer
 from shapely import get_parts
 from shapely.geometry import LineString, Point, Polygon, shape
@@ -21,6 +22,8 @@ from shapely.prepared import prep
 from shapely.strtree import STRtree
 
 from app.api.routes_city_flood import load_grid, screen_values
+from app.core.config import settings
+from app.routing.meteoblue import get_meteoblue_forecast
 
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 INCIDENT_URL = "https://api.tomtom.com/traffic/services/5/incidentDetails"
@@ -310,10 +313,75 @@ def _unavailable(reason: str, checked_at: str) -> dict:
     }
 
 
+def _alternate_weather(latitude: float, longitude: float, now: float, *, report: bool = False) -> dict | None:
+    """Use the configured hourly point forecast when the primary provider fails."""
+    if not settings.METEOBLUE_API_KEY:
+        return None
+    try:
+        point = get_meteoblue_forecast(round(latitude, 4), round(longitude, 4), int(now // 300))
+        hourly = {}
+        for row in point["hours"]:
+            valid = datetime.fromisoformat(row["valid_at"])
+            if valid.utcoffset() is None:
+                return None
+            hourly[int(valid.timestamp())] = {**row, "valid_at": iso_utc(int(valid.timestamp()))}
+        hour = int(now // 3600) * 3600
+        count = 48 if report else 3
+        slots = [hourly[hour + offset * 3600] for offset in range(1, count + 1)]
+        coordinates = point["location"]
+        lat = float(coordinates["latitude"])
+        lng = float(coordinates["longitude"])
+        if not -90 <= lat <= 90 or not -180 <= lng <= 180:
+            return None
+        provenance = {
+            "source": "Meteoblue",
+            "cell_selection": "provider point forecast",
+            "model_identifier": None,
+            "model_version": None,
+            "model_run": point.get("model_run"),
+            "model_note": "Alternate hourly point forecast. Values are model estimates.",
+            "requested_location": {"latitude": latitude, "longitude": longitude},
+            "grid_cell_center": {
+                "latitude": lat,
+                "longitude": lng,
+                "elevation_m": point.get("elevation_m"),
+            },
+            "spatial_resolution_m": None,
+            "spatial_resolution_note": "The alternate point forecast does not specify a grid resolution.",
+            "timezone": "UTC",
+            "utc_offset_seconds": 0,
+            "timestamps_are_unix_utc": True,
+            "units": WEATHER_UNITS,
+            "retrieved_at": point["retrieved_at"],
+        }
+        result = {"status": "ready", "provenance": provenance,
+                  "forecast_through": slots[-1]["valid_at"], "hourly_forecast": slots}
+        if report:
+            return {**result, "forecast_hours": count, "forecast_from": slots[0]["valid_at"]}
+        current = hourly[hour]
+        recent = current["precipitation_mm"] + hourly[hour - 3600]["precipitation_mm"]
+        return {
+            **result,
+            "valid_at": current["valid_at"],
+            "air_temperature_c": current["air_temperature_c"],
+            "feels_like_c": current["feels_like_c"],
+            "relative_humidity_pct": current["relative_humidity_pct"],
+            "recent_rain_mm": round(recent, 2),
+            "recent_through": current["valid_at"],
+            "upcoming_rain_mm": round(sum(slot["precipitation_mm"] for slot in slots), 2),
+        }
+    except (HTTPException, KeyError, TypeError, ValueError, OverflowError):
+        return None
+
+
 def get_weather(latitude: float = WEATHER_LOCATION["latitude"], longitude: float = WEATHER_LOCATION["longitude"]) -> dict:
-    checked_at = iso_utc(int(time()))
+    now = time()
+    checked_at = iso_utc(int(now))
 
     def unavailable(reason: str) -> dict:
+        fallback = _alternate_weather(latitude, longitude, now)
+        if fallback is not None:
+            return fallback
         key = (round(latitude, 4), round(longitude, 4))
         with _last_good_weather_lock:
             cached = _last_good_weather.get(key)
@@ -325,7 +393,6 @@ def get_weather(latitude: float = WEATHER_LOCATION["latitude"], longitude: float
         return _unavailable(reason, checked_at)
 
     try:
-        now = time()
         snapshot = weather_snapshot(latitude, longitude, int(now // 300))
     except TimeoutError:
         return unavailable("timeout")
@@ -394,27 +461,31 @@ def parse_two_day_forecast(payload: dict, now: float, retrieved_at: str | None =
 
 
 def get_two_day_forecast(latitude: float = WEATHER_LOCATION["latitude"], longitude: float = WEATHER_LOCATION["longitude"]) -> dict:
-    checked_at = iso_utc(int(time()))
+    now = time()
+    checked_at = iso_utc(int(now))
+
+    def unavailable(reason: str) -> dict:
+        return _alternate_weather(latitude, longitude, now, report=True) or _unavailable(reason, checked_at)
+
     try:
-        now = time()
         snapshot = weather_report_snapshot(latitude, longitude, int(now // 300))
     except TimeoutError:
-        return _unavailable("timeout", checked_at)
+        return unavailable("timeout")
     except HTTPError as exc:
         if 400 <= exc.code < 500 and exc.code != 429:
-            return _unavailable("invalid_data", checked_at)
-        return _unavailable("upstream_error", checked_at)
+            return unavailable("invalid_data")
+        return unavailable("upstream_error")
     except URLError as exc:
         if isinstance(exc.reason, TimeoutError):
-            return _unavailable("timeout", checked_at)
-        return _unavailable("upstream_error", checked_at)
+            return unavailable("timeout")
+        return unavailable("upstream_error")
     except (json.JSONDecodeError, OSError):
-        return _unavailable("invalid_data", checked_at)
+        return unavailable("invalid_data")
 
     try:
         return parse_two_day_forecast(snapshot["payload"], now, snapshot["retrieved_at"], location=snapshot["location"])
     except WeatherDataError as exc:
-        return _unavailable(exc.reason, checked_at)
+        return unavailable(exc.reason)
 
 
 @lru_cache(maxsize=1)

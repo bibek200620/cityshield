@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     METEOBLUE_API_KEY: SecretStr | None = None
     GOOGLE_MAPS_API_KEY: SecretStr | None = None
     GEMINI_API_KEY: SecretStr | None = None
-    GEMINI_MODEL: str = "gemini-2.5-flash-lite"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
     CX_CONVERSATION_ENABLED: bool = True
     PLACE_SEARCH_URL: str = "https://nominatim.openstreetmap.org/search"
 
