@@ -280,9 +280,12 @@ function Dashboard() {
       return "Stopped the rainfall simulation.";
     }
     if (action.kind === "select-place") {
+      if (drive.navigationMode !== "idle" && drive.navigationMode !== "error") {
+        return "The map is following your trip. Stop navigation or the car demo before moving it with CX.";
+      }
       const { id, name, lat, lng } = action.place;
       selectPlace({ id, name, center: [lng, lat], bounds: [lng - 0.08, lat - 0.08, lng + 0.08, lat + 0.08] });
-      return `Showing ${name} on the map.`;
+      return `Showing ${name.split(",").slice(0, 3).join(",")} on the map.`;
     }
     if (action.kind === "layer") {
       const current = useFloodStore.getState().layerVisibility[action.layer];

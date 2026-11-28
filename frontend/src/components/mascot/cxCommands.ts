@@ -13,6 +13,9 @@ const layers = {
   "road flooding": "cityRoads", "road runoff": "cityRoads",
   "surface temperature": "surfaceTemperature", combined: "combined",
 } as const;
+export function cxLayerLabel(layer: typeof layers[keyof typeof layers]) {
+  return Object.keys(layers).find((name) => layers[name as keyof typeof layers] === layer) ?? layer;
+}
 type PanDirection = "left" | "right" | "up" | "down" | "north" | "south" | "east" | "west";
 export type CXCameraAction =
   | { kind: "pan"; direction: PanDirection }
@@ -36,6 +39,7 @@ export type VoiceCommand =
   | { kind: "weather"; period?: WeatherPeriod; location?: string; rainProbability?: boolean }
   | { kind: "destination"; query: string }
   | { kind: "choose"; index: number }
+  | { kind: "choose-place"; query: string }
   | { kind: "confirm" | "decline" | "cancel-route" | "stop" | "standby" | "direction" | "eta" | "repeat" | "help" | "unknown" };
 
 const numbers: Record<string, number> = {
@@ -45,6 +49,7 @@ const numbers: Record<string, number> = {
   sixty: 60, seventy: 70, eighty: 80, ninety: 90,
 };
 const ordinals: Record<string, number> = { first: 1, second: 2, third: 3 };
+const commandVerbStems: Record<string, string> = { pann: "pan", mov: "move", centr: "centre", runn: "run", stopp: "stop" };
 
 function spokenNumber(value: string): number {
   const hundreds = /^(?:a|one|1) hundred(?: and)?(?: (.+))?$/.exec(value);
@@ -70,17 +75,22 @@ export function readCXInterruptPhrase(transcript: string): string | undefined {
 }
 
 export function parseVoiceCommand(transcript: string): VoiceCommand {
-  const text = transcript.trim().replace(/[’']/g, "'").replace(/[.!?,]+$/, "")
-    .replace(/^(?:(?:hey|hi)[ ,]+)?c[ .-]*x\b[ ,:]*/i, "")
-    .replace(/^(?:(?:can|could|would) you\s+)?(?:please\s+)?/i, "").replace(/,?\s+please$/i, "").trim();
+  const text = (readCXWakePhrase(transcript) ?? transcript).trim().replace(/[’']/g, "'").replace(/[.!?,]+$/, "")
+    .replace(/^(?:(?:uh|um|erm)[,\s]+)+/i, "")
+    .replace(/^(?:(?:please|(?:would|do) you mind|(?:can|could|would|will) you|(?:i'd like|i would like|i want)(?: you)? to)[,\s]+)+/i, "")
+    .replace(/^(pann|mov|center|centr|focus|show|turn|switch|open|runn|stopp|start|zoom)ing\b/i,
+      (_match, stem: string) => commandVerbStems[stem.toLowerCase()] ?? stem)
+    .replace(/,?\s+please$/i, "").trim();
   const lower = text.toLowerCase();
   if (/^(?:stop listening|mute microphone|end voice(?: mode| session)?|goodbye)$/.test(lower)) return { kind: "stop" };
   if (/^(?:stand by|standby|go to sleep|that's all|that is all)$/.test(lower)) return { kind: "standby" };
   if (/^(?:stop|cancel|end) (?:the )?(?:route|navigation|directions|trip)$/.test(lower)) return { kind: "cancel-route" };
   if (/^(?:yes(?: please)?|confirm|that's right|correct|go ahead)$/.test(lower)) return { kind: "confirm" };
   if (/^(?:no(?: thanks)?|cancel|never mind|forget it)$/.test(lower)) return { kind: "decline" };
-  const option = /^(?:(?:option|number|choose) )?(?:the )?(1|2|3|one|two|three|first|second|third)(?: one)?$/.exec(lower);
+  const option = /^(?:(?:let's go with|i meant|choose|pick) )?(?:the )?(?:(?:option|number) )?(1|2|3|one|two|three|first|second|third)(?: (?:one|option))?$/.exec(lower);
   if (option) return { kind: "choose", index: (ordinals[option[1]] ?? spokenNumber(option[1])) - 1 };
+  const namedOption = /^(?:i meant|choose|pick|(?:it's )?the one (?:in|near|at|called))\s+(.{2,120})$/i.exec(text);
+  if (namedOption) return { kind: "choose-place", query: namedOption[1] };
   if (/^(?:repeat(?: that)?|say that again)$/.test(lower)) return { kind: "repeat" };
   if (/^(?:help|what can you do|what can i say)$/.test(lower)) return { kind: "help" };
   if (/^(?:(?:turn|switch) )?alerts? (?:on|enable)$/.test(lower)) return { kind: "alerts-on" };
@@ -94,7 +104,7 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
     kind: "simulation", intensity: spokenNumber(custom[1].trim()),
     duration: spokenNumber(custom[2].trim()) * (custom[3].startsWith("h") ? 60 : 1),
   };
-  if (/^(?:simulate\b|(?:run|start)\b.*\b(?:simulation|scenario)\b)/.test(lower)) return { kind: "simulation-help" };
+  if (/^(?:simulate(?: rainfall)?|(?:run|start) (?:a |the )?(?:rainfall |rain |flood )?(?:simulation|scenario))$/.test(lower)) return { kind: "simulation-help" };
   const pan = /^(?:pan|move|scroll) (?:(?:the )?map )?(?:to the )?(left|right|up|down|north|south|east|west)$/.exec(lower);
   if (pan) return { kind: "pan", direction: pan[1] as PanDirection };
   const zoom = /^zoom (in|out)(?: (?:by )?(one|two|three|[1-3])(?: levels?)?)?$/.exec(lower);
@@ -104,14 +114,19 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
   if (workspace && Object.prototype.hasOwnProperty.call(workspaces, workspace)) {
     return { kind: "workspace", panel: workspaces[workspace as keyof typeof workspaces] };
   }
-  const visibility = /^(?:(?:turn|switch) (on|off)|(show|hide|toggle)) (?:the )?(.+?)(?: layer)?$/.exec(lower);
-  const trailing = /^(?:turn|switch) (?:the )?(.+?)(?: layer)? (on|off)$/.exec(lower);
+  const layerText = lower.replace(/ on (?:the )?map$/, "");
+  const visibility = /^(?:(?:turn|switch)(?: back)? (on|off)|(show|see|hide|toggle|enable|disable)) (?:me )?(?:the )?(.+?)(?: layer)?$/.exec(layerText);
+  const trailing = /^(?:turn|switch) (?:the )?(.+?)(?: layer)? (?:back )?(on|off)$/.exec(layerText);
   const layer = visibility?.[3] ?? trailing?.[1];
   if (layer && Object.prototype.hasOwnProperty.call(layers, layer)) {
     const action = visibility?.[1] ?? visibility?.[2] ?? trailing?.[2];
     return { kind: "layer", layer: layers[layer as keyof typeof layers], label: layer,
-      enabled: action === "toggle" ? undefined : action === "on" || action === "show" };
+      enabled: action === "toggle" ? undefined : ["on", "show", "see", "enable"].includes(action ?? "") };
   }
+  const mapPlace = /^(?:(?:pan|move|scroll|bring|take|shift)(?: (?:the )?map)?(?: over)? to|(?:cent(?:er|re)|focus)(?: (?:the )?map)? (?:on|around)|zoom (?:in on|to)|(?:show|see)(?: me)? (?:the )?map (?:of|around|for)|where is)\s+(.+)$/i.exec(text)
+    ?? /^(?:show(?: me)?|see)\s+(?!(?:me|how|what|why|when|where|whether)\b)(.+?)\s+on (?:the )?map$/i.exec(text);
+  const mapQuery = mapPlace?.[1].replace(/\s+on (?:the )?map$/i, "").trim();
+  if (mapQuery && mapQuery.length >= 2 && mapQuery.length <= 120) return { kind: "show-place", query: mapQuery };
   if (/\b(?:next turn|next step|next direction|which way|where do i turn)\b/.test(lower)) return { kind: "direction" };
   if (/\b(?:eta|e t a|how far|how long (?:until|to get|left|remaining)|time (?:left|remaining)|when (?:will|do) (?:we|i) (?:get there|arrive))\b/.test(lower)) return { kind: "eta" };
   const destination = /^(?:(?:can|could|would) you )?(?:(?:(?:navigate|drive|take me|go|route|(?:get |give me )?directions|show me the way) to)|(?:set (?:my |the )?destination to)|(?:how (?:do|can) i get to)|i(?:'d like| want) to go to)\s+(.+)$/i.exec(text);
@@ -119,10 +134,10 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
     const query = destination[1].replace(/\s+please$/i, "").trim();
     return query.length >= 2 && query.length <= 120 ? { kind: "destination", query } : { kind: "unknown" };
   }
-  const place = /^(?:find (?:the city of )?|search for |show )(.*?)\s*(?: on (?:the )?map)?$/i.exec(text)?.[1].trim();
+  const place = /^(?:find (?:the city of )?|search for |show (?:me )?(?!(?:me|how|what|why|when|where|whether)\b)(?!(?:the )?(?:weather|forecast|temperature|way|directions|results)\b))(.+)$/i.exec(text)?.[1].trim();
   if (place && place.length >= 2 && place.length <= 120) return { kind: "show-place", query: place };
   const rainProbability = /^(?:what(?:'s| is)\s+)?(?:the\s+)?(?:chances?|probability)\s+of\s+rain(?: .+)?\??$/i.test(lower);
-  const weatherRequest = rainProbability || /^(?:what(?:'s| is)\s+(?:the\s+)?(?:weather|temperature|forecast)(?: .+)?|weather(?: .+)?|forecast(?: .+)?|is it (?:raining|going to rain)(?: .+)?|will it rain(?: .+)?|rain(?: .+))\??$/i.test(lower);
+  const weatherRequest = rainProbability || /^(?:(?:what(?:'s| is)|show(?: me)?|tell me(?: about)?|check)\s+(?:the\s+)?(?:weather|temperature|forecast)(?: .+)?|weather(?: .+)?|forecast(?: .+)?|is it (?:raining|going to rain)(?: .+)?|will it rain(?: .+)?|rain(?: .+))\??$/i.test(lower);
   if (weatherRequest) {
     const inPlace = /\b(?:weather|temperature|forecast|chance of rain|probability of rain)\b.*?\b(?:in|at)\s+(?!(?:the\s+)?next\b)(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
     const forPlace = /\b(?:weather|temperature|forecast)\s+for\s+(?!(?:the\s+)?next\b)(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
@@ -152,6 +167,12 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
     return weatherCommand(forecast ? { hours: 3 } : undefined);
   }
   return { kind: "unknown" };
+}
+
+export function cxMapFollowup(text: string): VoiceCommand | null {
+  const query = /^(?:what about|how about|and)\s+(.{2,120}?)\s*[?.!]*$/i.exec(text.trim())?.[1];
+  if (!query || weatherFollowup(text) || /^(?:if|why|when|how|what|(?:the )?(?:weather|forecast|rain|heat|route|simulation))\b/i.test(query)) return null;
+  return { kind: "show-place", query };
 }
 
 export function selectCXTranscript(candidates: string[], awake: boolean): string {

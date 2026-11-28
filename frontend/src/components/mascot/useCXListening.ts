@@ -11,9 +11,11 @@ interface Recognition {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  unspokenPunctuation?: boolean;
   maxAlternatives: number;
   phrases?: { push: (phrase: unknown) => void };
   onstart: (() => void) | null;
+  onspeechstart: (() => void) | null;
   onend: (() => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onresult: ((event: TranscriptEvent) => void) | null;
@@ -33,9 +35,22 @@ function spokenWords(text: string) {
   return text.toLowerCase().replace(/\b(?:c[ .-]*x|see ex)\b/g, "cx").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+const TURN_PAUSE_MS = 850;
+const speechHints = [
+  "C X", "Hello CX", "Bengaluru", "Bangalore", "Mysuru", "Lalbagh",
+  "Majestic", "Whitefield", "Koramangala", "Indiranagar", "road flood risk", "storm replay",
+];
+
+function joinSpeech(parts: string[], keepPunctuation = false) {
+  return parts.map((part, index) =>
+    keepPunctuation || index === parts.length - 1 ? part : part.replace(/[.,;]+$/, ""),
+  ).join(" ").replace(/\s+([,.!?])/g, "$1").replace(/\s+/g, " ").trim();
+}
+
 type Phase = "off" | "starting" | "listening" | "follow-up" | "working" | "speaking" | "error";
 export type VoiceOutput = (text: string, done?: () => void) => void;
 export type VoiceSession = {
+  alternatives?: string[];
   reply: (text: string) => void;
   wait: () => void;
   stop: () => void;
@@ -49,16 +64,18 @@ export function useCXListening(
   keepListening: boolean,
   language: string,
   chooseTranscript: (candidates: string[]) => string,
+  placeHints: string[],
 ) {
   const [phase, setPhase] = useState<Phase>("off");
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
-  const latest = useRef({ read, onCommand, onStop, onInterrupt, keepListening, language, chooseTranscript });
-  latest.current = { read, onCommand, onStop, onInterrupt, keepListening, language, chooseTranscript };
+  const latest = useRef({ read, onCommand, onStop, onInterrupt, keepListening, language, chooseTranscript, placeHints });
+  latest.current = { read, onCommand, onStop, onInterrupt, keepListening, language, chooseTranscript, placeHints };
   const state = useRef<{
     enabled: boolean;
     recognizer?: Recognition;
     timer?: number;
+    turnTimer?: number;
     speechTimer?: number;
     lastInput: number;
     speaking: boolean;
@@ -73,10 +90,11 @@ export function useCXListening(
     generation: 0, speechId: 0, speechText: "" }).current;
 
   function releaseMic() {
+    window.clearTimeout(state.turnTimer);
     const recognizer = state.recognizer;
     state.recognizer = undefined;
     if (!recognizer) return;
-    recognizer.onstart = recognizer.onend = recognizer.onerror = recognizer.onresult = null;
+    recognizer.onstart = recognizer.onspeechstart = recognizer.onend = recognizer.onerror = recognizer.onresult = null;
     recognizer.abort();
   }
 
@@ -164,7 +182,7 @@ export function useCXListening(
     return true;
   }
 
-  function execute(transcript: string, fromSpeech = true) {
+  function execute(transcript: string, fromSpeech = true, alternatives?: string[]) {
     if (!state.enabled || state.working) return;
     state.working = true;
     state.awaitingFollowup = false;
@@ -180,6 +198,7 @@ export function useCXListening(
     const generation = ++state.generation;
     const current = () => state.enabled && state.generation === generation;
     const session: VoiceSession = {
+      alternatives,
       reply: (text) => {
         if (!current()) return;
         state.lastInput = Date.now();
@@ -205,13 +224,14 @@ export function useCXListening(
     const recognition = new RecognitionClass();
     state.recognizer = recognition;
     recognition.lang = latest.current.language;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
+    if ("unspokenPunctuation" in recognition) recognition.unspokenPunctuation = true;
+    recognition.maxAlternatives = 4;
     const Phrase = (window as Window & { SpeechRecognitionPhrase?: new (text: string, boost: number) => unknown }).SpeechRecognitionPhrase;
     if (Phrase && recognition.phrases && !state.retryWithoutPhrases) {
       try {
-        for (const hint of ["C X", "Hello CX", "Bengaluru", "Mysuru", "Lalbagh", "road flood risk", "storm replay"]) {
+        for (const hint of new Set([...speechHints, ...latest.current.placeHints])) {
           recognition.phrases.push(new Phrase(hint, 2));
         }
       } catch {
@@ -221,32 +241,44 @@ export function useCXListening(
     let candidates: string[] = [];
     let recoverableError = "";
     let interrupted = false;
+    let turnStart = 0;
     recognition.onstart = () => {
       if (state.recognizer === recognition && !interruptOnly) setPhase(state.awaitingFollowup ? "follow-up" : "listening");
+    };
+    recognition.onspeechstart = () => {
+      if (state.recognizer === recognition) window.clearTimeout(state.turnTimer);
     };
     recognition.onresult = (event) => {
       if (state.recognizer !== recognition) return;
       const results = Array.from(event.results);
-      const heard = results.map((result) => result[0]?.transcript.trim() ?? "").filter(Boolean).join(" ");
       if (interruptOnly && !interrupted) {
-        if (readCXInterruptPhrase(heard) === undefined) return;
-        // The microphone may hear our own speaker. Suppress matching playback
-        // and keep the same recognizer so a real follow-up is not cut off.
-        if (` ${state.speechText} `.includes(` ${spokenWords(heard)} `)) return;
+        const index = results.findIndex((result, index) => {
+          const heard = result[0]?.transcript.trim() ?? "";
+          return index >= event.resultIndex && readCXInterruptPhrase(heard) !== undefined &&
+            !` ${state.speechText} `.includes(` ${spokenWords(heard)} `);
+        });
+        if (index < 0) return;
         interrupted = cancelTurn();
         if (!interrupted) return;
+        turnStart = index;
         setPhase("follow-up");
       }
+      const turnResults = results.slice(turnStart);
+      const heard = joinSpeech(turnResults.map((result) => result[0]?.transcript.trim() ?? "").filter(Boolean), true);
       if (heard) setTranscript(heard);
-      const finals = results.filter((result) => result.isFinal && result[0]?.transcript.trim());
+      const finals = turnResults.filter((result) => result.isFinal && result[0]?.transcript.trim());
       const primary = finals.map((result) => result[0].transcript.trim());
       const alternatives = finals.flatMap((result, index) =>
-        Array.from({ length: Math.min(result.length ?? 1, 3) - 1 }, (_, alternate) => {
+        Array.from({ length: Math.min(result.length ?? 1, 4) - 1 }, (_, alternate) => {
           const parts = [...primary];
           parts[index] = result[alternate + 1]?.transcript.trim() || parts[index];
-          return parts.join(" ");
+          return joinSpeech(parts);
         }));
-      candidates = primary.length ? [primary.join(" "), ...new Set(alternatives)] : [];
+      candidates = [...new Set([joinSpeech(primary), ...alternatives])].filter(Boolean);
+      window.clearTimeout(state.turnTimer);
+      if (candidates.length && turnResults.every((result) => result.isFinal)) {
+        state.turnTimer = window.setTimeout(() => finishTurn(true), TURN_PAUSE_MS);
+      }
     };
     recognition.onerror = ({ error }) => {
       if (state.recognizer !== recognition) return;
@@ -266,16 +298,20 @@ export function useCXListening(
         : error === "audio-capture" ? "CX couldn’t access a microphone."
           : "Speech recognition is unavailable. Start a new voice session to try again.");
     };
-    recognition.onend = () => {
+    function finishTurn(abort: boolean) {
       if (state.recognizer !== recognition) return;
-      state.recognizer = undefined;
+      if (abort) releaseMic();
+      else {
+        window.clearTimeout(state.turnTimer);
+        state.recognizer = undefined;
+      }
       if (interruptOnly) {
         if (!interrupted) {
           scheduleMic(350, true);
           return;
         }
         const followup = candidates[0] && readCXInterruptPhrase(candidates[0]);
-        if (followup) execute(candidates[0]);
+        if (followup) execute(candidates[0], true, candidates.slice(1));
         else resume(0);
         return;
       }
@@ -288,8 +324,10 @@ export function useCXListening(
         return;
       }
       state.emptyEnds = 0;
-      execute(latest.current.chooseTranscript(candidates));
-    };
+      const selected = latest.current.chooseTranscript(candidates);
+      execute(selected, true, candidates.filter((candidate) => candidate !== selected));
+    }
+    recognition.onend = () => finishTurn(false);
     try {
       recognition.start();
     } catch {

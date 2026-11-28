@@ -40,6 +40,12 @@ async function installVoice(page: Page, holdSpeech = "") {
       const transcript = (event as CustomEvent<string>).detail ?? "What is the weather in Mysuru";
       recognition?.onresult?.({ resultIndex: 0, results: [{ isFinal: false, 0: { transcript } }] });
     });
+    window.addEventListener("cx-test-segments", (event) => {
+      const segments = (event as CustomEvent<Array<{ transcript: string; isFinal: boolean }>>).detail;
+      Recognition.active?.onresult?.({ resultIndex: segments.length - 1, results: segments.map(({ transcript, isFinal }) => ({
+        isFinal, 0: { transcript },
+      })) });
+    });
     window.addEventListener("cx-test-denial", () => Recognition.active?.onerror?.({ error: "not-allowed" }));
     Object.defineProperty(window, "SpeechRecognition", { value: Recognition });
     Object.defineProperty(window, "SpeechSynthesisUtterance", { value: class {
@@ -186,12 +192,12 @@ test("CX pans the actual map and runs a custom rainfall scenario by command", as
   await command("Pan east", "Panned the map east.");
   await expect.poll(async () => (await marker.boundingBox())!.x).toBeLessThan(initialX - 25);
   await command("Zoom in two levels", "Zoomed in 2 levels.");
-  await command("Toggle heat layer", "The heat layer is on.");
+  await command("I’d like you to show me the heat layer on the map, please.", "The heat layer is on.");
   await expect(page.getByRole("checkbox", { name: "Heat", exact: true })).toBeChecked();
   await command("Toggle heat layer", "The heat layer is off.");
   await command("Run a moderate storm", /90 millimetres over 90 minutes/);
   expect(presetsUsed).toBe(1);
-  await command("Simulate seventy-five millimetres per hour for two hours", /150 millimetres over 120 minutes/);
+  await command("Could you please simulate seventy-five millimetres per hour for two hours?", /150 millimetres over 120 minutes/);
   expect(simulation).toEqual({ rainfall_intensity_mm_hr: 75, duration_min: 120 });
   await command("Simulate 999 mm/hr for 1 hour", /5 to 150 millimetres per hour/);
   expect(simulation).toEqual({ rainfall_intensity_mm_hr: 75, duration_min: 120 });
@@ -206,6 +212,85 @@ test("CX recovers a wake phrase and a map command from speech alternatives", asy
   await expect(page.getByRole("checkbox", { name: "Road flood risk", exact: true })).toBeChecked();
   await expect(page.locator(".voice-response")).toHaveText("The road flood risk layer is on.");
   await expect(page.locator(".voice-transcript")).toContainText("Hello CX");
+  await expect(page.locator("body")).not.toHaveAttribute("data-gps");
+});
+
+test("CX waits for the complete spoken sentence and then pans to the named place", async ({ page }) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({ json: { version: 8, layers: [], sources: {} } }));
+  const queries: string[] = [];
+  await page.route("**/api/places/search?*", (route) => {
+    const query = new URL(route.request().url()).searchParams.get("query") ?? "";
+    queries.push(query);
+    const place = query === "Lalbagh" ? { id: "lalbagh", name: "Lalbagh, Bengaluru", ...destination }
+      : { id: "mysuru", name: "Mysuru, Karnataka", lat: 12.2958, lng: 76.6394 };
+    const results = query === "Mysuru" ? [place, { ...place, id: "mysuru-boundary", lat: place.lat + 0.002 }] : [place];
+    return route.fulfill({ headers, json: { status: "ready", results } });
+  });
+  await installVoice(page);
+  const firstSegment = { transcript: "Hello, CX, could you move the map.", isFinal: true };
+  async function emit(segments: Array<{ transcript: string; isFinal: boolean }>) {
+    await page.evaluate((detail) => window.dispatchEvent(new CustomEvent("cx-test-segments", { detail })), segments);
+  }
+  await emit([firstSegment]);
+  await emit([firstSegment, { transcript: "over to Lal", isFinal: false }]);
+  await expect(page.locator(".voice-transcript")).toContainText("over to Lal");
+  expect(queries).toEqual([]);
+  await emit([firstSegment, { transcript: "over to Lalbagh, please?", isFinal: true }]);
+  await expect(page.locator(".voice-response")).toHaveText("Showing Lalbagh, Bengaluru on the map.");
+  await expect(page.locator(".place-marker")).toBeVisible();
+  await say(page, "What about Mysuru?");
+  await expect(page.locator(".voice-response")).toHaveText("Showing Mysuru, Karnataka on the map.");
+  expect(queries).toEqual(["Lalbagh", "Mysuru"]);
+  await expect(page.locator("body")).not.toHaveAttribute("data-gps");
+});
+
+test("CX asks before using a misheard place alternative and accepts clarification by city", async ({ page }) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());
+  await page.route("**/api/places/search?*", (route) => {
+    const query = new URL(route.request().url()).searchParams.get("query")?.toLowerCase();
+    const lalbagh = { id: "lalbagh", name: "Lalbagh, Bengaluru", ...destination };
+    const other = { id: "lalbagh-mangaluru", name: "Lalbagh, Mangaluru", lat: 12.883, lng: 74.841 };
+    const results = query === "lalbagh garden" ? [lalbagh] : query === "lalbagh" ? [lalbagh, other] : [];
+    return route.fulfill({ headers, json: { status: "ready", results } });
+  });
+  await installVoice(page);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("cx-test-transcript", {
+    detail: ["Hello CX, could you center the map on Lull Bug Garden?", "Hello CX, could you center the map on Lalbagh Garden?"],
+  })));
+  await expect(page.locator(".voice-response")).toHaveText("Did you mean Lalbagh, Bengaluru? Reply yes or cancel.");
+  await expect(page.locator(".place-marker")).toHaveCount(0);
+  await say(page, "Yes, please.");
+  await expect(page.locator(".voice-response")).toHaveText("Showing Lalbagh, Bengaluru on the map.");
+  await say(page, "Would you mind centering the map on Lalbagh?");
+  await expect(page.getByRole("button", { name: "Lalbagh, Mangaluru", exact: true })).toBeVisible();
+  await say(page, "The one in Mangaluru, please.");
+  await expect(page.locator(".voice-response")).toHaveText("Showing Lalbagh, Mangaluru on the map.");
+  await expect(page.locator("body")).not.toHaveAttribute("data-gps");
+});
+
+test("CX executes validated site actions from full requests it sends to conversation mode", async ({ page }) => {
+  const turns: unknown[] = [];
+  await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());
+  await page.route("**/api/assistant/conversation", (route) => {
+    const turn = route.request().postDataJSON();
+    turns.push(turn);
+    const action = turns.length === 1 ? { kind: "show-place", query: "Lalbagh" } : { kind: "layer", layer: "heat", enabled: true };
+    return route.fulfill({ headers, json: { status: "ready", reply: "I’ll check that for you.", action } });
+  });
+  await page.route("**/api/places/search?*", (route) => route.fulfill({ headers, json: { status: "ready", results: [
+    { id: "lalbagh", name: "Lalbagh, Bengaluru", ...destination },
+  ] } }));
+  await installVoice(page);
+  await say(page, "Hello CX, I would love a closer look at Lalbagh. Could you frame that area for me?");
+  await expect(page.locator(".voice-response")).toHaveText("Showing Lalbagh, Bengaluru on the map.");
+  await say(page, "Keep the focus there, and make the heat overlay visible for me.");
+  await expect(page.getByRole("checkbox", { name: "Heat", exact: true })).toBeChecked();
+  await expect(page.locator(".voice-response")).toHaveText("The heat layer is on.");
+  expect(turns[1]).toMatchObject({ history: [
+    { role: "user", text: expect.stringContaining("Lalbagh") },
+    { role: "assistant", text: "Showing Lalbagh, Bengaluru on the map." },
+  ] });
   await expect(page.locator("body")).not.toHaveAttribute("data-gps");
 });
 

@@ -217,6 +217,36 @@ def test_conversation_rejects_route_endpoints_not_present_in_user_turn(conversat
     assert response.json() == {"status": "unavailable", "reason": "upstream"}
 
 
+@pytest.mark.parametrize("message,decision,action", [
+    ("Could you frame the area around Lalbagh for me?", {"kind": "show-place", "query": "Lalbagh"},
+     {"kind": "show-place", "query": "Lalbagh"}),
+    ("Could you frame the area around Lalbagh for me?", {"kind": "show-place", "query": "Mysuru"}, None),
+    ("Could you make the road flooding overlay visible?", {"kind": "layer", "layer": "cityRoads", "visibility": "on"},
+     {"kind": "layer", "layer": "cityRoads", "enabled": True}),
+    ("Can you switch the heat overlay off?", {"kind": "layer", "layer": "heat", "visibility": "off"},
+     {"kind": "layer", "layer": "heat", "enabled": False}),
+    ("Model 60 mm/hr for 90 minutes.", {"kind": "simulation", "intensity": 60, "duration": 90},
+     {"kind": "simulation", "intensity": 60, "duration": 90}),
+    ("Model 60 mm/hr.", {"kind": "simulation", "intensity": 60}, None),
+    ("Model 400 mm/hr for 90 minutes.", {"kind": "simulation", "intensity": 400, "duration": 90}, None),
+])
+def test_conversation_validates_site_actions(conversation_client, monkeypatch, message, decision, action):
+    monkeypatch.setattr(routes_assistant, "_generate_with_gemini", lambda *_args, **_kwargs: (json.dumps(decision), "fixture"))
+    result = conversation_client.post("/api/assistant/conversation", json={"message": message}).json()
+    if action is None:
+        assert result == {"status": "unavailable", "reason": "upstream"}
+    else:
+        assert result["status"] == "ready"
+        assert result["action"] == action
+
+
+def test_conversation_asks_for_layer_visibility_when_model_omits_it(conversation_client, monkeypatch):
+    decision = {"kind": "layer", "layer": "heat"}
+    monkeypatch.setattr(routes_assistant, "_generate_with_gemini", lambda *_args, **_kwargs: (json.dumps(decision), "fixture"))
+    result = conversation_client.post("/api/assistant/conversation", json={"message": "Make the heat layer visible."}).json()
+    assert result == {"status": "ready", "reply": "Would you like that layer on or off?"}
+
+
 def test_conversation_returns_unavailable_on_provider_failure(conversation_client, monkeypatch):
     def timeout(*_args, **_kwargs):
         raise TimeoutError
