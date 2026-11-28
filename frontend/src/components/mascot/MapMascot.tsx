@@ -75,7 +75,7 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
       ? `24-hour weather and voice alerts are on for ${weatherLocationName}.`
       : "Weather alerts are off.";
   }
-  const companion = useCXCompanion(drive, route, distances, read, weatherLocation, recognitionLanguage, onSiteCommand, (enabled) => {
+  const companion = useCXCompanion(drive, route, distances, read, weatherLocation, weatherLocationName, recognitionLanguage, onSiteCommand, (enabled) => {
     return setAlertMonitoring(enabled);
   });
   const { active: talking, canAnnounce, speak, transcript } = companion;
@@ -379,7 +379,7 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
           {!companion.supported && <p>Voice is unavailable in this browser. You can type a request.</p>}
           {talking && <>
             <p className="voice-session-hint" role="status">{voiceStatus}{companion.phase === "listening" && !companion.awake
-              ? " to begin. Then ask for weather, rain, or directions."
+              ? " to begin. Then ask for a place on the map, weather, or directions."
               : companion.phase === "working" || companion.phase === "speaking" ? " Say “C X” to interrupt." : ""}</p>
             {transcript && <p className="voice-transcript"><strong>Heard:</strong> {transcript}</p>}
             {(companion.phase === "speaking" || companion.phase === "working") &&
@@ -401,8 +401,8 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
             </select>
           </details>}
           <p id="cx-mic-help" className="mascot-voice-help">{companion.supported
-            ? "Say “Hello CX” to begin. Try “pan east” or “toggle road flood risk.” Say “C X” to interrupt a reply, or “Stop listening” to end. Your browser may process microphone audio online."
-            : "Try “show road flood risk” or “weather in Mysuru.”"}</p>
+            ? "Say “Hello CX” to begin. Try “Could you center the map on Lalbagh?” Say “C X” to interrupt a reply, or “Stop listening” to end. Your browser may process microphone audio online."
+            : "Try “Could you center the map on Lalbagh?” or “What’s the weather in Mysuru?”"}</p>
         </section>
         <div className="mascot-menu">
           <button type="button" onClick={() => setPanel("report")}><Icon name="calendar" />Forecast report</button>

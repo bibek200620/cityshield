@@ -186,6 +186,14 @@ export interface CXConversationTurn {
 export type CXConversationAction =
   | { kind: "route"; source?: string; destination?: string }
   | { kind: "weather"; hours?: number; day?: "today" | "tomorrow"; at_end?: boolean; focus?: "rain_probability" }
+  | { kind: "show-place"; query: string }
+  | { kind: "layer"; layer: "floodDepth" | "heat" | "cityRoads" | "surfaceTemperature" | "combined"; enabled?: boolean }
+  | { kind: "workspace"; panel: "map" | "rainfall" | "drive" | "weatherReport" | "outlook" | "replay" | "data" | "compare" }
+  | { kind: "pan"; direction: "left" | "right" | "up" | "down" | "north" | "south" | "east" | "west" }
+  | { kind: "zoom"; steps: number }
+  | { kind: "simulation"; preset: "light" | "moderate" | "heavy" }
+  | { kind: "simulation"; intensity: number; duration: number }
+  | { kind: "flood-demo" } | { kind: "stop-simulation" } | { kind: "reset-map" }
   | { kind: "eta" | "direction" };
 
 type CXConversationResponse = { status: "ready"; reply: string; action?: CXConversationAction }

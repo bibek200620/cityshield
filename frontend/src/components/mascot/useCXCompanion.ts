@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type CXConversationAction, type CXConversationTurn, type DrivingOption, type PlaceSearchResult } from "../../api/client";
 import { isWithinNavigationArea, type useDrivingPlanner } from "../../map/drivingPlanner";
-import { distanceSpoken, parseVoiceCommand, readCXWakePhrase, selectCXTranscript, spokenWeather, upcomingDirection, weatherFollowup, type CXSiteAction } from "./cxCommands";
+import { cxLayerLabel, cxMapFollowup, distanceSpoken, parseVoiceCommand, readCXWakePhrase, selectCXTranscript, spokenWeather, upcomingDirection, weatherFollowup, type CXSiteAction } from "./cxCommands";
 import { type VoiceOutput, type VoiceSession, useCXListening } from "./useCXListening";
 
-const help = "Try pan east, zoom in, toggle road flood risk, or simulate 60 millimetres per hour for 90 minutes. You can also ask for weather or directions.";
+const help = "Try asking me to center the map on Lalbagh, show the road flood risk layer, or run a moderate storm simulation. You can also ask for weather or directions.";
 const CONVERSATION_IDLE_MS = 45_000;
 
 function greetingReply(text: string): string | null {
@@ -23,6 +23,10 @@ function placeLabel(place: PlaceSearchResult) {
   return place.name.split(",").slice(0, 3).join(",").slice(0, 125).trim();
 }
 
+function placeWords(value: string) {
+  return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
 function isCurrentLocation(value: string | undefined) {
   return Boolean(value && /\b(?:my current (?:place|location|position)|current location|where i am|where i’m at|here)\b/i.test(value));
 }
@@ -33,6 +37,7 @@ export function useCXCompanion(
   distances: number[],
   read: VoiceOutput | undefined,
   selectedWeatherLocation: { lat: number; lng: number },
+  selectedPlaceName: string,
   language: string,
   onSiteCommand: (command: CXSiteAction) => string | Promise<string>,
   onAlertsCommand?: (enabled: boolean) => string,
@@ -44,10 +49,10 @@ export function useCXCompanion(
   const typedTurn = useRef(0);
   const inputMode = useRef<"voice" | "text">("voice");
   const conversation = useRef<{
-    expiresAt: number; timer?: number; weather: boolean; history: CXConversationTurn[];
+    expiresAt: number; timer?: number; topic?: "weather" | "map"; history: CXConversationTurn[];
     weatherLocation?: { lat: number; lng: number };
   }>({
-    expiresAt: 0, weather: false, history: [],
+    expiresAt: 0, history: [],
   });
   const request = useRef<AbortController | null>(null);
   const lastReply = useRef("");
@@ -64,7 +69,7 @@ export function useCXCompanion(
     request.current?.abort();
     request.current = null;
     window.clearTimeout(conversation.current.timer);
-    conversation.current = { expiresAt: 0, weather: false, history: [] };
+    conversation.current = { expiresAt: 0, history: [] };
     choice.current = null;
     lastReply.current = "";
     setAwake(false);
@@ -114,14 +119,23 @@ export function useCXCompanion(
       session.reply(hello);
       return;
     }
-    if (command.kind === "unknown" && conversation.current.weather) command = weatherFollowup(text) ?? command;
+    if (choice.current && Date.now() > choice.current.expiresAt) choice.current = null;
+    if (command.kind === "unknown" && choice.current && /[\p{L}\p{N}]/u.test(text)) {
+      const query = placeWords(text);
+      if (choice.current.results.some((place) => ` ${placeWords(place.name)} `.includes(` ${query} `))) {
+        command = { kind: "choose-place", query };
+      }
+    }
+    if (command.kind === "unknown") {
+      if (conversation.current.topic === "weather") command = weatherFollowup(text) ?? command;
+      if (conversation.current.topic === "map") command = cxMapFollowup(text) ?? command;
+    }
     function reply(text: string) {
       if (typedTurn.current !== turn) return;
       keepConversationOpen();
       lastReply.current = text;
       session.reply(text);
     }
-    if (choice.current && Date.now() > choice.current.expiresAt) choice.current = null;
     switch (command.kind) {
       case "workspace":
       case "layer":
@@ -133,6 +147,7 @@ export function useCXCompanion(
       case "simulation-help":
       case "stop-simulation":
         choice.current = null;
+        conversation.current.topic = undefined;
         reply(await onSiteCommand(command));
         return;
       case "alerts-on":
@@ -153,14 +168,19 @@ export function useCXCompanion(
         reply("Okay. I cancelled that request.");
         return;
       case "confirm":
-      case "choose": {
+      case "choose":
+      case "choose-place": {
         const pending = choice.current;
         if (!pending) {
           reply("There’s no place waiting for confirmation. Try asking me to find a place or navigate to it.");
           return;
         }
         const candidates = pending.results;
-        const result = command.kind === "choose" ? candidates[command.index] : candidates.length === 1 ? candidates[0] : undefined;
+        const named = command.kind === "choose-place" ? placeWords(command.query) : "";
+        const matches = named ? candidates.filter((place) => ` ${placeWords(place.name)} `.includes(` ${named} `)) : [];
+        const result = command.kind === "choose" ? candidates[command.index]
+          : command.kind === "choose-place" ? (matches.length === 1 ? matches[0] : undefined)
+            : candidates.length === 1 ? candidates[0] : undefined;
         if (!result) {
           reply(`Say ${candidates.length === 1 ? "yes" : `an option number from one to ${candidates.length}`}, or say cancel.`);
           return;
@@ -206,7 +226,7 @@ export function useCXCompanion(
       case "destination":
       case "show-place":
       case "weather": {
-        conversation.current.weather = command.kind === "weather";
+        conversation.current.topic = command.kind === "weather" ? "weather" : command.kind === "show-place" ? "map" : undefined;
         if (command.kind !== "weather") choice.current = null;
         const controller = new AbortController();
         request.current = controller;
@@ -235,16 +255,20 @@ export function useCXCompanion(
               if (locationName) answer = `For ${locationName}, ${answer}`;
               conversation.current.weatherLocation = target;
             }
+          } else if (command.kind === "show-place") {
+            const alternatives = session.alternatives?.flatMap((transcript) => {
+              const candidate = parseVoiceCommand(readCXWakePhrase(transcript) ?? transcript);
+              return candidate.kind === "show-place" ? [candidate.query] : [];
+            });
+            answer = await showMapPlace(command.query, controller.signal, alternatives);
           } else {
             const response = await api.searchPlaces(command.query, controller.signal);
             if (controller.signal.aborted) return;
             const results = response.results.filter((item) => isWithinNavigationArea(item) && item.name.trim()).slice(0, 3);
             if (!results.length) {
               answer = "I couldn’t find that place in India. Try a more specific place name or neighbourhood.";
-            } else if (command.kind === "show-place" && results.length === 1) {
-              answer = await onSiteCommand({ kind: "select-place", place: results[0] });
             } else {
-              choice.current = { results, expiresAt: Date.now() + 45_000, purpose: command.kind === "show-place" ? "map" : "navigate" };
+              choice.current = { results, expiresAt: Date.now() + 45_000, purpose: "navigate" };
               answer = results.length === 1 ? `Navigate to ${placeLabel(results[0])}? Say yes or cancel.`
                 : `I found ${results.length} places. ${results.map((item, index) => `Option ${index + 1}, ${placeLabel(item)}.`).join(" ")} Reply with the option number, or cancel.`;
             }
@@ -265,7 +289,7 @@ export function useCXCompanion(
         return;
       case "unknown": {
         if (choice.current) {
-          reply("Say yes or an option number to choose a destination, or say cancel.");
+          reply("Reply with the place name, its option number, or say cancel. Say yes if there’s one option.");
           return;
         }
         const greeting = greetingReply(text);
@@ -280,7 +304,7 @@ export function useCXCompanion(
         const controller = new AbortController();
         request.current = controller;
         const timer = window.setTimeout(() => controller.abort(), 14_000);
-        let answer = "I couldn’t reach conversation mode just now. You can still ask me for weather or navigation.";
+        let answer = "I couldn’t reach conversation mode just now. Try asking me to center the map on a place, show a layer, or check the weather.";
         let handledAction = false;
         try {
           const result = await api.askCX(text, conversation.current.history, controller.signal);
@@ -292,12 +316,18 @@ export function useCXCompanion(
             ];
             conversation.current.history = turns.slice(-4);
             if (result.action) {
-              await handleConversationAction(result.action, session, controller.signal);
-              handledAction = true;
+              answer = "I couldn’t finish that action. Try again in a moment.";
+              await handleConversationAction(result.action, { ...session, reply: (message) => {
+                if (controller.signal.aborted || request.current !== controller) return;
+                handledAction = true;
+                turns[turns.length - 1] = { role: "assistant", text: message.slice(0, 500) };
+                conversation.current.history = turns.slice(-4);
+                reply(message);
+              } }, controller.signal, mode);
               return;
             }
           } else if (result.status === "unavailable" && result.reason === "disabled") {
-            answer = "I can help with weather and driving. Try asking for tomorrow’s forecast or tell me where you’d like to go.";
+            answer = help;
           } else if (result.status === "unavailable" && result.reason === "busy") {
             answer = "Conversation mode is busy. Try again in a moment.";
           }
@@ -315,6 +345,40 @@ export function useCXCompanion(
     }
   }
 
+  async function showMapPlace(query: string, signal: AbortSignal, alternatives: string[] = []) {
+    async function search(candidate: string) {
+      const response = await api.searchPlaces(candidate.replace(/\s+in\s+/i, ", "), signal);
+      const matches: PlaceSearchResult[] = [];
+      for (const place of response.results) {
+        if (!isWithinNavigationArea(place) || !place.name.trim()) continue;
+        const duplicate = matches.some((match) => {
+          const separation = Math.hypot(match.lat - place.lat, match.lng - place.lng);
+          return (separation < 0.008 && placeWords(match.name) === placeWords(place.name)) ||
+            (separation < 0.001 && placeWords(match.name.split(",")[0]) === placeWords(place.name.split(",")[0]));
+        });
+        if (!duplicate) matches.push(place);
+        if (matches.length === 3) break;
+      }
+      return matches;
+    }
+    let results = await search(query);
+    let usedAlternative = false;
+    const alternativesByName = new Map(alternatives.map((candidate) => [placeWords(candidate), candidate]));
+    alternativesByName.delete(placeWords(query));
+    for (const candidate of [...alternativesByName.values()].slice(0, 2)) {
+      if (results.length || signal.aborted) break;
+      results = await search(candidate);
+      usedAlternative = results.length > 0;
+    }
+    signal.throwIfAborted();
+    if (!results.length) return `I couldn’t find ${query} in India. Try including the city or a nearby landmark.`;
+    if (results.length === 1 && !usedAlternative) return onSiteCommand({ kind: "select-place", place: results[0] });
+    choice.current = { results, expiresAt: Date.now() + 45_000, purpose: "map" };
+    if (results.length === 1) return `Did you mean ${placeLabel(results[0])}? Reply yes or cancel.`;
+    const options = results.map((place, index) => `Option ${index + 1}, ${placeLabel(place)}.`).join(" ");
+    return `I found several places. ${options} Choose an option, say which city it’s in, or say cancel.`;
+  }
+
   async function compareNamedRoute(origin: PlaceSearchResult, destination: PlaceSearchResult) {
     drive.setPoint("source", { ...origin, name: placeLabel(origin) });
     drive.setPoint("destination", { ...destination, name: placeLabel(destination) });
@@ -325,10 +389,27 @@ export function useCXCompanion(
       ? ` About ${Math.max(1, Math.round(route.eta_seconds / 60))} minutes. Open Routes to see the options.` : ""}`;
   }
 
-  async function handleConversationAction(action: CXConversationAction, session: VoiceSession, signal: AbortSignal) {
+  async function handleConversationAction(action: CXConversationAction, session: VoiceSession, signal: AbortSignal, mode: "voice" | "text") {
     if (action.kind === "eta" || action.kind === "direction") {
-      await onCommand(action.kind === "eta" ? "How far is left?" : "What’s the next turn?", session);
+      await onCommand(action.kind === "eta" ? "How far is left?" : "What’s the next turn?", session, mode);
       return;
+    }
+    switch (action.kind) {
+      case "show-place":
+        conversation.current.topic = "map";
+        session.reply(await showMapPlace(action.query, signal));
+        return;
+      case "layer":
+      case "workspace":
+      case "pan":
+      case "zoom":
+      case "reset-map":
+      case "simulation":
+      case "stop-simulation":
+      case "flood-demo":
+        conversation.current.topic = undefined;
+        session.reply(await onSiteCommand(action.kind === "layer" ? { ...action, label: cxLayerLabel(action.layer) } : action));
+        return;
     }
     if (action.kind === "weather") {
       const period = action.day ? { day: action.day } as const
@@ -340,13 +421,14 @@ export function useCXCompanion(
         action.focus === "rain_probability",
       );
       if (!signal.aborted) {
-        conversation.current.weather = true;
+        conversation.current.topic = "weather";
         lastReply.current = answer;
         session.reply(answer);
       }
       return;
     }
     if (action.kind !== "route") return;
+    conversation.current.topic = undefined;
     if (!action.destination) {
       lastReply.current = "Where would you like to go?";
       session.reply(lastReply.current);
@@ -406,7 +488,9 @@ export function useCXCompanion(
       },
     });
   }, stopSession, interruptTurn, ["locating", "routing", "active", "rerouting"].includes(navigationMode),
-  language, (candidates) => selectCXTranscript(candidates, Date.now() < conversation.current.expiresAt));
+  language, (candidates) => selectCXTranscript(candidates, Date.now() < conversation.current.expiresAt),
+  [selectedPlaceName, ...(choice.current?.results.map((place) => place.name) ?? [])]
+    .map((name) => name.split(",")[0].trim()).filter(Boolean));
   const { phase, speak } = listener;
   const waitingForChoice = Boolean(choice.current && Date.now() <= choice.current.expiresAt);
 
