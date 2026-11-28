@@ -55,10 +55,11 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
   const rainProbability = /^(?:what(?:'s| is)\s+)?(?:the\s+)?(?:chances?|probability)\s+of\s+rain(?: .+)?\??$/i.test(lower);
   const weatherRequest = rainProbability || /^(?:what(?:'s| is)\s+(?:the\s+)?(?:weather|temperature|forecast)(?: .+)?|weather(?: .+)?|forecast(?: .+)?|is it (?:raining|going to rain)(?: .+)?|will it rain(?: .+)?|rain(?: .+))\??$/i.test(lower);
   if (weatherRequest) {
-    const inPlace = /\b(?:weather|temperature|forecast|chance of rain|probability of rain)\b.*?\b(?:in|at)\s+(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
-    const forPlace = /\b(?:weather|temperature|forecast)\s+for\s+(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
+    const inPlace = /\b(?:weather|temperature|forecast|chance of rain|probability of rain)\b.*?\b(?:in|at)\s+(?!(?:the\s+)?next\b)(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
+    const forPlace = /\b(?:weather|temperature|forecast)\s+for\s+(?!(?:the\s+)?next\b)(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
     const requestedPlace = (inPlace?.[1] ?? forPlace?.[1])?.trim();
     const location = requestedPlace && !/^(?:(?:the )?next|today|tomorrow|right now|now)\b/i.test(requestedPlace)
+      && !/^[a-z\d-]+(?: [a-z\d-]+)?\s+(?:hours?|hrs?|days?)[?.!]*$/i.test(requestedPlace)
       ? requestedPlace : undefined;
     const weatherCommand = (period?: WeatherPeriod, asksRainProbability = false): VoiceCommand => ({
       kind: "weather", ...(period ? { period } : {}), ...(location ? { location } : {}),

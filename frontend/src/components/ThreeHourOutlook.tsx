@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type LatLng, type PointForecastResponse, type WeatherAvailabilityResponse } from "../api/client";
+import { api, type LatLng, type PointForecastResponse } from "../api/client";
+import type { useWeatherNowcast } from "../map/weatherNowcast";
 import Icon, { type IconName } from "./Icon";
 import PointForecast from "./PointForecast";
 import TwoDayWeatherReport from "./TwoDayWeatherReport";
@@ -15,94 +16,60 @@ const degrees = (value: number) => `${Math.round(value)}°`;
 
 type Condition = {
   label: string;
-  sky: "clear" | "night" | "clouds" | "rain" | "snow" | "neutral";
   icon: IconName;
 };
 
 function condition(code?: number | null, isDay?: number | null): Condition {
   if (code === 0 || code === 1) {
-    if (isDay === 0) return { label: code === 0 ? "Clear night" : "Mainly clear", sky: "night", icon: "moon" };
-    return { label: code === 0 ? "Clear sky" : "Mainly clear", sky: "clear", icon: "heat" };
+    if (isDay === 0) return { label: code === 0 ? "Clear night" : "Mainly clear", icon: "moon" };
+    return { label: code === 0 ? "Clear sky" : "Mainly clear", icon: "heat" };
   }
-  if (code === 2) return { label: "Partly cloudy", sky: "clouds", icon: "partly" };
-  if (code === 3) return { label: "Overcast", sky: "clouds", icon: "cloud" };
-  if (code === 45 || code === 48) return { label: "Fog", sky: "clouds", icon: "cloud" };
+  if (code === 2) return { label: "Partly cloudy", icon: "partly" };
+  if (code === 3) return { label: "Overcast", icon: "cloud" };
+  if (code === 45 || code === 48) return { label: "Fog", icon: "cloud" };
   if (code === 71 || code === 73 || code === 75 || code === 77 || code === 85 || code === 86) {
-    return { label: "Snow", sky: "snow", icon: "snow" };
+    return { label: "Snow", icon: "snow" };
   }
   if (code === 95 || code === 96 || code === 97 || code === 99) {
-    return { label: "Thunderstorms", sky: "rain", icon: "rain" };
+    return { label: "Thunderstorms", icon: "rain" };
   }
   if (code === 51 || code === 53 || code === 55 || code === 56 || code === 57) {
-    return { label: "Drizzle", sky: "rain", icon: "rain" };
+    return { label: "Drizzle", icon: "rain" };
   }
   if (code === 61 || code === 63 || code === 65 || code === 66 || code === 67 || code === 80 || code === 81 || code === 82) {
-    return { label: "Rain", sky: "rain", icon: "rain" };
+    return { label: "Rain", icon: "rain" };
   }
-  return { label: "Condition unavailable", sky: "neutral", icon: "thermometer" };
+  return { label: "Condition unavailable", icon: "thermometer" };
 }
 
-export default function ThreeHourOutlook({ open, onOpen, onClose, location, locationName = "India" }: {
+export default function ThreeHourOutlook({ open, onOpen, onClose, location, nowcast, locationName = "India" }: {
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
-  location?: LatLng;
+  location: LatLng;
+  nowcast: ReturnType<typeof useWeatherNowcast>;
   locationName?: string;
 }) {
-  const [weather, setWeather] = useState<WeatherAvailabilityResponse | null>(null);
-  const [pointForecast, setPointForecast] = useState<PointForecastResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [request, setRequest] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const { data: weather, error, refresh } = nowcast;
+  const [point, setPoint] = useState<{ key: string; forecast: PointForecastResponse | null } | null>(null);
   const [showReport, setShowReport] = useState(false);
-  const latitude = location?.lat;
-  const longitude = location?.lng;
+  const { lat, lng } = location;
+  const pointKey = `${lat},${lng}`;
+  const needsFallback = weather?.status === "unavailable" || Boolean(error);
+  const pointForecast = needsFallback && point?.key === pointKey ? point.forecast : null;
+  const fallbackLoading = needsFallback && point?.key !== pointKey;
   const dialog = useRef<HTMLDialogElement>(null);
-  const preview = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (!needsFallback) return;
     const controller = new AbortController();
-    setWeather(null);
-    setPointForecast(null);
-    setError(null);
-    setLoading(true);
-    api.getWeatherNowcast(controller.signal, latitude !== undefined && longitude !== undefined
-      ? { lat: latitude, lng: longitude } : undefined)
-      .then(async (result) => {
-        if (controller.signal.aborted) return;
-        setWeather(result);
-        if (result.status === "unavailable") {
-          try {
-            const point = { lat: latitude ?? 12.9716, lng: longitude ?? 77.5946 };
-            const fallback = await api.getPointForecast(point, controller.signal);
-            if (!controller.signal.aborted) setPointForecast(fallback);
-          } catch {
-            if (!controller.signal.aborted) {
-              setError("The point forecast could not load. Check the backend forecast configuration.");
-            }
-          }
-        }
-      })
-      .catch(async () => {
-        if (!controller.signal.aborted) {
-          try {
-            const fallback = await api.getPointForecast(
-              { lat: latitude ?? 12.9716, lng: longitude ?? 77.5946 }, controller.signal,
-            );
-            if (!controller.signal.aborted) setPointForecast(fallback);
-          } catch {
-            if (!controller.signal.aborted) {
-              setError("The point forecast could not load. Check the backend forecast configuration.");
-            }
-          }
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
+    void api.getPointForecast({ lat, lng }, controller.signal).then((forecast) => {
+      if (!controller.signal.aborted) setPoint({ key: pointKey, forecast });
+    }).catch(() => {
+      if (!controller.signal.aborted) setPoint({ key: pointKey, forecast: null });
+    });
     return () => controller.abort();
-  }, [request, latitude, longitude]);
+  }, [lat, lng, needsFallback, pointKey]);
 
   useEffect(() => {
     if (open && dialog.current && !dialog.current.open) {
@@ -112,16 +79,13 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, location, loca
   }, [open]);
 
   const forecast = weather?.status === "ready" ? weather : null;
-  const pointCurrent = pointForecast?.hours[0] ?? null;
+  const pointCurrent = pointForecast?.hours?.[0] ?? null;
   const current = condition(forecast?.weather_code, forecast?.is_day);
-  const animated = current.sky !== "neutral" && current.sky !== "night";
-  const unavailable = !loading && !forecast && !pointCurrent
-    ? error ?? (weather?.status === "unavailable" ? weather.message : null)
-    : null;
+  const unavailable = fallbackLoading || pointCurrent ? null : error ?? (weather?.status === "unavailable" ? weather.message : null);
 
   return (
     <>
-      <button ref={preview} type="button" className="weather-preview" data-sky={current.sky}
+      <button type="button" className="weather-preview"
         aria-label="Open next 3 hours forecast" aria-haspopup="dialog" onClick={onOpen}>
         <span className="preview-heading">
           <span><span>Next 3 hours</span><small>{locationName}</small></span>
@@ -165,13 +129,10 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, location, loca
         </span>}
       </button>
 
-      <dialog className="weather-dialog" ref={dialog} aria-labelledby="weather-title" data-sky={current.sky}
-        data-paused={paused} onClose={() => {
+      <dialog className="weather-dialog" ref={dialog} aria-labelledby="weather-title" onClose={() => {
           setShowReport(false);
           onClose();
-          preview.current?.focus();
         }}>
-        <div className="weather-scene" aria-hidden="true"><span /><span /></div>
         <div className="weather-dialog-content">
           <header className="weather-dialog-header">
             <div>
@@ -184,10 +145,8 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, location, loca
           {unavailable && <div className="weather-empty" role="status">
             <p>{unavailable}</p>
             <button type="button" onClick={() => {
-              setError(null);
-              setWeather(null);
-              setPointForecast(null);
-              setRequest((value) => value + 1);
+              setPoint(null);
+              refresh();
             }}>Retry forecast</button>
           </div>}
           {!forecast && !pointCurrent && !unavailable && <p role="status">Loading the hourly outlook…</p>}
@@ -271,10 +230,8 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, location, loca
           <div className="weather-detail-actions">
             <button type="button" aria-expanded={showReport} aria-controls="weather-two-day"
               onClick={() => setShowReport((value) => !value)}>{showReport ? "Hide two-day weather report" : "Two-day weather report"}<Icon name="chevron" /></button>
-            {forecast && animated && <button type="button" className="weather-motion-toggle"
-              onClick={() => setPaused((value) => !value)}>{paused ? "Resume background motion" : "Pause background motion"}</button>}
           </div>
-        <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport location={location} locationName={locationName} />}</div>
+        <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport key={pointKey} location={location} locationName={locationName} />}</div>
         </div>
       </dialog>
     </>

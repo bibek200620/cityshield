@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { floodDemoPreset, useFloodStore } from "../store/useFloodStore";
 import IndiaCitySelect from "./IndiaCitySelect";
-import type { MapPlace } from "./PlaceSearch";
+import { supportsBengaluruSimulation, type MapPlace } from "../map/places";
 
 export default function ScenarioSlider({ selectedPlace, onSelectPlace }: {
   selectedPlace: MapPlace | null;
@@ -17,24 +17,25 @@ export default function ScenarioSlider({ selectedPlace, onSelectPlace }: {
   const applied = useFloodStore((s) => s.appliedRainfall);
   const stopSimulation = useFloodStore((s) => s.stopSimulation);
   const heatOffset = useFloodStore((s) => s.heatOffsetC);
+  const surfaceOffset = useFloodStore((s) => s.surfaceOffsetC);
   const showRoads = useFloodStore((s) => s.layerVisibility.cityRoads);
   const toggleLayer = useFloodStore((s) => s.toggleLayer);
-  const [draft, setDraft] = useState<{ intensity: string; duration: string; preset: string; temperature: string } | null>(null);
+  const [draft, setDraft] = useState<{ intensity: string; duration: string; preset: string; air: string; surface: string } | null>(null);
   const selectedPresetId = useFloodStore((s) => s.selectedPresetId);
-  const supportsSimulation = Boolean(selectedPlace && /bengaluru|bangalore/i.test(selectedPlace.name)
-    && selectedPlace.center[0] >= 77.39 && selectedPlace.center[0] <= 77.85
-    && selectedPlace.center[1] >= 12.57 && selectedPlace.center[1] <= 13.21);
-  const values = draft ?? { intensity: String(current.intensity), duration: String(current.duration), preset: selectedPresetId ?? "", temperature: String(heatOffset) };
+  const supportsSimulation = supportsBengaluruSimulation(selectedPlace);
+  const values = draft ?? { intensity: String(current.intensity), duration: String(current.duration), preset: selectedPresetId ?? "", air: String(heatOffset), surface: String(surfaceOffset) };
   const flooded = result?.road_segments.filter((segment) => segment.state === "flooded").length;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!supportsSimulation) return;
+    const offsets = { air: Number(values.air), surface: Number(values.surface) };
     if (values.preset === floodDemoPreset.id) {
-      void runCustomRainfall(floodDemoPreset.intensity, floodDemoPreset.duration, Number(values.temperature), true);
+      void runCustomRainfall(floodDemoPreset.intensity, floodDemoPreset.duration, offsets, true);
     } else if (values.preset) {
-      void runScenario(values.preset, Number(values.temperature));
+      void runScenario(values.preset, offsets);
     } else {
-      void runCustomRainfall(Number(values.intensity), Number(values.duration), Number(values.temperature));
+      void runCustomRainfall(Number(values.intensity), Number(values.duration), offsets);
     }
   }
 
@@ -75,13 +76,25 @@ export default function ScenarioSlider({ selectedPlace, onSelectPlace }: {
               onChange={(event) => setDraft({ ...values, duration: event.target.value, preset: "" })} />
           </label>
         </div>
-        <label>
-          Air-temperature offset (°C)
-          <input type="number" min="-20" max="20" step="0.1" required value={values.temperature}
-            aria-describedby="temperature-offset-help"
-            onChange={(event) => setDraft({ ...values, temperature: event.target.value })} />
-        </label>
-        <p id="temperature-offset-help" className="scenario-result">Applies a what-if offset to the displayed 2 m air-temperature forecast. It does not change the forecast itself.</p>
+        <details className="scenario-advanced">
+          <summary>Temperature settings</summary>
+          <label>
+            Air-temperature offset (°C)
+            <input type="number" min="-20" max="20" step="0.1" required value={values.air}
+              aria-describedby="temperature-offset-help"
+              onInvalid={(event) => { event.currentTarget.closest("details")?.setAttribute("open", ""); }}
+              onChange={(event) => setDraft({ ...values, air: event.target.value })} />
+          </label>
+          <p id="temperature-offset-help" className="scenario-result">Applies a what-if offset to the displayed 2 m air-temperature forecast and India combined screen.</p>
+          <label>
+            Landsat surface-temperature offset (°C)
+            <input type="number" min="-20" max="20" step="0.1" required value={values.surface}
+              aria-describedby="surface-offset-help"
+              onInvalid={(event) => { event.currentTarget.closest("details")?.setAttribute("open", ""); }}
+              onChange={(event) => setDraft({ ...values, surface: event.target.value })} />
+          </label>
+          <p id="surface-offset-help" className="scenario-result">Applies to the historical Bengaluru Landsat display and ward analysis.</p>
+        </details>
         <button className="primary-button" disabled={loading || !supportsSimulation}>
           {loading ? "Running…" : "Run local simulation"}
         </button>

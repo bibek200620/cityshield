@@ -236,6 +236,7 @@ test("CX interprets a full turn before handling a follow-up with forecast data",
 });
 
 test("CX speaks current weather and a requested forecast duration without a transcript", async ({ page }) => {
+  await page.clock.setFixedTime(new Date(Date.UTC(2026, 10, 27, 23, 59)));
   const hours = Array.from({ length: 48 }, (_, index) => ({
     valid_at: new Date(Date.UTC(2026, 10, 28, index)).toISOString(),
     air_temperature_c: 22 + index, feels_like_c: 23 + index, relative_humidity_pct: 70, precipitation_mm: 1,

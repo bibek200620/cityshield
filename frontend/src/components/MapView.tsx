@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Layer } from "@deck.gl/core";
-import { PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
+import type { MultiPolygon, Polygon } from "geojson";
+import { GeoJsonLayer, PathLayer, PolygonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import maplibregl from "maplibre-gl";
 import type { FillExtrusionLayerSpecification } from "maplibre-gl";
-import type { CityFloodCell, CityFloodResponse, DrivingOption, LatLng, NodePrediction, RoadSegment, ScenarioRouteExposure, TrafficLevel } from "../api/client";
+import type { CityFloodCell, CityFloodResponse, DrivingOption, ExposureCell, LatLng, NodePrediction, RoadSegment, ScenarioRouteExposure, TrafficLevel } from "../api/client";
 import { createIndiaHexGrid, getMapDetail, summarizeHexes, type HexCell, type HexGrids, type HexSummary, type IndiaBoundary, type IndiaGridCell, type MapBounds, type MapDetail } from "../map/hexGrid";
 import { loadIndiaHexWeather, type IndiaHexWeather } from "../map/nationalHexWeather";
 import { createRoadRunoffScreen, ROAD_SCREEN_MIN_ZOOM, type RoadRunoff } from "../map/roadRunoff";
 import { useFloodStore } from "../store/useFloodStore";
-import type { MapPlace } from "./PlaceSearch";
+import type { MapPlace } from "../map/places";
 import { pathForFraction, routeVertexDistances, type LiveLocation, type NavigationMode, type RouteMatch, type Waypoints } from "../map/drivingPlanner";
 import Icon from "./Icon";
+
+export interface CityHeat {
+  scene_id: string;
+  date: string;
+  resolution_m: number;
+  valid_pixel_fraction: number;
+  rmse_c: number;
+  cells: [lng: number, lat: number, temperature: number, gridKey?: string][];
+}
 
 const BASEMAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const AREA_VIEW = { padding: 48, maxZoom: 14.2 };
@@ -23,7 +33,7 @@ const ROAD_COLORS = {
   at_risk: [177, 103, 32],
   flooded: [175, 45, 48],
 } satisfies Record<RoadSegment["state"], [number, number, number]>;
-const RUNOFF_COLORS: [number, number, number][] = [[119, 66, 179], [145, 28, 145], [97, 18, 85]];
+const RUNOFF_COLORS: [number, number, number][] = [[94, 123, 154], [59, 93, 132], [34, 57, 89]];
 const RAINFALL_PROXY_COLORS: [number, number, number][] = [
   [29, 119, 143], [52, 146, 139], [109, 174, 151], [165, 194, 151],
   [214, 217, 153], [218, 180, 107], [193, 128, 75], [143, 88, 61],
@@ -45,16 +55,17 @@ const TEMPERATURE_PALETTE = [
 ] as const;
 
 const FLOOD_LEGEND = [
-  { label: "0 mm", color: RAINFALL_PROXY_COLORS[0] },
-  { label: ">0–5 mm", color: RAINFALL_PROXY_COLORS[2] },
-  { label: ">5–20 mm", color: RAINFALL_PROXY_COLORS[5] },
-  { label: ">20 mm", color: RAINFALL_PROXY_COLORS[7] },
-  { label: "Permanent water", color: [129, 141, 148] },
+  { label: "0 mm", color: [227, 234, 241], opacity: 70 },
+  { label: ">0–5 mm", color: [165, 191, 220], opacity: 145 },
+  { label: ">5–20 mm", color: [100, 143, 189], opacity: 170 },
+  { label: ">20 mm", color: [43, 89, 142], opacity: 197 },
+  { label: "Permanent water", color: [146, 158, 170], opacity: 135 },
 ] as const;
 
 function floodScreenColor(score: number | null): [number, number, number, number] {
   const index = score === null ? 4 : score === 0 ? 0 : score <= 5 ? 1 : score <= 20 ? 2 : 3;
-  return [...FLOOD_LEGEND[index].color, index === 0 ? 110 : 175];
+  const { color, opacity } = FLOOD_LEGEND[index];
+  return [...color, opacity];
 }
 
 function depthColor(depth: number): [number, number, number, number] {
@@ -135,10 +146,12 @@ type IndiaWeatherHex = IndiaGridCell & Omit<IndiaHexWeather, "id">;
 type CityFloodHover = HexSummary & { weather: IndiaWeatherHex | null };
 
 export default function MapView({
-  place, cityFlood, onReset, onCurrentLocation, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
-  navigation, assistant, weatherWidget, scenarioRoute, trafficSegments,
+  place, wardOutline, cityHeat, cityFlood, onReset, onCurrentLocation, drivePoints, drivingRoutes, selectedDrivingId, onPickPoint,
+  navigation, assistant, scenarioRoute, trafficSegments,
 }: {
   place: MapPlace | null;
+  wardOutline?: Polygon | MultiPolygon;
+  cityHeat: CityHeat | null;
   cityFlood: Extract<CityFloodResponse, { status: "ready" }> | null;
   onReset: () => void;
   onCurrentLocation?: (location: LatLng) => void;
@@ -148,7 +161,6 @@ export default function MapView({
   onPickPoint?: (point: LatLng) => void;
   navigation: { mode: NavigationMode; location: LiveLocation | null; routeMatch: RouteMatch | null };
   assistant: ReactNode;
-  weatherWidget: ReactNode;
   scenarioRoute?: ScenarioRouteExposure;
   trafficSegments?: DrivingOption["traffic_segments"];
 }) {
@@ -170,6 +182,7 @@ export default function MapView({
   const [roadScreen, setRoadScreen] = useState<{
     source: typeof cityFlood; segments: RoadRunoff[]; status: "ready" | "zoom" | "unavailable";
   } | null>(null);
+  const exposure = useFloodStore((s) => s.combinedExposure);
   const result = useFloodStore((s) => s.simulateResult);
   const route = useFloodStore((s) => s.route);
   const selectedRoute = useFloodStore((s) => s.selectedRouteId);
@@ -178,6 +191,9 @@ export default function MapView({
   const currentSurfaceTemperature = useRef(visibility.surfaceTemperature);
   currentSurfaceTemperature.current = visibility.surfaceTemperature;
   const heatOffset = useFloodStore((s) => s.heatOffsetC);
+  const surfaceOffset = useFloodStore((s) => s.surfaceOffsetC);
+  const currentSurfaceOffset = useRef(surfaceOffset);
+  currentSurfaceOffset.current = surfaceOffset;
   const currentHeatOffset = useRef(heatOffset);
   currentHeatOffset.current = heatOffset;
   const nationalLayerActive = visibility.floodDepth || visibility.heat || visibility.combined;
@@ -185,7 +201,7 @@ export default function MapView({
   const centerLat = viewBounds ? (viewBounds[0][1] + viewBounds[1][1]) / 2 : null;
   const inBengaluruView = viewZoom >= 10.5 && centerLng !== null && centerLat !== null
     && centerLng >= 77.39 && centerLng <= 77.85 && centerLat >= 12.57 && centerLat <= 13.21;
-  const localFloodReady = visibility.floodDepth && Boolean(cityFlood);
+  const localFloodReady = visibility.cityRunoff && Boolean(cityFlood);
   const bellandurDetailActive = Boolean(inBengaluruView && localFloodReady);
   const indiaGrid = useMemo(() => viewBounds && indiaBoundary && nationalLayerActive
     ? createIndiaHexGrid(viewBounds, viewZoom, indiaBoundary)
@@ -245,7 +261,7 @@ export default function MapView({
   useEffect(() => () => fineHexesRequest.current?.abort(), []);
 
   const floodHexes = useMemo<CityFloodHover[]>(() => {
-    if (!mesh || !visibility.floodDepth || !cityFlood || !bellandurDetailActive) return [];
+    if (!mesh || !cityFlood || !bellandurDetailActive) return [];
     const values = new Map<string, number | null>();
     for (const cell of cityFlood.cells) {
       values.set(cell.id.split(":").slice(0, 2).join(":"), cell.screen_mm);
@@ -269,12 +285,20 @@ export default function MapView({
       }
       return { ...summary, weather: nearest };
     });
-  }, [bellandurDetailActive, cityFlood, indiaWeatherHexes, mesh, visibility.floodDepth]);
+  }, [bellandurDetailActive, cityFlood, indiaWeatherHexes, mesh]);
 
-  const hasMapOverlay = Boolean((visibility.floodDepth && (cityFlood || indiaRainHexes.length))
+  const heatHexes = useMemo(() => {
+    if (!mesh || !visibility.cityHeat || !cityHeat) return [];
+    const values = new Map<string, number>();
+    for (const [, , temperature, key] of cityHeat.cells) {
+      if (key) values.set(key, temperature);
+    }
+    return summarizeHexes(mesh, values);
+  }, [cityHeat, mesh, visibility.cityHeat]);
+  const hasMapOverlay = Boolean((visibility.floodDepth && indiaRainHexes.length) || localFloodReady || heatHexes.length
     || (visibility.heat && indiaHeatHexes.length) || (visibility.combined && indiaCompoundHexes.length)
     || visibility.surfaceTemperature);
-  const hasHexes = floodHexes.length > 0 || indiaGrid.length > 0
+  const hasHexes = floodHexes.length > 0 || heatHexes.length > 0 || indiaGrid.length > 0
     || indiaRainHexes.length > 0 || indiaHeatHexes.length > 0;
 
   useEffect(() => {
@@ -307,8 +331,8 @@ export default function MapView({
       currentDetail = next;
       setDetail(next);
     });
-    instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-    instance.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    instance.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+    instance.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "top-left");
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true, timeout: 10_000 },
       trackUserLocation: true,
@@ -316,12 +340,16 @@ export default function MapView({
       showAccuracyCircle: true,
     });
     geolocate.on("geolocate", (event) => onCurrentLocation?.({ lat: event.coords.latitude, lng: event.coords.longitude }));
-    instance.addControl(geolocate, "bottom-right");
+    instance.addControl(geolocate, "top-right");
     const deckOverlay = new MapboxOverlay({
       layers: [],
       getTooltip: ({ object, layer }) => {
         if (!object) return null;
         switch (layer?.id) {
+          case "city-heat-hexes":
+            return `Historical Landsat surface temperature: ${valueOrUnavailable(object.value == null ? null : object.value + currentSurfaceOffset.current, " °C")}`;
+          case "both-elevated":
+            return "Bellandur pilot overlap: simulated depth ≥15 cm and surface heat in the scene’s top decile.";
           case "flood-nodes":
             return `Simulated depth: ${(object.depth_m_mean * 100).toFixed(1)} cm\nModel spread: ±${(object.depth_m_std * 100).toFixed(1)} cm`;
           case "flood-roads":
@@ -706,17 +734,32 @@ export default function MapView({
         updateTriggers: { getFillColor: heatOffset },
       }));
     }
+    if (heatHexes.length) {
+      layers.push(new PolygonLayer<HexSummary>({
+        id: "city-heat-hexes",
+        data: heatHexes,
+        getPolygon: (cell) => cell.rings,
+        getFillColor: (cell) => {
+          const weight = Math.max(0, Math.min(1, ((cell.value ?? 25) + surfaceOffset - 25) / 20));
+          return [Math.round(250 - 75 * weight), Math.round(210 - 175 * weight), Math.round(131 - 70 * weight), 178];
+        },
+        updateTriggers: { getFillColor: surfaceOffset },
+        getLineColor: [255, 221, 161, 155],
+        lineWidthMinPixels: 1,
+        pickable: true,
+      }));
+    }
     if (floodHexes.length) {
       layers.push(new PolygonLayer<CityFloodHover>({
         id: "city-flood-hexes",
         data: floodHexes,
         getPolygon: (cell) => cell.rings,
         getFillColor: (cell) => floodScreenColor(cell.value),
-        getLineColor: [46, 86, 117, 140],
+        getLineColor: [98, 131, 166, 112],
         lineWidthMinPixels: 1,
         pickable: true,
       }));
-    } else if (visibility.floodDepth && cityFlood) {
+    } else if (visibility.cityRunoff && cityFlood) {
       layers.push(new PolygonLayer<CityFloodCell>({
         id: "city-flood",
         data: cityFlood.cells,
@@ -724,6 +767,24 @@ export default function MapView({
         getFillColor: (cell) => floodScreenColor(cell.screen_mm),
         stroked: false,
         pickable: true,
+      }));
+    }
+    layers.push(new GeoJsonLayer({
+      id: "gba-boundary",
+      data: "/data/bengaluru-boundary.geojson",
+      filled: false,
+      getLineColor: [77, 98, 119, 190],
+      getLineWidth: 1.35,
+      lineWidthUnits: "pixels",
+    }));
+    if (wardOutline) {
+      layers.push(new GeoJsonLayer({
+        id: "selected-ward",
+        data: { type: "Feature", geometry: wardOutline, properties: {} },
+        filled: false,
+        getLineColor: [36, 77, 128],
+        getLineWidth: 2.5,
+        lineWidthUnits: "pixels",
       }));
     }
     if (roadSegments?.length) {
@@ -759,6 +820,20 @@ export default function MapView({
           if (object) selectNode((object as NodePrediction).node_id);
           return Boolean(object);
         },
+      }));
+    }
+    if (visibility.pilotExposure && exposure?.status === "ready") {
+      layers.push(new ScatterplotLayer<ExposureCell>({
+        id: "both-elevated",
+        data: exposure.cells.filter((cell) => cell.both_elevated),
+        getPosition: (cell) => [cell.lng, cell.lat],
+        getRadius: exposure.grid_resolution_m / 2,
+        radiusMinPixels: 4,
+        getFillColor: [129, 78, 180, 230],
+        getLineColor: [255, 255, 255],
+        lineWidthMinPixels: 1,
+        stroked: true,
+        pickable: true,
       }));
     }
     if (route && !drivingRoutes?.length) {
@@ -842,9 +917,9 @@ export default function MapView({
       }
     }
     overlay.current?.setProps({ layers });
-  }, [cityFlood, floodHexes, indiaGrid, indiaHeatHexes, indiaRainHexes, indiaCompoundHexes, nationalLayerActive, nationalWeather,
+  }, [cityFlood, heatHexes, floodHexes, wardOutline, exposure, indiaGrid, indiaHeatHexes, indiaRainHexes, indiaCompoundHexes, nationalLayerActive, nationalWeather,
     nationalWeatherLoading,
-    result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, roadSegments,
+    result, route, selectedRoute, visibility, drivingRoutes, selectedDrivingId, heatOffset, surfaceOffset, roadSegments,
     scenarioRoute, trafficSegments, selectNode]);
 
   return (
@@ -854,12 +929,11 @@ export default function MapView({
         {mapError && <p className="map-status" role="status">Basemap unavailable. Check your connection or browser graphics support.</p>}
         <button className="map-reset" type="button" aria-label="View all India" title="View all India"
           onClick={() => { onReset(); map.current?.fitBounds(INDIA_BOUNDS, INDIA_VIEW); }}>
-          <Icon name="extent" /><span>View all India</span>
+          <Icon name="extent" />
         </button>
       </div>
-      <div className="map-footer">{assistant}</div>
-      <aside className="map-info-rail" aria-label="Forecast and map information">
-        <div className="map-weather">{weatherWidget}</div>
+      <div className="map-footer">
+        {assistant}
         <section className="map-legend" aria-labelledby="legend-title">
           <div className="legend-heading">
             <h3 id="legend-title">Map legend</h3>
@@ -887,10 +961,10 @@ export default function MapView({
               <span key={label}><i style={rainfallSwatchStyle(color, color === RAINFALL_PROXY_COLORS[0] ? 100 : 185)} />{label}</span>
             ))}
           </div>}
-          {visibility.floodDepth && cityFlood && <div className="flood-legend">
+          {visibility.cityRunoff && cityFlood && <div className="flood-legend">
             <strong>Runoff on terrain depressions</strong>
-            {FLOOD_LEGEND.map(({ label, color }) => (
-              <span key={label}><i style={{ background: `rgb(${color.join(",")})` }} /> {label}</span>
+            {FLOOD_LEGEND.map(({ label, color, opacity }) => (
+              <span key={label}><i style={{ backgroundColor: `rgba(${color.join(",")},${opacity / 255})` }} /> {label}</span>
             ))}
           </div>}
           {visibility.pilotFlood && <>
@@ -913,6 +987,8 @@ export default function MapView({
             {(["clear", "slow", "heavy", "unknown"] as const).map((level) => <span key={level}><i style={{ background: `rgb(${TRAFFIC_COLORS[level].join(",")})` }} />{TRAFFIC_LABELS[level]}</span>)}
             {scenarioRoute && <span><i style={{ background: `rgb(${RUNOFF_COLORS[0].join(",")})` }} />Scenario runoff along route</span>}
           </div>}
+          {visibility.cityHeat && cityHeat && <span><i className="heat-scale" /> Municipal Landsat · {cityHeat.date} · 25–45 °C</span>}
+          {visibility.pilotExposure && exposure?.status === "ready" && <span><i style={{ background: "#814eb4" }} /> Bellandur depth ≥15 cm and heat top 10%</span>}
           {visibility.heat && indiaHeatHexes.length > 0 && <span><i className="heat-scale" style={temperatureLegendStyle()} /> 2 m air-temperature forecast</span>}
           {visibility.surfaceTemperature && <p className="coverage-note">Daily daytime satellite surface-temperature imagery · latest available scene · cloud gaps may appear. This is land-surface temperature, not air temperature or a forecast.</p>}
           {visibility.combined && <div className="flood-legend">
@@ -924,7 +1000,7 @@ export default function MapView({
           {nationalLayerActive && <p className="coverage-note">India-wide numerical forecast data at 0.25° resolution: heat shows 2 m air temperature at every zoom, never satellite land-surface temperature. Display hex sizes adapt to map zoom; closer zoom does not add forecast resolution. Accumulated precipitation is a screening proxy, not inundation depth. Validity window and model run are available on each hex. Boundary and basemap: © OpenStreetMap contributors.</p>}
           {!nationalLayerActive && !visibility.surfaceTemperature && <p className="coverage-note">Turn on Flood or Heat to show India-wide forecast hexes. Local flood screening is available for the Bengaluru study area.</p>}
         </section>
-      </aside>
+      </div>
     </>
   );
 }

@@ -51,33 +51,14 @@ test("selected-city point forecast and five-day chart use the backend without pr
   const preview = page.getByRole("button", { name: "Open next 3 hours forecast" });
   await expect(preview).toContainText("29°");
   await expect.poll(() => selectedCityRequested).toBe(true);
-  await preview.hover();
-  const previewBounds = await preview.boundingBox();
-  const legend = page.locator(".map-legend");
+  const legend = page.getByRole("region", { name: "Map legend" });
   await expect(legend).toBeVisible();
-  const legendBounds = await legend.boundingBox();
-  expect(previewBounds).not.toBeNull();
-  expect(legendBounds).not.toBeNull();
-  expect(legendBounds!.x).toBeGreaterThanOrEqual(previewBounds!.x - 1);
-  expect(legendBounds!.y).toBeGreaterThan(previewBounds!.y + previewBounds!.height);
-  const overlayOrder = await page.evaluate(() => ({
-    rail: Number.parseInt(getComputedStyle(document.querySelector(".map-info-rail")!).zIndex, 10),
-    railPointerEvents: getComputedStyle(document.querySelector(".map-info-rail")!).pointerEvents,
-    legendPointerEvents: getComputedStyle(document.querySelector(".map-legend")!).pointerEvents,
-    legendBackground: getComputedStyle(document.querySelector(".map-legend")!).backgroundColor,
-    tooltip: (() => {
-      const tooltip = document.createElement("div");
-      tooltip.className = "deck-tooltip";
-      document.querySelector(".map-frame")!.append(tooltip);
-      const zIndex = Number.parseInt(getComputedStyle(tooltip).zIndex, 10);
-      tooltip.remove();
-      return zIndex;
-    })(),
-  }));
-  expect(overlayOrder.tooltip).toBeGreaterThan(overlayOrder.rail);
-  expect(overlayOrder.railPointerEvents).toBe("none");
-  expect(overlayOrder.legendPointerEvents).toBe("none");
-  expect(overlayOrder.legendBackground).toBe("rgb(248, 251, 255)");
+  const legendOverlapsCanvas = await legend.evaluate((element) => {
+    const legendBounds = element.getBoundingClientRect();
+    const mapBounds = document.querySelector(".map-canvas")!.getBoundingClientRect();
+    return legendBounds.top < mapBounds.bottom;
+  });
+  expect(legendOverlapsCanvas).toBe(false);
   await preview.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { name: "Mumbai forecast" })).toBeVisible();
@@ -88,7 +69,5 @@ test("selected-city point forecast and five-day chart use the backend without pr
   await expect(dialog.getByText("Universal AQI: 62")).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/meteoblue|open-meteo/i);
   await dialog.getByRole("button", { name: "Close forecast" }).click();
-  await page.mouse.move(12, 500);
-  await expect.poll(() => page.locator(".map-canvas").evaluate((canvas) => canvas.matches(":hover"))).toBe(true);
-  await expect(legend).toHaveCSS("visibility", "hidden");
+  await expect(legend).toBeVisible();
 });

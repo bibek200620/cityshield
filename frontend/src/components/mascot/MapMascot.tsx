@@ -317,10 +317,11 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
         <div className="mascot-bubble-heading">
           {panel !== "home" && <button className="mascot-close" type="button" aria-label="Back to CX menu"
             onClick={() => setPanel("home")}><Icon name="back" /></button>}
-          <strong ref={heading} tabIndex={-1}>{panel === "report" ? "Forecast report" : panel === "traffic" ? "Traffic" : "CX"}</strong>
+          <strong ref={heading} tabIndex={-1}>{panel === "report" ? "Forecast report" : panel === "traffic" ? "Traffic" : "Forecast and route assistant"}</strong>
           <button className="mascot-close" type="button" aria-label="Close CX bubble" onClick={closeBubble}><Icon name="close" /></button>
         </div>
-        {panel === "report" && <ForecastBrief onRead={speakInPanel} autoSpeak={voiceOn && !talking} />}
+        {panel === "report" && <ForecastBrief key={`${weatherLatitude},${weatherLongitude}`} onRead={speakInPanel} autoSpeak={voiceOn && !talking}
+          location={weatherLocation} locationName={weatherLocationName} />}
         {panel === "traffic" && <TrafficBrief drive={drive} onRead={speakInPanel} />}
         {panel === "home" && <>
         {alerts.length ? <ul className="mascot-alerts">
@@ -410,13 +411,16 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
               onChange={(event) => setPreviewIndex(Number(event.target.value))}>
               {expressions.map((expression, index) => <option key={expression.label} value={index}>{expression.label}</option>)}
             </select>
+            {previewIndex !== null && <div className="mascot-expression-preview">
+              <Suspense fallback={<p>Loading preview…</p>}><MascotModel pose={pose} /></Suspense>
+            </div>}
           </details>}
         </div>
         </>}
       </div>}
       <button ref={trigger} className="mascot-trigger" type="button" aria-label="CX assistant"
         aria-controls={bubbleOpen ? "mascot-bubble" : undefined} aria-expanded={bubbleOpen}
-        data-expression={pose.label} onClick={() => {
+        onClick={() => {
           if (automaticBubble && !manualOpen && panel === "home") setManualOpen(true);
           else if (bubbleOpen) closeBubble();
           else {
@@ -425,9 +429,7 @@ export default function MapMascot({ drive, cityFlood, weatherLocation, weatherLo
             if (!talking) read?.("Hi!");
           }
         }}>
-        <Suspense fallback={<span className="mascot-fallback" aria-hidden="true"><i /><b>CX</b></span>}>
-          <MascotModel pose={pose} />
-        </Suspense>
+        <Icon name="info" /><span>Assistant</span>
       </button>
       {talking && panel !== "home" && <button type="button" className="mascot-mic-state" aria-label="Stop listening" onClick={companion.stop}>
         <Icon name="microphone" /><span role="status">{voiceStatus}</span>

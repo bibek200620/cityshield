@@ -4,7 +4,17 @@
 
 The risk-data boundary is the five Greater Bengaluru Authority corporations. Its outline is a dissolved and 30 m simplified copy of the 2025 corporation polygons. Search indexes 369 notified wards by their English and Kannada names and zooms to the selected ward. Ward IDs use corporation and ward numbers together. Search coverage is limited to the ward index and its spelling aliases. The official map reference is [GBA city corporation maps](https://www.bbmp.gov.in/maps/). Machine-readable geometry is from OpenCity via the [bharatlas layer catalog](https://bharatlas.com/layers#city-wards), where the two layers are marked CC0.
 
-The map viewport, general place search, and driving route bounds extend south to 12.62°N (and span 77.44–77.80°E), so southern suburbs through Anekal can be seen and used for routing. This is basemap and route coverage only. The 2025 GBA polygon remains the cutoff for city flood and heat risk outputs; no values are extrapolated south of it. The route bounds are a rectangular supported region, not an administrative boundary.
+The India-wide map, general place search, and driving services include southern suburbs through Anekal where providers have coverage. The municipal runoff and Landsat layers are clipped to the 2025 GBA polygon.
+
+### Ward analysis and scenario comparison
+
+Search for a ward to outline it and open its analysis. The ward mean weights the non-null value of each municipal runoff cell part by the area that intersects the ward in EPSG:32643. The “scored area above 20 mm” percentage uses only the intersection area with a runoff value as its denominator. Mapped permanent water and cells with missing values are excluded. This percentage describes grid values under a chosen rainfall input. Model runoff and observed inundation measure different quantities.
+
+The temperature reading weights the historical Landsat display cells by their ward overlap. The included area is display-grid coverage and can differ from the area of valid Landsat pixels. The optional temperature offset applies uniformly to the historical value.
+
+Use **Compare scenarios** to save the current inputs or a rainfall preset as a baseline in this browser. With a ward selected, the comparison uses that ward for both scenarios. The city view counts distinct 300 m cells above 20 mm. The CSV records the comparison scope, both inputs and outputs, and the source metadata. Baselines save the inputs and recalculate against the available model inputs on later visits. **Data sources** shows source availability and timestamps.
+
+The checked-in ward evidence file can be regenerated with `python scripts/build_ward_evidence.py /path/to/wards.geojson` from the repository root with the backend environment active. Use the [OpenCity 2025 ward GeoJSON distributed by bharatlas](https://data.bharatlas.com/admin/wards-bengaluru-gba/wards_bengaluru_gba.a181f1d8.geojson), SHA-256 `53733db2674e9e1283dcc57172945b3b1963d2c25d84e57f571e49d3880af11e`, with the [catalog's CC0 designation](https://bharatlas.com/layers#city-wards). The script verifies its IDs against the atlas index and stores 15 m simplified display outlines. The intersection weights use the source ward polygons before display simplification.
 
 ## City land-surface temperature
 
@@ -46,7 +56,7 @@ The study writes versioned scene manifests and sample caches, `evaluation.v2.jso
 
 ## Citywide flood screening
 
-The Flood toggle shows a 300 m grid across the Greater Bengaluru municipal outline. Copernicus GLO-30 elevation tiles N12 E077 and N13 E077 are averaged to a 60 m projected grid in EPSG:32643. ESA WorldCover 2021 v200 tile N12 E075 provides the modal land-cover class at each 60 m location. The project uses the resulting raster as a digital surface model, which can reflect buildings and vegetation.
+The Bengaluru runoff toggle shows results from a 300 m grid across the Greater Bengaluru municipal outline. Copernicus GLO-30 elevation tiles N12 E077 and N13 E077 are averaged to a 60 m projected grid in EPSG:32643. ESA WorldCover 2021 v200 tile N12 E075 provides the modal land-cover class at each 60 m location. The project uses the resulting raster as a digital surface model, which can reflect buildings and vegetation.
 
 An eight-neighbor Priority-Flood fill calculates the elevation difference to the spill level, allowing flow to leave the 4.2 km buffered raster boundary. A 60 m sample enters the depression screen if the computed difference is at least 1 m. SCS Curve Number runoff uses the submitted storm depth and assumed land-cover-specific curve numbers with initial abstraction coefficient 0.2. The displayed value is millimetres of estimated runoff generated on those depression samples, averaged over all land samples in the 300 m cell. Permanent water samples are excluded. Entirely water cells appear grey. The displayed bins are visualization intervals.
 
@@ -74,7 +84,7 @@ Regenerate the display mesh from the repository root with `backend/.venv/bin/pyt
 
 ## Observed flood evaluation remains blocked
 
-The Bellandur GNN has simulated targets. The optional real-map provider adds terrain and road geometry but still relies on inferred drainage and simulated targets. Historic rainfall totals, flood-prone area inventories and street reports without matched timestamps are insufficient to evaluate predicted depths. The existing backtest returns HTTP 501.
+The Bellandur GNN has simulated targets. The optional real-map provider adds terrain and road geometry and uses inferred drainage and simulated targets. Evaluating predicted depths requires paired timestamps and observations. The event-specific backtest returns HTTP 501 when a suitable storm and surveyed-network run are unavailable.
 
 The published Bengaluru study used observed gauge rainfall and stormwater water levels, including the storm on 20–21 October 2020. Its data availability statement says high-resolution KSNDMC observations are available by request. The next input required is a licensed export of timestamped rainfall and water-level or inundation observations with coordinates, units, quality flags, sensor type and reporting intervals, covering multiple storms. Use whole storms for the split and report event metrics separately from depth metrics. [IISc and KSNDMC study and data availability](https://www.frontiersin.org/journals/earth-science/articles/10.3389/feart.2022.883842/full#h9).
 

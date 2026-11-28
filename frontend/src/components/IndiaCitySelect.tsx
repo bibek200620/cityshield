@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadIndiaCities, type IndiaCity } from "../map/indiaCities";
-import type { MapPlace } from "./PlaceSearch";
-
-const BENGALURU_CITY_ID = "1277333";
+import { supportsBengaluruSimulation, type MapPlace } from "../map/places";
 
 function placeForCity(city: IndiaCity): MapPlace {
   const delta = 0.08;
@@ -44,7 +42,7 @@ export default function IndiaCitySelect({ selectedPlace, onSelect }: {
     ?? cities.find((item) => selectedName.includes(item.name.toLocaleLowerCase()) && item.name.length > 3) : null;
   const effectiveId = selectedPlace ? placeCity?.id ?? "" : selectedId;
   const selectedCity = cities.find((city) => city.id === effectiveId);
-  const supportsCurrentModel = effectiveId === BENGALURU_CITY_ID;
+  const supportsCurrentModel = supportsBengaluruSimulation(selectedPlace);
 
   return (
     <div className="simulation-location">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type LatLng, type TwoDayWeatherReportResponse } from "../api/client";
+import { downloadCsv } from "../downloadCsv";
 import { summarizeHourly } from "../map/weatherReport";
 import Icon from "./Icon";
 
@@ -23,15 +24,8 @@ function downloadForecast(report: Extract<TwoDayWeatherReportResponse, { status:
     hour.air_temperature_c, hour.feels_like_c, hour.precipitation_mm, hour.relative_humidity_pct,
     grid.latitude, grid.longitude, new Date(retrievedAt).toISOString(),
   ]);
-  const csv = [fields, ...rows].map((row) => row.map((field) =>
-    typeof field === "number" ? field : `"${field.replace(/"/g, '""')}"`).join(",")).join("\r\n");
-  const url = URL.createObjectURL(new Blob([csv + "\r\n"], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
   const safeName = locationName.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  link.download = `cityshield-${safeName || "india"}-48h-${report.forecast_from.slice(0, 10)}.csv`;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  downloadCsv(`cityshield-${safeName || "india"}-48h-${report.forecast_from.slice(0, 10)}.csv`, [fields, ...rows]);
 }
 
 export default function TwoDayWeatherReport({ location, locationName = "Bengaluru" }: {
@@ -48,8 +42,9 @@ export default function TwoDayWeatherReport({ location, locationName = "Bengalur
     setRefreshing(true);
     setError(null);
     try {
-      setReport(await api.getWeatherReport(signal, latitude !== undefined && longitude !== undefined
-        ? { lat: latitude, lng: longitude } : undefined));
+      const result = await api.getWeatherReport(signal, latitude !== undefined && longitude !== undefined
+        ? { lat: latitude, lng: longitude } : undefined);
+      if (!signal?.aborted) setReport(result);
     } catch (reason) {
       if (!signal?.aborted) setError(reason instanceof Error ? reason.message : "The weather report could not load.");
     } finally {
