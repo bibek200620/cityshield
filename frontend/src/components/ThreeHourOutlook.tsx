@@ -112,7 +112,8 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, location, loca
   }, [open]);
 
   const forecast = weather?.status === "ready" ? weather : null;
-  const pointCurrent = pointForecast?.hours[0] ?? null;
+  const pointHours = Array.isArray(pointForecast?.hours) ? pointForecast.hours : [];
+  const pointCurrent = pointHours[0] ?? null;
   const current = condition(forecast?.weather_code, forecast?.is_day);
   const animated = current.sky !== "neutral" && current.sky !== "night";
   const unavailable = !loading && !forecast && !pointCurrent
@@ -155,7 +156,7 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, location, loca
             <span className="preview-condition">Air temperature</span>
           </span>
           <span className="preview-hours">
-            {pointForecast?.hours.slice(0, 3).map((hour) => <span key={hour.valid_at}>
+            {pointHours.slice(0, 3).map((hour) => <span key={hour.valid_at}>
               <time dateTime={hour.valid_at}>{timeLabel(hour.valid_at)}</time>
               <span className="preview-hour-value">{degrees(hour.air_temperature_c)}</span>
             </span>)}
@@ -210,7 +211,7 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, location, loca
               <table>
                 <thead><tr><th scope="col">Time</th><th scope="col">Air temp.</th><th scope="col">Feels like</th>
                   <th scope="col">Precip.</th><th scope="col">Humidity</th></tr></thead>
-                <tbody>{pointForecast.hours.slice(0, 3).map((hour) => <tr key={hour.valid_at}>
+                <tbody>{pointHours.slice(0, 3).map((hour) => <tr key={hour.valid_at}>
                   <th scope="row"><time dateTime={hour.valid_at}>{timeLabel(hour.valid_at)}</time></th>
                   <td>{hour.air_temperature_c.toFixed(1)} °C</td>
                   <td>{hour.feels_like_c.toFixed(1)} °C</td>

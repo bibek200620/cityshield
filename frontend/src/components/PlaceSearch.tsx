@@ -11,6 +11,8 @@ export interface MapPlace {
   corporation?: string;
 }
 
+export type BengaluruPlace = MapPlace;
+
 function fromSearchResult(place: PlaceSearchResult): MapPlace {
   const delta = 0.08;
   return { id: place.id, name: place.name, center: [place.lng, place.lat],

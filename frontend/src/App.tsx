@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import { api, type CityFloodResponse, type LatLng } from "./api/client";
 import FloodProvenancePanel from "./components/FloodProvenancePanel";
@@ -13,9 +13,14 @@ import MapView from "./components/MapView";
 import MapMascot from "./components/mascot/MapMascot";
 import PlaceSearch, { type MapPlace } from "./components/PlaceSearch";
 import RouteComparisonPanel from "./components/RouteComparisonPanel";
+import ScenarioComparison from "./components/ScenarioComparison";
 import ScenarioSlider from "./components/ScenarioSlider";
+import SourceHealthPanel from "./components/SourceHealthPanel";
+import StormReplay from "./components/StormReplay";
 import ThreeHourOutlook from "./components/ThreeHourOutlook";
 import TwoDayWeatherReport from "./components/TwoDayWeatherReport";
+import WardInspector, { type WardSummary } from "./components/WardInspector";
+import { summarizeWardRunoff, type WardEvidenceIndex } from "./map/wardEvidence";
 import UncertaintyPanel from "./components/UncertaintyPanel";
 import { useFloodStore } from "./store/useFloodStore";
 import { loadIndiaCities } from "./map/indiaCities";
@@ -27,14 +32,26 @@ const layers = [
   { key: "combined", name: "Combined", icon: "heat", description: "Rain and air-temperature overlap screen" },
 ] as const;
 
-type ToolPanel = "drive" | "outlook" | "weatherReport" | "rainfall" | "data";
+type ToolPanel = "drive" | "outlook" | "weatherReport" | "rainfall" | "compare" | "replay" | "data";
 
 const toolOptions: { id: ToolPanel; label: string; icon: IconName }[] = [
   { id: "drive", label: "Car routes", icon: "route" },
   { id: "outlook", label: "Next 3 hours", icon: "clock" },
   { id: "weatherReport", label: "Two-day weather report", icon: "calendar" },
   { id: "rainfall", label: "Rainfall scenario", icon: "rain" },
+  { id: "compare", label: "Scenario comparison", icon: "combined" },
+  { id: "replay", label: "Storm replay", icon: "clock" },
   { id: "data", label: "Data & models", icon: "database" },
+];
+
+const workspaces: { id: ToolPanel | null; label: string }[] = [
+  { id: null, label: "Map" },
+  { id: "rainfall", label: "Scenarios" },
+  { id: "compare", label: "Compare scenarios" },
+  { id: "replay", label: "Storm replay" },
+  { id: "drive", label: "Routes" },
+  { id: "weatherReport", label: "Weather" },
+  { id: "data", label: "Data sources" },
 ];
 
 const BENGALURU_DEFAULT: LatLng = { lat: 12.97194, lng: 77.59369 };
@@ -95,10 +112,13 @@ function Dashboard() {
   const toggleLayer = useFloodStore((s) => s.toggleLayer);
   const rainfallMm = useFloodStore((s) => s.currentRainfall.intensity * s.currentRainfall.duration / 60);
   const [place, setPlace] = useState<MapPlace | null>(null);
+  const [wardIndex, setWardIndex] = useState<WardEvidenceIndex | null>(null);
+  const [wardFailed, setWardFailed] = useState(false);
+  const [wardRequest, setWardRequest] = useState(0);
   const currentPlace = useRef(place);
   currentPlace.current = place;
   const showCityFlood = useFloodStore((s) => s.simulationActive && isBengaluruArea(place)
-    && (s.layerVisibility.floodDepth || s.layerVisibility.cityRoads));
+    && (s.layerVisibility.floodDepth || s.layerVisibility.cityRoads || Boolean(place?.corporation)));
   const [currentArea, setCurrentArea] = useState<{ location: LatLng; name: string } | null>(null);
   const [cityFlood, setCityFlood] = useState<{ rainfallMm: number; value: CityFloodResponse } | null>(null);
   const [panel, setPanel] = useState<ToolPanel | null>(null);
@@ -114,9 +134,13 @@ function Dashboard() {
       : place?.name.split(",")[0] ?? currentArea?.name ?? "Bengaluru";
   const selectPlace = useCallback((nextPlace: MapPlace | null) => {
     setPlace(nextPlace);
+    if (nextPlace && toolsOpen) {
+      setPanel(null);
+      setToolsOpen(false);
+    }
     if (useFloodStore.getState().simulationActive
       && (currentPlace.current?.id !== nextPlace?.id || !isBengaluruArea(nextPlace))) stopSimulation();
-  }, [stopSimulation]);
+  }, [stopSimulation, toolsOpen]);
   const handleCurrentLocation = useCallback((location: LatLng) => {
     setCurrentArea({ location, name: "Your area" });
     selectPlace({ id: "device-location", name: "Current location", center: [location.lng, location.lat],
@@ -143,12 +167,15 @@ function Dashboard() {
   const toolPanel = useRef<HTMLElement>(null);
   const panelHeading = useRef<HTMLHeadingElement>(null);
   const toolsTrigger = useRef<HTMLButtonElement>(null);
+  const workspaceTrigger = useRef<HTMLButtonElement | null>(null);
   const mapHeading = useRef<HTMLHeadingElement>(null);
 
   const closePanel = useCallback(() => {
     setPanel(null);
     setToolsOpen(false);
-    toolsTrigger.current?.focus();
+    const opener = workspaceTrigger.current;
+    workspaceTrigger.current = null;
+    (opener ?? toolsTrigger.current)?.focus();
   }, []);
 
   useEffect(() => {
@@ -195,6 +222,35 @@ function Dashboard() {
   }, [rainfallMm, showCityFlood, reloadCount]);
 
   const displayedFlood = cityFlood?.rainfallMm === rainfallMm ? cityFlood.value : null;
+  const selectedWard = place?.corporation ? place : null;
+  const selectedWardId = selectedWard?.id;
+  const selectedWardEvidence = selectedWard ? wardIndex?.[selectedWard.id] ?? null : null;
+  const wardSummary: WardSummary | null = useMemo(() => {
+    if (!selectedWardEvidence) return null;
+    return {
+      evidence: selectedWardEvidence,
+      runoff: displayedFlood?.status === "ready" ? summarizeWardRunoff(selectedWardEvidence, displayedFlood) : null,
+      heat: null,
+    };
+  }, [selectedWardEvidence, displayedFlood]);
+
+  useEffect(() => {
+    if (!selectedWardId) return;
+    const controller = new AbortController();
+    setWardFailed(false);
+    fetch("/data/bengaluru-ward-evidence.json", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<WardEvidenceIndex> : Promise.reject(new Error("Ward evidence unavailable")))
+      .then((index) => { if (!controller.signal.aborted) setWardIndex(index); })
+      .catch(() => { if (!controller.signal.aborted) setWardFailed(true); });
+    return () => controller.abort();
+  }, [selectedWardId, wardRequest]);
+
+  useEffect(() => {
+    if (!selectedWardId || simulationActive) return;
+    const presets = useFloodStore.getState().scenarios;
+    const defaultScenario = presets.find((scenario) => scenario.scenario_id === "moderate") ?? presets[1] ?? presets[0];
+    if (defaultScenario) void useFloodStore.getState().runScenario(defaultScenario.scenario_id);
+  }, [selectedWardId, simulationActive]);
 
   return (
     <div className="cityshield">
@@ -209,6 +265,7 @@ function Dashboard() {
           onClick={() => {
             if (toolsOpen) closePanel();
             else {
+              workspaceTrigger.current = null;
               setPicking(null);
               setToolsOpen(true);
             }
@@ -216,6 +273,17 @@ function Dashboard() {
           <Icon name="more" />
         </button>
       </header>
+
+      <nav className="console-workspaces" aria-label="Console workspaces">
+        {workspaces.map(({ id, label }) => <button key={label} type="button" aria-current={panel === id && toolsOpen ? "page" : undefined}
+          onClick={(event) => {
+            workspaceTrigger.current = event.currentTarget;
+            if (id === null) { closePanel(); return; }
+            setPanel(id);
+            setPicking(null);
+            setToolsOpen(true);
+          }}>{label}</button>)}
+      </nav>
 
       <main id="atlas" className="atlas" aria-label="India map" tabIndex={-1}>
         <section className="map-workspace" aria-labelledby="map-title">
@@ -251,6 +319,9 @@ function Dashboard() {
               }}>Cancel</button>}
             </div>
             {!picking && <MapLayers cityFlood={displayedFlood} />}
+            {selectedWard && <WardInspector place={selectedWard} summary={wardSummary} flood={displayedFlood}
+              heat={null} failed={wardFailed} onRetry={() => { setWardIndex(null); setWardRequest((count) => count + 1); }}
+              onCompare={() => { setPanel("compare"); setToolsOpen(true); }} />}
             {error && <div className="app-error" role="alert">
               <p><strong>Atlas data could not load.</strong> {error}</p>
               <button type="button" onClick={() => {
@@ -267,7 +338,8 @@ function Dashboard() {
 
         </section>
 
-        <aside id="map-tools" ref={toolPanel} hidden={!toolsOpen} className="tool-panel" data-panel={panel} aria-labelledby="map-tools-title">
+        <aside id="map-tools" ref={toolPanel} hidden={!toolsOpen} className="tool-panel" data-panel={panel}
+          aria-label={panel === "compare" ? "Scenario comparison" : undefined} aria-labelledby="map-tools-title">
           <div className="tool-title">
             {panel && <button type="button" className="close-button" aria-label="Back to map tools"
               onClick={() => setPanel(null)}><Icon name="back" /></button>}
@@ -294,6 +366,12 @@ function Dashboard() {
           <div className="tool-content" hidden={panel !== "rainfall"}>
             <ScenarioSlider selectedPlace={place} onSelectPlace={selectPlace} />
           </div>
+          {panel === "compare" && <div className="tool-content">
+            <ScenarioComparison currentFlood={displayedFlood} place={selectedWard} ward={wardSummary} heat={null}
+              onEdit={() => setPanel("rainfall")} retryActive={() => setReloadCount((count) => count + 1)}
+              wardFailed={wardFailed} retryWard={() => { setWardIndex(null); setWardRequest((count) => count + 1); }} />
+          </div>}
+          {panel === "replay" && <div className="tool-content"><StormReplay /></div>}
           {panel === "weatherReport" && <div className="tool-content"><TwoDayWeatherReport location={weatherLocation} locationName={weatherLocationName} /></div>}
           {panel === "drive" && <div className="tool-content">
             <DrivingPlanner drive={drive} onSimulationStart={closePanel} onPick={(endpoint) => {
@@ -302,6 +380,9 @@ function Dashboard() {
             }} />
           </div>}
           {panel === "data" && <div className="tool-content">
+            <SourceHealthPanel flood={displayedFlood} retry={() => {
+              setReloadCount((count) => count + 1);
+            }} />
             <HistoricalFloodTimeline />
             <div className="detail-content">
               <h3>Local flood screening</h3>

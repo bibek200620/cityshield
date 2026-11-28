@@ -83,6 +83,10 @@ button:enabled, summary { cursor: pointer; }
 }
 .tools-trigger[aria-expanded="true"] { background: #dceaff; border-color: #8dacd9; color: var(--accent); }
 .tools-trigger svg { width: 25px; height: 25px; }
+.console-workspaces { z-index: 9; display: flex; gap: 5px; overflow-x: auto; padding: 6px var(--gutter); border-bottom: 1px solid var(--line); background: #f8fbff; scrollbar-width: thin; }
+.console-workspaces button { flex: none; min-height: 34px; padding: 5px 10px; border: 1px solid transparent; border-radius: 8px; color: var(--muted); background: transparent; font-size: 12px; font-weight: 750; }
+.console-workspaces button[aria-current="page"] { border-color: #c5d3e7; color: var(--accent); background: #eef4fd; }
+.console-workspaces button:hover { color: var(--ink); background: var(--soft); }
 .place-search { position: relative; width: 100%; min-width: 0; }
 .place-search input, .tool-content :is(input:not([type="checkbox"]), select) {
   width: 100%;

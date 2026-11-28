@@ -89,7 +89,7 @@ test("flood demo updates an existing trip, alerts CX, and moves the car without 
   const mapSearch = page.getByRole("searchbox", { name: "Search India" });
   await mapSearch.fill("Bengaluru");
   await button("Bengaluru, Karnataka, India").click();
-  await button("Rainfall scenario").click();
+  await button("Scenarios").click();
   await page.getByLabel("Preset").selectOption("flood-demo");
   await button("Run local simulation").click();
   await expect(page.getByText("Flood demo running", { exact: true }).last()).toBeVisible();

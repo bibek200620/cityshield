@@ -13,6 +13,15 @@ import type { MapPlace } from "./PlaceSearch";
 import { pathForFraction, routeVertexDistances, type LiveLocation, type NavigationMode, type RouteMatch, type Waypoints } from "../map/drivingPlanner";
 import Icon from "./Icon";
 
+export interface CityHeat {
+  scene_id: string;
+  date: string;
+  resolution_m: number;
+  valid_pixel_fraction: number;
+  rmse_c: number;
+  cells: [lng: number, lat: number, temperature: number, gridKey?: string][];
+}
+
 const BASEMAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const AREA_VIEW = { padding: 48, maxZoom: 14.2 };
 const INDIA_BOUNDS: maplibregl.LngLatBoundsLike = [[68, 6], [98, 38]];
