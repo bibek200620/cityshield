@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type CXConversationAction, type CXConversationTurn, type DrivingOption, type PlaceSearchResult } from "../../api/client";
 import { isWithinNavigationArea, type useDrivingPlanner } from "../../map/drivingPlanner";
+import { loadIndiaCities } from "../../map/indiaCities";
 import { cxLayerLabel, cxMapFollowup, distanceSpoken, parseVoiceCommand, readCXWakePhrase, selectCXTranscript, spokenWeather, upcomingDirection, weatherFollowup, type CXSiteAction } from "./cxCommands";
 import { type VoiceOutput, type VoiceSession, useCXListening } from "./useCXListening";
 
@@ -347,9 +348,21 @@ export function useCXCompanion(
 
   async function showMapPlace(query: string, signal: AbortSignal, alternatives: string[] = []) {
     async function search(candidate: string) {
-      const response = await api.searchPlaces(candidate.replace(/\s+in\s+/i, ", "), signal);
+      const query = candidate.replace(/\s+in\s+/i, ", ");
+      let results: PlaceSearchResult[];
+      try {
+        results = (await api.searchPlaces(query, signal)).results;
+      } catch (error) {
+        signal.throwIfAborted();
+        const [name, state] = query.split(",").map(placeWords);
+        const { places } = await loadIndiaCities(signal);
+        const cities = places.filter((city) => placeWords(city.name) === name &&
+          (!state || state === "india" || placeWords(city.state) === state));
+        if (!cities.length) throw error;
+        results = cities.map((city) => ({ ...city, name: `${city.name}, ${city.state}`, category: "city" }));
+      }
       const matches: PlaceSearchResult[] = [];
-      for (const place of response.results) {
+      for (const place of results) {
         if (!isWithinNavigationArea(place) || !place.name.trim()) continue;
         const duplicate = matches.some((match) => {
           const separation = Math.hypot(match.lat - place.lat, match.lng - place.lng);

@@ -269,6 +269,19 @@ test("CX asks before using a misheard place alternative and accepts clarificatio
   await expect(page.locator("body")).not.toHaveAttribute("data-gps");
 });
 
+test("CX can still pan to a named city when online place search is unavailable", async ({ page }) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({ json: { version: 8, layers: [], sources: {} } }));
+  await page.route("**/api/places/search?*", (route) => route.fulfill({
+    status: 503, headers, json: { detail: "Place search is temporarily unavailable." },
+  }));
+  await installVoice(page);
+  await say(page, "Hello CX, would you mind centering the map on Mysuru in Karnataka?");
+  await expect(page.locator(".voice-response")).toHaveText("Showing Mysuru, Karnataka on the map.");
+  await expect(page.locator(".place-marker")).toBeVisible();
+  await expect(page.locator("body")).not.toHaveAttribute("data-gps");
+});
+
 test("CX executes validated site actions from full requests it sends to conversation mode", async ({ page }) => {
   const turns: unknown[] = [];
   await page.route("https://basemaps.cartocdn.com/**", (route) => route.abort());

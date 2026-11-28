@@ -71,11 +71,13 @@ def test_place_search_caches_normalized_queries(monkeypatch):
 
 def test_place_search_reports_provider_failure_and_rejects_short_query(monkeypatch):
     routes_places._search_cached.cache_clear()
+    routes_places._search_photon_cached.cache_clear()
 
     def unavailable(_url):
         raise OSError("provider down")
 
     monkeypatch.setattr(routes_places, "_limited_provider_get", unavailable)
+    monkeypatch.setattr(routes_places, "_limited_provider_json", unavailable)
     client = TestClient(app)
     failed = client.get("/api/places/search", params={"query": "hotel"})
     short = client.get("/api/places/search", params={"query": "x"})
@@ -83,6 +85,42 @@ def test_place_search_reports_provider_failure_and_rejects_short_query(monkeypat
     assert failed.status_code == 503
     assert failed.json()["detail"] == "Place search is temporarily unavailable."
     assert short.status_code == 422
+
+
+def test_place_search_falls_back_to_photon_during_a_provider_outage(monkeypatch):
+    routes_places._search_cached.cache_clear()
+    routes_places._search_photon_cached.cache_clear()
+    calls = []
+
+    def provider(url):
+        calls.append(url)
+        if urlparse(url).netloc != "photon.komoot.io":
+            raise OSError("Primary provider unavailable")
+        place = {"name": "Lalbagh Botanical Gardens", "city": "Bengaluru", "state": "Karnataka",
+                 "countrycode": "IN", "osm_type": "W", "osm_id": 53, "osm_value": "park"}
+        point = {"type": "Point", "coordinates": [77.5869, 12.9489]}
+        return {"features": [
+            {"properties": place, "geometry": point},
+            {"properties": {**place, "countrycode": "LK", "osm_id": 54}, "geometry": point},
+            {"properties": {**place, "osm_id": 55}, "geometry": {"type": "Point", "coordinates": [60.5, 12.3]}},
+        ]}
+
+    monkeypatch.setattr(routes_places, "_limited_provider_json", provider)
+    client = TestClient(app)
+    first = client.get("/api/places/search", params={"query": "Lalbagh, Bengaluru"})
+    second = client.get("/api/places/search", params={"query": "lalbagh,   bengaluru"})
+
+    assert first.status_code == second.status_code == 200
+    assert first.json() == second.json() == {
+        "status": "ready", "source": "OpenStreetMap Photon", "attribution": "© OpenStreetMap contributors",
+        "results": [{"id": "W/53", "name": "Lalbagh Botanical Gardens, Bengaluru, Karnataka",
+                     "lat": 12.9489, "lng": 77.5869, "category": "park"}],
+    }
+    photon_calls = [url for url in calls if urlparse(url).netloc == "photon.komoot.io"]
+    assert len(photon_calls) == 1
+    query = parse_qs(urlparse(photon_calls[0]).query)
+    assert query["q"] == ["lalbagh, bengaluru"]
+    assert query["countrycode"] == ["IN"]
 
 
 def test_nearby_mapped_facilities_are_bounded_cached_and_unverified(monkeypatch):
