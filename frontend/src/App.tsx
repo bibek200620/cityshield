@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Route, Routes } from "react-router-dom";
 import { api, type CityFloodResponse, type LatLng } from "./api/client";
 import FloodProvenancePanel from "./components/FloodProvenancePanel";
 import HistoricalFloodTimeline from "./components/HistoricalFloodTimeline";
@@ -109,7 +108,7 @@ function MapLayers({ cityFlood, onRoadToggle, onBengaluru }: {
   );
 }
 
-function Dashboard() {
+export default function App() {
   const loadInitial = useFloodStore((s) => s.loadInitial);
   const error = useFloodStore((s) => s.error);
   const simulationActive = useFloodStore((s) => s.simulationActive);
@@ -346,8 +345,8 @@ function Dashboard() {
     <div className="cityshield">
       <a className="skip-link" href="#atlas">Skip to atlas</a>
       <header className="site-header">
-        <a className="wordmark" href="/" aria-label="CityShield home">
-          <span>CityShield</span>
+        <a className="wordmark" href="/welcome" aria-label="About CityShield">
+          CityShield
         </a>
         <PlaceSearch selected={place} onSelect={selectPlace} placeholder="City, town or landmark in India" />
         <button ref={toolsTrigger} className="tools-trigger" type="button"
@@ -524,13 +523,5 @@ function Dashboard() {
         </aside>
       </main>
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-    </Routes>
   );
 }
