@@ -141,8 +141,8 @@ FastAPI reads environment variables and `backend/.env` when launched from `backe
 | `STORM_EVENT_DIR` | Optional directory of authorized observation manifests and the `model_runs/` subdirectory. The default is `backend/data/storm_events/` when running from `backend/`. |
 | `PLACE_SEARCH_URL` | Nominatim-compatible search endpoint. The default is the OpenStreetMap public service. |
 | `TOMTOM_API_KEY` | Optional traffic-aware routing, incidents, and traffic flow. |
-| `METEOBLUE_API_KEY` | Optional Meteoblue point-forecast provider, read from the backend environment. The keyless point path uses the standard 48-hour forecast when available. |
-| `GEMINI_API_KEY`, `GEMINI_MODEL`, `CX_CONVERSATION_ENABLED` | Optional Gemini phrasing and voice conversation. The default model is `gemini-2.5-flash-lite`. To keep local voice commands and disable conversation, set `CX_CONVERSATION_ENABLED=false`. |
+| `METEOBLUE_API_KEY` | Optional Meteoblue point forecasts and backend fallback for hourly weather when Open-Meteo is unavailable. |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `CX_CONVERSATION_ENABLED` | Optional Gemini phrasing and voice conversation. The default model is `gemini-3.5-flash-lite`. To keep local voice commands and disable conversation, set `CX_CONVERSATION_ENABLED=false`. |
 
 See [.env.example](.env.example), [frontend/.env.example](frontend/.env.example), and [backend settings](backend/app/core/config.py) for defaults and operator-specific options.
 
@@ -204,7 +204,7 @@ Use `curl.exe` or `Invoke-RestMethod` on Windows. Some model and provider endpoi
 
 | Workflow | Inputs and method | How to interpret the output |
 | --- | --- | --- |
-| India weather grid and point forecasts | NOAA GFS 0.25° for the national grid. Open-Meteo for the standard point forecasts, with optional Meteoblue point forecasts and a browser Open-Meteo fallback when the API or provider is unavailable. | Rain totals and 2 m temperatures are weather-model estimates at provider resolution. Zoomed hexagons repeat or summarize coarse values. Missing or stale estimates are surfaced where applicable. |
+| India weather grid and point forecasts | NOAA GFS 0.25° for the national grid. Open-Meteo for the standard point forecasts, optional Meteoblue for alternate hourly data, and a browser Open-Meteo fallback when the backend is unavailable. | Rain totals and 2 m temperatures are weather-model estimates at provider resolution. Zoomed hexagons repeat or summarize coarse values. Missing or stale estimates are surfaced where applicable. |
 | Municipal runoff | Copernicus GLO-30 elevation, ESA WorldCover, Priority-Flood depression screening, and SCS Curve Number runoff. The output is averaged across land samples in each clipped 300 m cell. | Units are millimetres of estimated runoff from a hypothetical uniform storm. No explicit storm sewer or street hydraulic model sits behind these values. The >20 mm threshold describes the modeled variable only. |
 | Bellandur flood surrogate | Rainfall intensity and duration feed the SCS Curve Number calculation, a simplified graph-based physics baseline, and a FloodGNN surrogate with Monte Carlo dropout. | The training targets come from the physics baseline. The default synthetic terrain, roads, drains, and facilities are generated for the demo. Real pilot mode adds mapped terrain and roads with inferred drainage and model assumptions. Depth classes have default cut points of 0.15 m and 0.30 m. Dropout spread measures model variation under those assumptions. |
 | Municipal Landsat | Multi-acquisition Landsat Collection 2 Level-2 training and later held-out acquisitions. The checked-in 300 m map aggregates the April 1, 2026 modeled scene. | The city study reports 4.03 °C pooled RMSE across four date-held-out acquisitions, 3.33 °C for the displayed acquisition, and 4.13 °C on its buffered spatial holdout. The comparison target is satellite land-surface temperature from the corresponding acquisition. |

@@ -64,9 +64,11 @@ def _get_forecast(latitude: float, longitude: float) -> dict:
             })
         if len(hours) < 24:
             raise ValueError("Meteoblue returned no usable hourly values")
+        height = metadata.get("height")
         return {
             "location": {"latitude": metadata.get("latitude", latitude),
                          "longitude": metadata.get("longitude", longitude)},
+            "elevation_m": height if isinstance(height, (int, float)) and isfinite(height) else None,
             "model_run": metadata.get("modelrun_utc"),
             "model_updated_at": metadata.get("modelrun_updatetime_utc"),
             "retrieved_at": datetime.now(timezone.utc).isoformat(),

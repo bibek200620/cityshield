@@ -8,7 +8,9 @@ async function respond(route: Route, body: unknown) {
 
 test("nationwide combined layer screens rain and heat without enabling either source layer", async ({ page }) => {
   let requested = false;
-  await page.route("**/api/**", async (route) => {
+  await page.route("https://basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({ json: { version: 8, layers: [], sources: {} } }));
+  await page.route("http://localhost:8000/api/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/scenarios") return respond(route, []);
     if (url.pathname === "/api/critical-infrastructure") return respond(route, []);
@@ -31,7 +33,7 @@ test("nationwide combined layer screens rain and heat without enabling either so
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  const flood = page.getByRole("checkbox", { name: "Flood" });
+  const flood = page.getByRole("checkbox", { name: "Flood", exact: true });
   const heat = page.getByRole("checkbox", { name: "Heat" });
   const combined = page.getByRole("checkbox", { name: "Combined", exact: true });
   await expect(flood).toBeVisible();

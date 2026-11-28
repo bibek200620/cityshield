@@ -4,6 +4,9 @@ const headers = { "access-control-allow-origin": "*" };
 const coordinates = [[77.637, 12.971], [77.651, 12.957], [77.662, 12.944], [77.677, 12.926]];
 
 test("flood demo updates an existing trip, alerts CX, and moves the car without GPS", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.route("https://basemaps.cartocdn.com/**", (route) =>
+    route.fulfill({ json: { version: 8, layers: [], sources: {} } }));
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "geolocation", { value: {
       watchPosition: () => { document.body.dataset.gpsRequested = "true"; return 1; },

@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from shapely.geometry import LineString, box
 from shapely.strtree import STRtree
 
@@ -128,6 +129,7 @@ def test_two_day_forecast_rejects_missing_late_hour_and_invalid_late_values():
 
 
 def test_two_day_weather_api_returns_unavailable_without_provider_data(monkeypatch):
+    monkeypatch.setattr(conditions.settings, "METEOBLUE_API_KEY", None)
     monkeypatch.setattr(conditions, "time", lambda: 7500)
     monkeypatch.setattr(conditions, "weather_report_snapshot", lambda *_args: (_ for _ in ()).throw(TimeoutError()))
 
@@ -156,6 +158,7 @@ def test_two_day_weather_api_returns_unavailable_without_provider_data(monkeypat
     ],
 )
 def test_weather_provider_failures_have_distinct_states(monkeypatch, failure, expected_reason):
+    monkeypatch.setattr(conditions.settings, "METEOBLUE_API_KEY", None)
     monkeypatch.setattr(conditions, "time", lambda: 7500)
     if failure == "timeout":
         def timeout(*_args):
@@ -183,6 +186,7 @@ def test_weather_provider_failures_have_distinct_states(monkeypatch, failure, ex
 
 
 def test_weather_api_reports_timeout_without_making_a_network_request(monkeypatch):
+    monkeypatch.setattr(conditions.settings, "METEOBLUE_API_KEY", None)
     monkeypatch.setattr(conditions, "time", lambda: 7500)
 
     def timeout(*_args):
@@ -195,6 +199,42 @@ def test_weather_api_reports_timeout_without_making_a_network_request(monkeypatc
     assert response.status_code == 200
     assert response.json()["status"] == "unavailable"
     assert response.json()["reason"] == "timeout"
+
+
+def test_meteoblue_fills_nowcast_report_and_city_watch_when_primary_is_down(monkeypatch):
+    from urllib.error import URLError
+
+    monkeypatch.setattr(conditions, "time", lambda: 7500)
+    monkeypatch.setattr(conditions.settings, "METEOBLUE_API_KEY", SecretStr("fixture"))
+
+    def unavailable(*_args):
+        raise URLError("primary provider unavailable")
+
+    for name in ("weather_snapshot", "weather_report_snapshot", "city_watch_snapshot"):
+        monkeypatch.setattr(conditions, name, unavailable)
+
+    rows = [
+        {"valid_at": conditions.iso_utc(hour * 3600), "precipitation_mm": hour, "air_temperature_c": 25,
+         "feels_like_c": 26, "relative_humidity_pct": 65}
+        for hour in range(1, 51)
+    ]
+    point = {"location": {"latitude": 12.98, "longitude": 77.59}, "hours": rows,
+             "retrieved_at": conditions.iso_utc(7500)}
+    monkeypatch.setattr(conditions, "get_meteoblue_forecast", lambda *_args: point)
+
+    nowcast = conditions.get_weather()
+    assert nowcast["status"] == "ready"
+    assert nowcast["recent_rain_mm"] == 3
+    assert nowcast["upcoming_rain_mm"] == 12
+    assert conditions.get_alert_weather() == [nowcast]
+    report = conditions.get_two_day_forecast()
+    assert report["forecast_hours"] == 48
+    assert report["forecast_from"] == conditions.iso_utc(10800)
+    assert report["forecast_through"] == conditions.iso_utc(180000)
+
+    rows.pop(0)
+    assert conditions.get_weather()["status"] == "unavailable"
+    assert conditions.get_two_day_forecast()["forecast_hours"] == 48
 
 
 def test_projected_rain_changes_runoff_exposure_not_route_eta(monkeypatch):

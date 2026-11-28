@@ -12,6 +12,9 @@ function greetingReply(text: string): string | null {
   if (/^(?:hello|hey|hi|good morning|good afternoon|good evening)$/.test(message)) return "Hello. What can I do for you?";
   if (/^(?:how are you|how's it going)$/.test(message)) return "I’m doing well. Ready when you are.";
   if (/^(?:who are you|what's your name|what is your name)$/.test(message)) return "I’m C X, your CityShield companion. I can check weather across India and help you navigate.";
+  if (/^(?:what(?: is|'s) cityshield|how does cityshield work|what can (?:i do with|cityshield do))$/.test(message)) {
+    return "CityShield shows India-wide weather and routes, with flood and rainfall simulation tools for Bengaluru. I can move the map, change layers, run a rainfall scenario, or help you check a route.";
+  }
   if (/^(?:thanks|thank you)(?: c[ .-]*x)?$/.test(message)) return "You’re welcome.";
   return null;
 }

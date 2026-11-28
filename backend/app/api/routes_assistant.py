@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections import deque
 from functools import lru_cache
 from threading import BoundedSemaphore, Lock
-from time import monotonic, time
+from time import monotonic, sleep, time
 from typing import Annotated, Literal
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -36,6 +37,7 @@ _conversation_lock = Lock()
 _conversation_calls: deque[float] = deque()
 _CHAT_MINUTE_LIMIT = 12
 _CHAT_DAY_LIMIT = 250
+logger = logging.getLogger("uvicorn.error")
 
 CXText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 CXPlace = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=120)]
@@ -184,17 +186,21 @@ def _gemini_config() -> tuple[str, str] | None:
     return key.get_secret_value().strip(), model
 
 
-def _generate_with_gemini(config: tuple[str, str], payload: dict, *, timeout: float) -> tuple[str, str]:
+def _generate_with_gemini(config: tuple[str, str], payload: dict, *, timeout: float, retry_transient: bool = False) -> tuple[str, str]:
     key, model = config
+    deadline = monotonic() + timeout
 
     def generate(model_id: str) -> str:
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            raise TimeoutError
         request = Request(
             f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent",
             data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json", "x-goog-api-key": key},
             method="POST",
         )
-        with urlopen(request, timeout=timeout) as response:
+        with urlopen(request, timeout=min(5, remaining) if retry_transient else remaining) as response:
             data = json.load(response)
         candidate = data["candidates"][0]
         if not isinstance(candidate, dict) or candidate.get("finishReason", "STOP") != "STOP":
@@ -204,13 +210,25 @@ def _generate_with_gemini(config: tuple[str, str], payload: dict, *, timeout: fl
             raise ValueError("Gemini returned no text")
         return text.strip()
 
-    try:
+    def generate_with_legacy_fallback() -> tuple[str, str]:
+        nonlocal model
+        try:
+            return generate(model), model
+        except HTTPError as error:
+            if error.code != 404 or model != "gemini-2.5-flash-lite":
+                raise
+        model = "gemini-3.5-flash-lite"
         return generate(model), model
-    except HTTPError as error:
-        if error.code != 404 or model != "gemini-2.5-flash-lite":
+
+    try:
+        return generate_with_legacy_fallback()
+    except (URLError, TimeoutError) as error:
+        if not retry_transient or deadline - monotonic() <= 1:
             raise
-        fallback = "gemini-3.5-flash-lite"
-        return generate(fallback), fallback
+        if isinstance(error, HTTPError) and error.code not in {500, 502, 503, 504}:
+            raise
+        sleep(0.25)
+        return generate_with_legacy_fallback()
 
 
 @lru_cache(maxsize=1)
@@ -332,12 +350,13 @@ def assistant_conversation(request: ConversationRequest) -> dict:
             )}]},
             "contents": contents,
             "generationConfig": {
-                "maxOutputTokens": 512, "temperature": 0.35,
+                "maxOutputTokens": 768, "temperature": 0.35,
                 "responseMimeType": "application/json", "responseSchema": _CX_DECISION_SCHEMA,
             },
-        }, timeout=6)
+        }, timeout=12, retry_transient=True)
         return _conversation_response(ConversationDecision.model_validate_json(text), request)
-    except (URLError, TimeoutError, ValueError, KeyError, IndexError, TypeError):
+    except (URLError, TimeoutError, ValueError, KeyError, IndexError, TypeError) as error:
+        logger.warning("CX conversation failed (type=%s, status=%s)", type(error).__name__, getattr(error, "code", None))
         return {"status": "unavailable", "reason": "upstream"}
     finally:
         _conversation_slots.release()
