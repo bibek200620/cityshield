@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
-import { api, type WeatherAvailabilityResponse } from "../api/client";
+import { api, type LatLng, type WeatherAvailabilityResponse } from "../api/client";
 import { assistantRefreshMs } from "./assistantOutlook";
 
-export function useWeatherNowcast() {
-  const [data, setData] = useState<WeatherAvailabilityResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [lastReadyAt, setLastReadyAt] = useState<string | null>(null);
+export function useWeatherNowcast(location: LatLng) {
+  const { lat, lng } = location;
+  const [result, setResult] = useState<{
+    locationKey: string;
+    data: WeatherAvailabilityResponse | null;
+    error: string | null;
+    lastReadyAt: string | null;
+  } | null>(null);
+  const locationKey = `${lat},${lng}`;
+  const currentResult = result?.locationKey === locationKey ? result : null;
   const [request, setRequest] = useState(0);
 
   useEffect(() => {
@@ -14,16 +20,17 @@ export function useWeatherNowcast() {
       current?.abort();
       const controller = new AbortController();
       current = controller;
-      void api.getWeatherNowcast(controller.signal).then((result) => {
+      void api.getWeatherNowcast(controller.signal, { lat, lng }).then((result) => {
         if (!controller.signal.aborted) {
-          setData(result);
-          setError(null);
-          if (result.status === "ready") setLastReadyAt(result.provenance.retrieved_at);
+          setResult((previous) => ({ locationKey, data: result, error: null,
+            lastReadyAt: result.status === "ready" ? result.provenance.retrieved_at
+              : previous?.locationKey === locationKey ? previous.lastReadyAt : null }));
         }
       }).catch((reason: unknown) => {
         if (!controller.signal.aborted) {
-          setData(null);
-          setError(reason instanceof Error ? reason.message : "The outlook could not load.");
+          setResult((previous) => ({ locationKey, data: null,
+            error: reason instanceof Error ? reason.message : "The outlook could not load.",
+            lastReadyAt: previous?.locationKey === locationKey ? previous.lastReadyAt : null }));
         }
       });
     }
@@ -33,13 +40,12 @@ export function useWeatherNowcast() {
       current?.abort();
       window.clearInterval(timer);
     };
-  }, [request]);
+  }, [lat, lng, locationKey, request]);
 
   return {
-    data, error, lastReadyAt,
+    data: currentResult?.data ?? null, error: currentResult?.error ?? null, lastReadyAt: currentResult?.lastReadyAt ?? null,
     refresh: () => {
-      setData(null);
-      setError(null);
+      setResult((previous) => previous ? { ...previous, data: null, error: null } : null);
       setRequest((value) => value + 1);
     },
   };

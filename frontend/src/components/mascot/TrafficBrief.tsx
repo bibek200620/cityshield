@@ -20,7 +20,7 @@ function tripBrief(response: DrivingResponse, route: DrivingOption) {
     ? `Bengaluru’s city forecast shows ${weather.upcoming_rain_mm.toFixed(1)} mm of precipitation over the next three hours.`
     : "The Bengaluru precipitation forecast is unavailable.";
   const exposure = route.runoff
-    ? `Modeled runoff exposure is ${route.runoff.current_km.toFixed(2)} km with recent rain and ${route.runoff.forecast_km.toFixed(2)} km with forecast rain, across ${route.runoff.covered_km.toFixed(2)} km of screened route. The ETA comes from the routing provider.`
+    ? `Modeled runoff exposure is ${route.runoff.current_km.toFixed(2)} km with recent rain and ${route.runoff.forecast_km.toFixed(2)} km with forecast rain, across ${route.runoff.covered_km.toFixed(2)} km of screened route. The route estimate can change with traffic coverage.`
     : "Modeled runoff exposure is unavailable for this route.";
   const reports = response.flood_reports.status === "ready" && route.nearby_flood_reports !== undefined
     ? `${route.nearby_flood_reports} nearby flood ${route.nearby_flood_reports === 1 ? "report" : "reports"} in the provider feed.`
@@ -80,7 +80,7 @@ export default function TrafficBrief({ drive, onRead }: {
         <p>{brief.exposure}</p>
         <p>{brief.reports}</p>
         {drive.scenario && <p>{scenarioSummary || (drive.scenarioValue ? "Route runoff screening is unavailable for this scenario." : "Screening the route against the rainfall scenario…")}</p>}
-        <p>Routing source: {drive.result.source}.</p>
+        <p>Route estimates can change with mapped road coverage and current traffic availability.</p>
       </section>}
     </div>
   );

@@ -25,10 +25,10 @@ export interface RouteMatch {
 }
 
 export const NAVIGATION_AREA = {
-  west: 77.44,
-  south: 12.62,
-  east: 77.80,
-  north: 13.16,
+  west: 68,
+  south: 6,
+  east: 98,
+  north: 38,
 } as const;
 
 const initialPoints: Waypoints = { source: null, destination: null };
@@ -205,7 +205,7 @@ export function useDrivingPlanner() {
   const scenarioRoutes = useMemo(() => scenarioValue?.status === "ready" && result ? result.routes.map((route, index) => {
     const exposure = scenarioValue.routes[index];
     const providerSecondsPerKm = route.eta_seconds / exposure.route_km;
-    // Deliberately hypothetical speeds for a presentation. Keep the provider ETA intact.
+    // Deliberately hypothetical speeds for a presentation. Keep the current route estimate intact.
     const delay = (exposure.exposed_km - exposure.high_km) * Math.max(0, 240 - providerSecondsPerKm)
       + exposure.high_km * Math.max(0, 720 - providerSecondsPerKm);
     return { ...exposure, id: route.id, demoEtaSeconds: route.eta_seconds + Math.max(0, delay) };
@@ -355,7 +355,7 @@ export function useDrivingPlanner() {
     const location = locationFromPosition(position);
     if (!isWithinNavigationArea(location)) {
       if (navigationModeRef.current === "locating") {
-        setNavigationNotice("Your GPS location is outside the supported Bengaluru navigation area.");
+        setNavigationNotice("Your GPS location is outside the supported India map area.");
         setNavigationMode("error");
         setWatchingLocation(false);
       } else {
@@ -431,18 +431,18 @@ export function useDrivingPlanner() {
     if (watchId.current !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId.current);
   }, []);
 
-  function setPoint(endpoint: Endpoint, point: Waypoint | null) {
+  function setTrip(next: Waypoints) {
     stopNavigation();
-    routeRequest.current?.abort();
-    setPoints((previous) => {
-      const next = { ...previous, [endpoint]: point };
-      currentPoints.current = next;
-      return next;
-    });
+    currentPoints.current = next;
+    setPoints(next);
     setResult(null);
     currentResult.current = null;
     setStatus(null);
     setLoading(false);
+  }
+
+  function setPoint(endpoint: Endpoint, point: Waypoint | null) {
+    setTrip({ ...currentPoints.current, [endpoint]: point });
   }
 
   async function compare() {
@@ -508,11 +508,16 @@ export function useDrivingPlanner() {
     else setNavigationNotice("Waiting for GPS before recalculating the route.");
   }
 
+  function navigateTo(destination: Waypoint) {
+    setTrip({ source: null, destination });
+    startNavigation();
+  }
+
   return {
     points, setPoint, compare, result, selectedId, setSelectedId: selectRoute, loading, status,
     scenario, scenarioValue, scenarioRoutes, recommendedScenarioId,
     liveTrafficSegments, trafficFlowCheckedAt: activeFlow?.checked_at,
     navigationMode, navigationLocation, navigationNotice, routeMatch, offRoute,
-    startNavigation, startCarSimulation, stopNavigation, recalculateNavigation,
+    startNavigation, navigateTo, startCarSimulation, stopNavigation, recalculateNavigation,
   };
 }

@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import json
 import logging
+from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache
 from math import isfinite
+from threading import Lock
 from time import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -22,7 +24,6 @@ from app.api.routes_city_flood import load_grid, screen_values
 
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 INCIDENT_URL = "https://api.tomtom.com/traffic/services/5/incidentDetails"
-SOURCE = "Open-Meteo weather model"
 WEATHER_LOCATION = {"latitude": 12.98, "longitude": 77.59}
 WATCH_LOCATIONS = (WEATHER_LOCATION, {"latitude": 13.08, "longitude": 77.58},
                    {"latitude": 12.98, "longitude": 77.73}, {"latitude": 12.86, "longitude": 77.61},
@@ -38,10 +39,12 @@ INCIDENT_PROXIMITY_M = 35
 PROJECT = Transformer.from_crs("EPSG:4326", "EPSG:32643", always_xy=True).transform
 PROVIDER_ERRORS = (URLError, TimeoutError, KeyError, TypeError, ValueError, IndexError)
 logger = logging.getLogger("uvicorn.error")
+_last_good_weather: dict[tuple[float, float], tuple[dict, float]] = {}
+_last_good_weather_lock = Lock()
 
 
 class WeatherDataError(ValueError):
-    """A provider response that is stale, incomplete or invalid."""
+    """A weather response that is stale, incomplete or invalid."""
 
     def __init__(self, reason: str, message: str):
         super().__init__(message)
@@ -118,7 +121,7 @@ def parse_weather(payload: dict, now: float, retrieved_at: str | None = None, *,
     if any(current_units.get(key) != unit for key, unit in expected_units["current"].items()) or any(
         hourly_units.get(key) != unit for key, unit in expected_units["hourly"].items()
     ):
-        raise WeatherDataError("invalid_data", "Provider weather units do not match the requested units")
+        raise WeatherDataError("invalid_data", "Weather units do not match the requested units")
 
     fields = ("precipitation", "temperature_2m", "apparent_temperature", "relative_humidity_2m")
     times = hourly.get("time")
@@ -172,10 +175,6 @@ def parse_weather(payload: dict, now: float, retrieved_at: str | None = None, *,
         forecast.append(slot)
 
     provenance = {
-        "provider": "Open-Meteo",
-        "api_version": "v1",
-        "endpoint": WEATHER_URL,
-        "model_selection": "provider default Best Match (automatic)",
         "cell_selection": "land",
         "model_identifier": None,
         "model_version": None,
@@ -201,7 +200,6 @@ def parse_weather(payload: dict, now: float, retrieved_at: str | None = None, *,
     }
     return {
         "status": "ready",
-        "source": SOURCE,
         "provenance": provenance,
         "valid_at": iso_utc(valid_at),
         "air_temperature_c": temperatures[0],
@@ -241,10 +239,11 @@ def fetch_weather(params: dict):
         raise
 
 
-@lru_cache(maxsize=2)
-def weather_snapshot(_five_minute_slot: int) -> dict:
-    payload = fetch_weather({**weather_parameters(), **WEATHER_LOCATION})
-    return {"payload": payload, "retrieved_at": iso_utc(int(time()))}
+@lru_cache(maxsize=256)
+def weather_snapshot(latitude: float, longitude: float, _five_minute_slot: int) -> dict:
+    location = {"latitude": latitude, "longitude": longitude}
+    payload = fetch_weather({**weather_parameters(), **location})
+    return {"payload": payload, "retrieved_at": iso_utc(int(time())), "location": location}
 
 
 @lru_cache(maxsize=2)
@@ -268,71 +267,88 @@ def get_alert_weather() -> list[dict]:
         return [fallback] if fallback["status"] == "ready" else []
 
 
-@lru_cache(maxsize=2)
-def weather_report_snapshot(_five_minute_slot: int) -> dict:
-    """Fetch enough hourly provider output for the next 48 complete forecast hours."""
+@lru_cache(maxsize=128)
+def weather_report_snapshot(latitude: float, longitude: float, _five_minute_slot: int) -> dict:
+    """Fetch enough hourly forecast output for the next 48 complete hours."""
     payload = fetch_weather({
-        "latitude": WEATHER_LOCATION["latitude"], "longitude": WEATHER_LOCATION["longitude"],
+        "latitude": latitude, "longitude": longitude,
         "current": "temperature_2m,apparent_temperature",
         "hourly": "precipitation,temperature_2m,apparent_temperature,relative_humidity_2m",
         "past_hours": 2, "forecast_hours": 49,
         "temperature_unit": "celsius", "precipitation_unit": "mm",
         "timeformat": "unixtime", "timezone": "UTC", "cell_selection": "land",
     })
-    return {"payload": payload, "retrieved_at": iso_utc(int(time()))}
+    return {"payload": payload, "retrieved_at": iso_utc(int(time())),
+            "location": {"latitude": latitude, "longitude": longitude}}
 
 
 def _unavailable(reason: str, checked_at: str) -> dict:
     messages = {
-        "timeout": "The weather provider timed out. Try again later.",
-        "provider_error": "The weather provider could not be reached.",
+        "timeout": "The weather service timed out. Try again later.",
+        "upstream_error": "The weather service could not be reached.",
         "stale_data": "The latest weather estimate is stale or outside the supported time window.",
-        "missing_data": "The provider did not return all required weather values or metadata.",
-        "invalid_data": "The provider returned invalid weather values or units.",
+        "missing_data": "The forecast service did not return all required weather values or metadata.",
+        "invalid_data": "The forecast service returned invalid weather values or units.",
     }
     return {
         "status": "unavailable",
-        "source": SOURCE,
         "reason": reason,
         "checked_at": checked_at,
         "message": messages[reason],
     }
 
 
-def get_weather() -> dict:
+def get_weather(latitude: float = WEATHER_LOCATION["latitude"], longitude: float = WEATHER_LOCATION["longitude"]) -> dict:
     checked_at = iso_utc(int(time()))
+
+    def unavailable(reason: str) -> dict:
+        key = (round(latitude, 4), round(longitude, 4))
+        with _last_good_weather_lock:
+            cached = _last_good_weather.get(key)
+        if cached and time() - cached[1] <= 60 * 60:
+            stale = deepcopy(cached[0])
+            stale["is_stale"] = True
+            stale["stale_age_seconds"] = int(time() - cached[1])
+            return stale
+        return _unavailable(reason, checked_at)
+
     try:
         now = time()
-        snapshot = weather_snapshot(int(now // 300))
+        snapshot = weather_snapshot(latitude, longitude, int(now // 300))
     except TimeoutError:
-        return _unavailable("timeout", checked_at)
+        return unavailable("timeout")
     except HTTPError as exc:
         if 400 <= exc.code < 500 and exc.code != 429:
-            return _unavailable("invalid_data", checked_at)
-        return _unavailable("provider_error", checked_at)
+            return unavailable("invalid_data")
+        return unavailable("upstream_error")
     except URLError as exc:
         if isinstance(exc.reason, TimeoutError):
-            return _unavailable("timeout", checked_at)
-        return _unavailable("provider_error", checked_at)
+            return unavailable("timeout")
+        return unavailable("upstream_error")
     except json.JSONDecodeError:
-        return _unavailable("invalid_data", checked_at)
+        return unavailable("invalid_data")
 
     try:
-        return parse_weather(snapshot["payload"], now, snapshot["retrieved_at"])
+        response = parse_weather(snapshot["payload"], now, snapshot["retrieved_at"], location=snapshot["location"])
     except WeatherDataError as exc:
-        return _unavailable(exc.reason, checked_at)
+        return unavailable(exc.reason)
+    key = (round(latitude, 4), round(longitude, 4))
+    with _last_good_weather_lock:
+        _last_good_weather[key] = (response, now)
+    return response
 
 
-def parse_two_day_forecast(payload: dict, now: float, retrieved_at: str | None = None) -> dict:
-    """Validate and return 48 hourly provider estimates after the current hour."""
-    base = parse_weather(payload, now, retrieved_at)
+def parse_two_day_forecast(payload: dict, now: float, retrieved_at: str | None = None,
+                           location: dict | None = None) -> dict:
+    """Validate and return 48 hourly forecast estimates after the current hour."""
+    base = parse_weather(payload, now, retrieved_at, location=location)
     hourly = payload["hourly"]
     times = [int(timestamp) for timestamp in hourly["time"]]
     indexed = {timestamp: index for index, timestamp in enumerate(times)}
     hour_end = int(now // 3600) * 3600
     expected = [hour_end + 3600 * offset for offset in range(1, 49)]
     if any(timestamp not in indexed for timestamp in expected):
-        raise WeatherDataError("missing_data", "The provider did not return a complete 48-hour forecast")
+        raise WeatherDataError("missing_data", "The forecast service did not return a complete 48-hour outlook")
 
     fields = {
         "air_temperature_c": "temperature_2m",
@@ -357,7 +373,6 @@ def parse_two_day_forecast(payload: dict, now: float, retrieved_at: str | None =
         forecast.append(slot)
     return {
         "status": "ready",
-        "source": SOURCE,
         "provenance": base["provenance"],
         "forecast_hours": len(forecast),
         "forecast_from": forecast[0]["valid_at"],
@@ -366,26 +381,26 @@ def parse_two_day_forecast(payload: dict, now: float, retrieved_at: str | None =
     }
 
 
-def get_two_day_forecast() -> dict:
+def get_two_day_forecast(latitude: float = WEATHER_LOCATION["latitude"], longitude: float = WEATHER_LOCATION["longitude"]) -> dict:
     checked_at = iso_utc(int(time()))
     try:
         now = time()
-        snapshot = weather_report_snapshot(int(now // 300))
+        snapshot = weather_report_snapshot(latitude, longitude, int(now // 300))
     except TimeoutError:
         return _unavailable("timeout", checked_at)
     except HTTPError as exc:
         if 400 <= exc.code < 500 and exc.code != 429:
             return _unavailable("invalid_data", checked_at)
-        return _unavailable("provider_error", checked_at)
+        return _unavailable("upstream_error", checked_at)
     except URLError as exc:
         if isinstance(exc.reason, TimeoutError):
             return _unavailable("timeout", checked_at)
-        return _unavailable("provider_error", checked_at)
+        return _unavailable("upstream_error", checked_at)
     except (json.JSONDecodeError, OSError):
         return _unavailable("invalid_data", checked_at)
 
     try:
-        return parse_two_day_forecast(snapshot["payload"], now, snapshot["retrieved_at"])
+        return parse_two_day_forecast(snapshot["payload"], now, snapshot["retrieved_at"], location=snapshot["location"])
     except WeatherDataError as exc:
         return _unavailable(exc.reason, checked_at)
 
@@ -479,8 +494,12 @@ def scenario_route_exposure(lines: list[LineString], rainfall_mm: float) -> list
     return results
 
 
-def annotate_conditions(routes: list[dict], key: str | None) -> dict:
-    weather = get_weather()
+def annotate_conditions(routes: list[dict], key: str | None, latitude: float = WEATHER_LOCATION["latitude"],
+                        longitude: float = WEATHER_LOCATION["longitude"], *, bengaluru_only: bool = True) -> dict:
+    weather = get_weather(latitude, longitude)
+    if not bengaluru_only:
+        return {"weather": weather, "runoff_available": False,
+                "flood_reports": {"status": "unavailable", "source": "TomTom Traffic Incidents"}}
     lines = [transform(PROJECT, LineString(route["coordinates"])) for route in routes]
     runoff_available = annotate_runoff(routes, lines, weather)
     flood_reports = {"status": "unavailable", "source": "TomTom Traffic Incidents"}

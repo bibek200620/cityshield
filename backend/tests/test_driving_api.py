@@ -13,7 +13,13 @@ REQUEST = {
 
 
 def test_driving_comparison_merges_an_identical_shortest_path(monkeypatch):
-    primary = {"summary": {"length": 10, "time": 800}, "legs": [{"shape": "??AA"}]}
+    primary = {"summary": {"length": 10, "time": 800}, "legs": [{
+        "shape": "??AA",
+        "maneuvers": [
+            {"begin_shape_index": 1, "instruction": "Arrive.", "verbal_transition_alert_instruction": "Your destination is ahead."},
+            {"begin_shape_index": 3, "instruction": "Invalid position."},
+        ],
+    }]}
     alternate = {"summary": {"length": 11, "time": 900}, "legs": [{"shape": "??CC"}]}
 
     def query(req, *, shortest):
@@ -21,7 +27,7 @@ def test_driving_comparison_merges_an_identical_shortest_path(monkeypatch):
 
     monkeypatch.setattr(routes_driving, "query_valhalla", query)
     monkeypatch.setattr(settings, "TOMTOM_API_KEY", None)
-    monkeypatch.setattr(routes_driving, "annotate_conditions", lambda routes, key: {})
+    monkeypatch.setattr(routes_driving, "annotate_conditions", lambda *args, **kwargs: {})
     response = TestClient(app).post("/api/drive/routes", json=REQUEST)
     assert response.status_code == 200
     result = response.json()
@@ -29,15 +35,16 @@ def test_driving_comparison_merges_an_identical_shortest_path(monkeypatch):
     assert result["traffic"]["status"] == "unavailable"
     assert [r["labels"] for r in result["routes"]] == [["Best estimated time", "Shortest distance"], ["Alternative"]]
     assert result["routes"][0]["coordinates"] == [[0, 0], [0.000001, 0.000001]]
+    assert result["routes"][0]["guidance"] == [{"point_index": 1, "instruction": "Your destination is ahead."}]
 
 
-def test_driving_rejects_points_outside_bengaluru_before_querying_provider(monkeypatch):
+def test_driving_rejects_points_outside_india_before_querying_provider(monkeypatch):
     def unexpected_query(*args, **kwargs):
         raise AssertionError("An out-of-area request must be rejected locally")
 
     monkeypatch.setattr(routes_driving, "query_valhalla", unexpected_query)
     response = TestClient(app).post(
-        "/api/drive/routes", json={**REQUEST, "destination": {"lat": 12.5, "lng": 77.6}},
+        "/api/drive/routes", json={**REQUEST, "destination": {"lat": 12.5, "lng": 60.6}},
     )
     assert response.status_code == 422
 
@@ -46,7 +53,7 @@ def test_driving_accepts_southern_suburb_coordinates(monkeypatch):
     route = {"summary": {"length": 10, "time": 800}, "legs": [{"shape": "??AA"}]}
     monkeypatch.setattr(routes_driving, "query_valhalla", lambda req, *, shortest: {"trip": route})
     monkeypatch.setattr(settings, "TOMTOM_API_KEY", None)
-    monkeypatch.setattr(routes_driving, "annotate_conditions", lambda routes, key: {})
+    monkeypatch.setattr(routes_driving, "annotate_conditions", lambda *args, **kwargs: {})
     request = {
         "source": {"lat": 12.979, "lng": 77.6408},
         "destination": {"lat": 12.70, "lng": 77.58},
@@ -61,17 +68,22 @@ def test_configured_traffic_adapter_uses_provider_time_without_hazard_adjustment
     def fetch(url, params):
         assert params["traffic"] == "true"
         assert params["sectionType"] == "traffic"
+        assert params["instructionsType"] == "text"
         return {"routes": [{
             "summary": {"travelTimeInSeconds": 900, "noTrafficTravelTimeInSeconds": 600, "lengthInMeters": 8000},
             "legs": [{"points": [
                 {"latitude": 12.979, "longitude": 77.6408},
                 {"latitude": 12.9698, "longitude": 77.7499},
             ]}],
+            "guidance": {"instructions": [
+                {"pointIndex": 1, "message": "Turn left."},
+                {"pointIndex": -1, "message": "Invalid position."},
+            ]},
         }]}
 
     monkeypatch.setattr(settings, "TOMTOM_API_KEY", SecretStr("test-key"))
     monkeypatch.setattr(routes_driving, "fetch_json", fetch)
-    monkeypatch.setattr(routes_driving, "annotate_conditions", lambda routes, key: {})
+    monkeypatch.setattr(routes_driving, "annotate_conditions", lambda *args, **kwargs: {})
     response = TestClient(app).post("/api/drive/routes", json=REQUEST)
     assert response.status_code == 200
     result = response.json()
@@ -79,6 +91,7 @@ def test_configured_traffic_adapter_uses_provider_time_without_hazard_adjustment
     assert result["routes"][0]["eta_seconds"] == 900
     assert result["routes"][0]["traffic_time_delta_seconds"] == 300
     assert result["routes"][0]["traffic_segments"] is None
+    assert result["routes"][0]["guidance"] == [{"point_index": 1, "instruction": "Turn left."}]
 
 
 def test_traffic_sections_resolve_overlap_and_preserve_point_index_boundaries():
@@ -117,7 +130,9 @@ def test_flood_scenario_changes_exposure_on_the_same_bengaluru_road():
     assert 0 < flood["high_km"] < flood["exposed_km"] < flood["route_km"]
     assert flood["covered_km"] == dry["covered_km"]
     assert all(0 <= span["start"] < span["end"] <= 1 for span in flood["spans"])
-    assert client.post("/api/drive/scenario", json={"rainfall_mm": 200, "routes": [[[0, 0], [1, 1]]]}).status_code == 422
+    outside = client.post("/api/drive/scenario", json={"rainfall_mm": 200, "routes": [[[0, 0], [1, 1]]]})
+    assert outside.status_code == 200
+    assert outside.json()["status"] == "unavailable"
 
 
 def test_route_ranking_uses_comparable_hazards_and_keeps_provider_etas(monkeypatch):
@@ -129,7 +144,7 @@ def test_route_ranking_uses_comparable_hazards_and_keeps_provider_etas(monkeypat
     monkeypatch.setattr(settings, "TOMTOM_API_KEY", None)
     monkeypatch.setattr(routes_driving, "valhalla_options", lambda _req: (routes, routes[0].copy()))
 
-    def annotate(candidates, _key):
+    def annotate(candidates, _key, *_coords, **_kwargs):
         for candidate, reports, km in zip(candidates, [1, 0, 0], [0, 2, 0.5]):
             candidate.update(nearby_flood_reports=reports, runoff_comparable=True, runoff={"forecast_km": km})
         return {"runoff_available": True}

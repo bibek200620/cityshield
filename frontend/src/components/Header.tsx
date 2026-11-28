@@ -62,7 +62,7 @@ export default function Header() {
             Bengaluru Flood & Heatwave Intelligence
           </h1>
           <p className="text-[11.5px] text-slate-400 font-normal">
-            Bellandur pilot · simulated flood and Landsat surface-temperature patterns.
+            Local flood and heat research layers.
           </p>
         </div>
       </div>
@@ -72,7 +72,7 @@ export default function Header() {
         {/* Ward / Location selector */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d223a] border border-[#1b3e64] text-xs font-medium text-slate-200 hover:border-[#00E5FF]/40 cursor-pointer transition-colors shadow-inner">
           <span className="text-[#00E5FF] text-sm">📍</span>
-          <span>Bellandur pilot</span>
+          <span>Local research layers</span>
         </div>
 
         {/* Local clock; this is not a data timestamp. */}

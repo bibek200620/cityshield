@@ -12,6 +12,7 @@ from shapely.ops import transform
 PUBLIC_DATA = Path(__file__).resolve().parents[1] / "frontend" / "public" / "data"
 CELL_M = 300
 SCALES = {"city": 1700, "district": 650}
+FINE_RADIUS_M = 300
 
 
 def polygons(geometry):
@@ -66,7 +67,9 @@ def main() -> None:
     city = transform(to_utm, shape(geometry)).buffer(0)
     grids = {name: make_hex_grid(city, radius, to_wgs84) for name, radius in SCALES.items()}
     (PUBLIC_DATA / "bengaluru-hexes.json").write_text(json.dumps(grids, separators=(",", ":")) + "\n")
-    print({name: len(grid) for name, grid in grids.items()})
+    fine = make_hex_grid(city, FINE_RADIUS_M, to_wgs84)
+    (PUBLIC_DATA / "bengaluru-hexes-fine.json").write_text(json.dumps(fine, separators=(",", ":")) + "\n")
+    print({**{name: len(grid) for name, grid in grids.items()}, "cells": len(fine)})
 
 
 if __name__ == "__main__":

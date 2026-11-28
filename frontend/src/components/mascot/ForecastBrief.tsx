@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { api, type TwoDayWeatherReportResponse } from "../../api/client";
+import { api, type LatLng, type TwoDayWeatherReportResponse } from "../../api/client";
 import { summarizeHourly } from "../../map/weatherReport";
 
 const ist = new Intl.DateTimeFormat("en-IN", {
@@ -7,7 +7,9 @@ const ist = new Intl.DateTimeFormat("en-IN", {
 });
 const time = (value: string) => ist.format(new Date(value));
 
-export default function ForecastBrief({ onRead, autoSpeak }: { onRead?: (brief: string) => void; autoSpeak: boolean }) {
+export default function ForecastBrief({ onRead, autoSpeak, location, locationName }: {
+  onRead?: (brief: string) => void; autoSpeak: boolean; location: LatLng; locationName: string;
+}) {
   const [duration, setDuration] = useState("10");
   const [report, setReport] = useState<{
     hours: number; response: Extract<TwoDayWeatherReportResponse, { status: "ready" }>;
@@ -28,17 +30,17 @@ export default function ForecastBrief({ onRead, autoSpeak }: { onRead?: (brief: 
     setReport(null);
     setError("");
     try {
-      const response = await api.getWeatherReport(controller.signal);
+      const response = await api.getWeatherReport(controller.signal, location);
       if (controller.signal.aborted) return;
       if (response.status === "unavailable") {
         setError(response.message);
       } else if (response.hourly_forecast.length < hours) {
-        setError("The provider returned fewer forecast hours than requested.");
+        setError("The forecast service returned fewer hours than requested.");
       } else {
         setReport({ hours, response });
         if (autoSpeak) {
           const values = summarizeHourly(response.hourly_forecast.slice(0, hours));
-          onRead?.(spokenForecast(hours, values));
+          onRead?.(spokenForecast(hours, values, locationName));
         }
       }
     } catch (reason) {
@@ -52,7 +54,7 @@ export default function ForecastBrief({ onRead, autoSpeak }: { onRead?: (brief: 
   const values = hourly && summarizeHourly(hourly);
 
   return (
-    <div className="mascot-tool" aria-label="Bengaluru forecast report">
+    <div className="mascot-tool" aria-label={`${locationName} forecast report`}>
       <form className="mascot-form" onSubmit={(event) => { void generate(event); }}>
         <label htmlFor="cx-forecast-hours">Forecast duration in hours</label>
         <div className="mascot-duration">
@@ -67,7 +69,7 @@ export default function ForecastBrief({ onRead, autoSpeak }: { onRead?: (brief: 
         <div className="mascot-result-title">
           <h3>Next {report.hours} {report.hours === 1 ? "hour" : "hours"}</h3>
           {onRead && <button type="button" className="mascot-secondary"
-            onClick={() => onRead(spokenForecast(report.hours, values))}>Read report</button>}
+            onClick={() => onRead(spokenForecast(report.hours, values, locationName))}>Read report</button>}
         </div>
         <p>{time(hourly[0].valid_at)} to {time(hourly[hourly.length - 1].valid_at)} IST</p>
         <dl className="mascot-metrics">
@@ -91,16 +93,16 @@ export default function ForecastBrief({ onRead, autoSpeak }: { onRead?: (brief: 
             </tr>)}</tbody>
           </table>
         </details>
-        <p>Retrieved {time(report.response.provenance.retrieved_at)} IST. City-scale forecast from <a href="https://open-meteo.com/">Open-Meteo</a>.</p>
+        <p>Retrieved {time(report.response.provenance.retrieved_at)} IST. City-scale model forecast.</p>
       </section>}
     </div>
   );
 }
 
-function spokenForecast(hours: number, values: ReturnType<typeof summarizeHourly>) {
+function spokenForecast(hours: number, values: ReturnType<typeof summarizeHourly>, locationName: string) {
   const span = hours === 1 ? "hour" : `${hours} hours`;
   const rain = values.firstWet && values.peak
     ? `${values.rain.toFixed(1)} millimetres of precipitation are forecast. The wettest hour ends at ${time(values.peak.valid_at)}, India Standard Time.`
     : "There is no measurable precipitation in this forecast window.";
-  return `Bengaluru forecast for the next ${span}. ${rain} Air temperature ranges from ${Math.round(values.low)} to ${Math.round(values.high)} degrees Celsius, with average humidity of ${Math.round(values.humidity)} percent.`;
+  return `${locationName} forecast for the next ${span}. ${rain} Air temperature ranges from ${Math.round(values.low)} to ${Math.round(values.high)} degrees Celsius, with average humidity of ${Math.round(values.humidity)} percent.`;
 }

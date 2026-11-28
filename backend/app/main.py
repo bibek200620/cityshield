@@ -11,6 +11,7 @@ from app.api import (
     routes_backtest,
     routes_city_flood,
     routes_driving,
+    routes_flood_history,
     routes_explain,
     routes_infra,
     routes_heat,
@@ -32,7 +33,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Bengaluru Flood & Heatwave Intelligence (Research MVP)",
+    title="India Weather & Routing with Bengaluru Risk Research",
     description=(
         "User-entered rainfall scenarios drive a simplified SCS-CN/physics/GNN flood simulation. "
         "Optional single-scene Landsat LST and common-grid exposure endpoints are provided when "
@@ -52,6 +53,7 @@ app.add_middleware(
 app.include_router(routes_simulate.router)
 app.include_router(routes_city_flood.router)
 app.include_router(routes_driving.router)
+app.include_router(routes_flood_history.router)
 app.include_router(routes_places.router)
 app.include_router(routes_scenarios.router)
 app.include_router(routes_route.router)

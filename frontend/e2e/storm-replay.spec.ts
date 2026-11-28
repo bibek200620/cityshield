@@ -45,10 +45,10 @@ test("plays the published snapshots without substituting a CityShield match", as
 
   await page.getByRole("button", { name: "Close panel", exact: true }).click();
   await expect(open).toBeFocused();
-  await expect(page.getByRole("heading", { name: "Greater Bengaluru", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "India-wide weather map", exact: true })).toBeVisible();
 
   await open.click();
-  await page.getByRole("searchbox", { name: "Find an area" }).fill("Bellandur");
+  await page.getByRole("searchbox", { name: "Search India" }).fill("Bellandur");
   await page.getByRole("button", { name: "Bellanduru East", exact: true }).click();
   await expect(replay).toBeHidden();
   await expect(page.getByRole("heading", { name: "Bellanduru", level: 1 })).toBeVisible();

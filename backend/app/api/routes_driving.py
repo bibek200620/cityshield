@@ -56,8 +56,20 @@ def checked_road_line(coordinates: RoadGeometry) -> LineString:
     return line
 
 
+def checked_india_route_line(coordinates: RoadGeometry) -> LineString:
+    if not all(68 <= lng <= 98 and 6 <= lat <= 38 for lng, lat in coordinates):
+        raise HTTPException(422, "Provide valid route geometry within India.")
+    line = LineString(coordinates)
+    if line.length <= 0:
+        raise HTTPException(422, "Provide a route with nonzero length.")
+    return line
+
+
 @router.post("/api/drive/scenario")
 def drive_scenario(req: ScenarioRoutesRequest) -> dict:
+    if any(not all(77.30 <= lng <= 77.95 and 12.49 <= lat <= 13.29 for lng, lat in route)
+           for route in req.routes):
+        return {"status": "unavailable", "message": "Flood screening is available for the Bengaluru study area only."}
     lines = [transform(PROJECT, checked_road_line(route)) for route in req.routes]
     try:
         return {"status": "ready", "routes": scenario_route_exposure(lines, req.rainfall_mm)}
@@ -67,7 +79,7 @@ def drive_scenario(req: ScenarioRoutesRequest) -> dict:
 
 @router.post("/api/drive/traffic-flow")
 def drive_traffic_flow(req: TrafficFlowRequest) -> dict:
-    checked_road_line(req.coordinates)
+    checked_india_route_line(req.coordinates)
     now = int(time())
     segments = sample_route_flow(req.coordinates, now // 300)
     if not segments or all(span["level"] == "unknown" for span in segments):
@@ -113,7 +125,7 @@ def query_valhalla(req: DrivingRequest, *, shortest: bool) -> dict:
         "locations": [{"lat": point.lat, "lon": point.lng} for point in (req.source, req.destination)],
         "costing": "auto",
         "shape_format": "polyline6",
-        "directions_type": "none",
+        "directions_type": "instructions",
         "units": "kilometers",
         "alternates": 0 if shortest else 2,
         "costing_options": {"auto": costing_options},
@@ -132,16 +144,41 @@ def get_options(payload: dict) -> list[dict]:
     return [payload["trip"], *(item["trip"] for item in payload.get("alternates", []))]
 
 
+def guidance_steps(items, coordinate_count: int, *, index_field: str, text_fields: tuple[str, ...]) -> list[dict]:
+    """Accept only provider instructions that can be located on this route."""
+    if not isinstance(items, list):
+        return []
+    steps = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        index = item.get(index_field)
+        if type(index) is not int or not 0 <= index < coordinate_count:
+            continue
+        for field in text_fields:
+            text = item.get(field)
+            if isinstance(text, str) and text.strip() and len(text) <= 300:
+                steps.append({"point_index": index, "instruction": " ".join(text.split())})
+                break
+    return sorted(steps, key=lambda step: step["point_index"])
+
+
 def shape_option(trip: dict, label: str) -> dict:
     length = float(trip["summary"]["length"])
     seconds = float(trip["summary"]["time"])
     if not all(isfinite(value) and value > 0 for value in (length, seconds)):
         raise ValueError("Invalid route summary")
+    leg = trip["legs"][0]
+    coordinates = decode_polyline6(leg["shape"])
     return {
         "labels": [label],
         "distance_km": length,
         "eta_seconds": seconds,
-        "coordinates": decode_polyline6(trip["legs"][0]["shape"]),
+        "coordinates": coordinates,
+        "guidance": guidance_steps(
+            leg.get("maneuvers"), len(coordinates), index_field="begin_shape_index",
+            text_fields=("verbal_transition_alert_instruction", "verbal_pre_transition_instruction", "instruction"),
+        ),
     }
 
 
@@ -195,6 +232,7 @@ def tomtom_options(req: DrivingRequest, key: str, *, shortest: bool) -> list[dic
         "routeType": "shortest" if shortest else "fastest",
         "maxAlternatives": 0 if shortest else 2, "computeTravelTimeFor": "all",
         "routeRepresentation": "polyline", "sectionType": "traffic",
+        "instructionsType": "text", "language": "en-GB",
     })
     options = []
     for route in payload["routes"]:
@@ -208,6 +246,7 @@ def tomtom_options(req: DrivingRequest, key: str, *, shortest: bool) -> list[dic
         if len(coords) < 2 or not all(isfinite(v) and v > 0 for v in (length, seconds)):
             raise ValueError("Invalid driving route summary")
         free_flow = summary.get("noTrafficTravelTimeInSeconds")
+        guidance = route.get("guidance")
         options.append({
             "labels": ["Alternative"],
             "distance_km": length / 1000,
@@ -215,6 +254,10 @@ def tomtom_options(req: DrivingRequest, key: str, *, shortest: bool) -> list[dic
             "coordinates": coords,
             "traffic_time_delta_seconds": round(seconds - free_flow) if isinstance(free_flow, (int, float)) else None,
             "traffic_segments": traffic_segments(route, len(coords)),
+            "guidance": guidance_steps(
+                guidance.get("instructions") if isinstance(guidance, dict) else None, len(coords),
+                index_field="pointIndex", text_fields=("message",),
+            ),
         })
     if not options:
         raise ValueError("No traffic routes returned")
@@ -257,8 +300,8 @@ def recommend_route(candidates: list[dict]) -> dict:
 
 @router.post("/api/drive/routes")
 def drive_routes(req: DrivingRequest) -> dict:
-    if any(not (12.62 <= p.lat <= 13.16 and 77.44 <= p.lng <= 77.80) for p in (req.source, req.destination)):
-        raise HTTPException(422, "Choose a source and destination in the Bengaluru map area.")
+    if any(not (6 <= p.lat <= 38 and 68 <= p.lng <= 98) for p in (req.source, req.destination)):
+        raise HTTPException(422, "Choose a source and destination in the supported India map area.")
     if req.source == req.destination:
         raise HTTPException(422, "Choose a different destination.")
 
@@ -285,10 +328,13 @@ def drive_routes(req: DrivingRequest) -> dict:
     for option in [*candidates, *([shortest] if shortest else [])]:
         if not any(existing["coordinates"] == option["coordinates"] for existing in distinct):
             distinct.append(option)
-    conditions = annotate_conditions(distinct, key or None)
-    recommended = recommend_route(distinct)
+    bengaluru_route = all(12.57 <= point.lat <= 13.21 and 77.39 <= point.lng <= 77.85
+                           for point in (req.source, req.destination))
+    conditions = annotate_conditions(distinct, key or None, req.source.lat, req.source.lng,
+                                     bengaluru_only=bengaluru_route)
+    recommended = recommend_route(distinct) if bengaluru_route else distinct[0]
     options = compare_options(distinct, shortest)
-    if recommended is not options[0]:
+    if bengaluru_route and recommended is not options[0]:
         recommended["labels"] = [label for label in recommended["labels"] if label != "Alternative"]
         recommended["labels"].insert(0, "Recommended for lower flood exposure")
         options = [recommended, *(option for option in options if option is not recommended)][:3]

@@ -39,7 +39,7 @@ export default function WardInspector({ place, summary, flood, heat, failed, onR
         <div><dt>Ward area</dt><dd>{(summary.evidence.area_m2 / 1_000_000).toFixed(2)} km²</dd></div>
         <div><dt>Mean runoff</dt><dd>{runoff?.mean == null ? "—" : `${runoff.mean.toFixed(1)} mm`}</dd></div>
         <div><dt>Scored area above 20 mm</dt><dd>{comparisonArea == null ? "—" : `${comparisonArea.toFixed(1)}%`}</dd></div>
-        <div><dt>Mean surface temperature</dt><dd>{surface?.mean == null ? "—" : `${(surface.mean + heatOffset).toFixed(1)} °C`}</dd></div>
+        <div><dt>Mean surface temperature</dt><dd>{surface?.mean == null ? "Unavailable" : `${(surface.mean + heatOffset).toFixed(1)} °C`}</dd></div>
       </dl>
       {comparisonArea != null && <div className="ward-bar" aria-hidden="true">
         <span style={{ width: `${Math.min(100, comparisonArea)}%` }} />
@@ -47,7 +47,7 @@ export default function WardInspector({ place, summary, flood, heat, failed, onR
       <p className="ward-method">{runoff?.mean != null ? `${runoff.areaKm2.toFixed(2)} km² of grid has a runoff value.` :
         !active ? "Rainfall scenario stopped." : flood?.status === "unavailable" ? "Municipal runoff unavailable." :
           flood?.status === "ready" ? "No runoff values intersect this ward." : "Waiting for the current runoff screen."}
-        {surface?.mean != null && heat ? ` Landsat ${heat.date}, ${surface.areaKm2.toFixed(2)} km² of display grid${heatOffset ? " with scenario offset" : ""}.` : ""}
+        {surface?.mean != null && heat ? ` Satellite scene ${heat.date}, ${surface.areaKm2.toFixed(2)} km² of display grid${heatOffset ? " with scenario offset" : ""}.` : ""}
       </p>
     </>}
     <button type="button" className="text-action" onClick={(event) => onCompare(event.currentTarget)}>

@@ -21,7 +21,7 @@ export function useCXVoice() {
   }, [speech]);
 
   const voice = voices.find((option) => option.voiceURI === voiceId) ?? voices[0];
-  const say = useCallback((text: string) => {
+  const say = useCallback((text: string, done?: () => void) => {
     if (!speech) return;
     const utterance = new SpeechSynthesisUtterance(text);
     if (voice) {
@@ -30,6 +30,7 @@ export function useCXVoice() {
     }
     utterance.pitch = 1;
     utterance.rate = .97;
+    utterance.onend = utterance.onerror = () => done?.();
     speech.cancel();
     speech.speak(utterance);
   }, [speech, voice]);

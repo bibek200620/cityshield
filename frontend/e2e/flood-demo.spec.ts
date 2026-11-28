@@ -25,6 +25,8 @@ test("flood demo updates an existing trip, alerts CX, and moves the car without 
       },
     } });
   });
+  await page.route("**/api/weather/nowcast*", (route) => route.fulfill({ json: { status: "unavailable", reason: "stale_data" }, headers }));
+  await page.route("**/api/weather/point-forecast*", (route) => route.fulfill({ status: 503, json: { detail: "Forecast unavailable" }, headers }));
   await page.route("**/api/assistant/outlook", (route) => route.fulfill({ json: { status: "unavailable" }, headers }));
   await page.route("**/api/scenarios", (route) => route.fulfill({ json: [], headers }));
   await page.route("**/api/critical-infrastructure", (route) => route.fulfill({ json: [], headers }));
@@ -38,7 +40,11 @@ test("flood demo updates an existing trip, alerts CX, and moves the car without 
   }));
   await page.route("**/api/exposure/demo", (route) => route.fulfill({ json: { status: "unavailable", cells: [] }, headers }));
   await page.route("**/api/places/search?*", (route) => {
-    const source = new URL(route.request().url()).searchParams.get("query") === "Indiranagar";
+    const query = new URL(route.request().url()).searchParams.get("query");
+    const source = query === "Indiranagar";
+    if (query === "Bengaluru") return route.fulfill({ json: { status: "ready", results: [{
+      id: "bengaluru", name: "Bengaluru, Karnataka, India", category: "city", lng: 77.5937, lat: 12.9719,
+    }] }, headers });
     return route.fulfill({ json: { status: "ready", results: [{
       id: source ? "s" : "d", name: source ? "Indiranagar" : "Bellandur", category: "suburb",
       lng: source ? 77.637 : 77.677, lat: source ? 12.971 : 12.926,
@@ -68,7 +74,7 @@ test("flood demo updates an existing trip, alerts CX, and moves the car without 
   const button = (name: string) => page.getByRole("button", { name, exact: true });
   await button("CX assistant").click();
   await expect(page.locator("body")).toHaveAttribute("data-voice", "enhanced");
-  await button("Enable voice").click();
+  await button("Enable spoken alerts").click();
   await button("Close CX bubble").click();
 
   await button("Open map tools").click();
@@ -78,19 +84,22 @@ test("flood demo updates an existing trip, alerts CX, and moves the car without 
   await page.getByRole("searchbox", { name: "Search destination by place name" }).fill("Bellandur");
   await button("Bellandur suburb").click();
   await button("Compare car routes").click();
-  await expect(page.getByText("10 min provider ETA · 7.0 km")).toBeVisible();
+  await expect(page.getByText("10 min current route estimate · 7.0 km")).toBeVisible();
   await expect(page.getByText(/min demo ETA/)).toHaveCount(0);
 
   await button("Back to map tools").click();
-  await button("Rainfall scenario").click();
+  const mapSearch = page.getByRole("searchbox", { name: "Search India" });
+  await mapSearch.fill("Bengaluru");
+  await button("Bengaluru, Karnataka, India").click();
+  await button("Scenarios").click();
   await page.getByLabel("Preset").selectOption("flood-demo");
-  await button("Run flood simulation").click();
-  await expect(page.getByText("Flood demo active", { exact: true }).last()).toBeVisible();
+  await button("Run local simulation").click();
+  await expect(page.getByText("Flood demo running", { exact: true }).last()).toBeVisible();
   await expect(page.locator("body")).toHaveAttribute("data-spoken", /Flood demo is running/);
 
   await button("Back to map tools").click();
   await button("Car routes").click();
-  await expect(page.getByText("10 min provider ETA · 7.0 km")).toBeVisible();
+  await expect(page.getByText("10 min current route estimate · 7.0 km")).toBeVisible();
   await expect(page.getByText("28 min demo ETA")).toBeVisible();
   await expect(page.getByText("· 4.00 km screened for runoff", { exact: false })).toBeVisible();
   await expect(page.getByText("Scenario runoff along route")).toBeVisible();
@@ -107,7 +116,7 @@ test("flood demo updates an existing trip, alerts CX, and moves the car without 
   await button("Open map tools").click();
   await button("Rainfall scenario").click();
   await button("Stop simulation").click();
-  await expect(page.getByText("Flood demo active", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Flood demo running", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Scenario runoff along route")).toHaveCount(0);
 });
 
@@ -118,7 +127,7 @@ test("the forecast report shows rain, flood and heat evidence and exports on a p
     valid_at: new Date(start + (index + 1) * 3_600_000).toISOString(),
     air_temperature_c: 28, feels_like_c: 42, relative_humidity_pct: 75, precipitation_mm: index === 3 ? 8 : 0,
   }));
-  await page.route("**/api/weather/report", (route) => route.fulfill({ json: {
+  await page.route("**/api/weather/report*", (route) => route.fulfill({ json: {
     status: "ready", source: "Open-Meteo", forecast_from: hours[0].valid_at, forecast_through: hours[47].valid_at,
     forecast_hours: 48, hourly_forecast: hours,
     provenance: { retrieved_at: new Date(start).toISOString(), grid_cell_center: { latitude: 12.98, longitude: 77.59 } },
@@ -132,9 +141,9 @@ test("the forecast report shows rain, flood and heat evidence and exports on a p
   await page.getByRole("button", { name: "Two-day weather report" }).click();
   const report = page.getByRole("complementary", { name: "Two-day weather report" });
   await expect(report.getByRole("region", { name: "Hourly rain outlook" })).toContainText("8.0 mm");
-  await expect(report.getByText(/23 modeled cells/)).toBeVisible();
-  await expect(report.getByText(/42.0 °C feels like at/)).toBeVisible();
-  await expect(report.getByText(/5 weather-model grid points/)).toBeVisible();
+  await expect(report.getByRole("heading", { name: "Next 24 hours · Bengaluru" })).toBeVisible();
+  await expect(report.getByText("Rain total", { exact: true }).first()).toBeVisible();
+  await expect(report.getByText("Peak feels like", { exact: true }).first()).toBeVisible();
   const download = page.waitForEvent("download");
   await report.getByRole("button", { name: "Export CSV" }).click();
   expect((await download).suggestedFilename()).toMatch(/cityshield-bengaluru-48h-.*\.csv$/);

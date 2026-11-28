@@ -18,7 +18,7 @@ test("CX greets on open and uses exactly the requested forecast duration", async
       },
     });
   });
-  await page.route("**/api/weather/report", (route) => route.fulfill({
+  await page.route("**/api/weather/report*", (route) => route.fulfill({
     json: {
       status: "ready", source: "Open-Meteo", forecast_hours: 48,
       forecast_from: forecast[0].valid_at, forecast_through: forecast[47].valid_at, hourly_forecast: forecast,

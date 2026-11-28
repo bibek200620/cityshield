@@ -67,7 +67,7 @@ export function collectMascotAlerts(
           kind: "traffic",
           face: heavy ? "urgent" : "traffic",
           title: heavy ? "Heavy delay ahead" : "Slow traffic ahead",
-          message: `TomTom reports ${heavy ? "a heavy delay or closure" : "slow traffic"} ${distanceLabel(distance)}.`,
+          message: `Traffic data shows ${heavy ? "a heavy delay or possible closure" : "slow traffic"} ${distanceLabel(distance)}.`,
         });
       }
     }

@@ -69,7 +69,7 @@ async function mockAtlas(page: Page) {
 }
 
 async function selectBellanduru(page: Page) {
-  await page.getByRole("searchbox", { name: "Find an area" }).fill("Bellandur");
+  await page.getByRole("searchbox", { name: "Search India" }).fill("Bellandur");
   await page.getByRole("button", { name: "Bellanduru East" }).click();
 }
 
@@ -100,7 +100,8 @@ test("ward comparison weights available cells, exports the evidence, and saves t
   await page.reload();
   await page.getByRole("button", { name: "Compare scenarios", exact: true }).click();
   await expect(compare.getByText("Light shower", { exact: true }).last()).toBeVisible();
-  await expect(compare.getByRole("row", { name: /Grid cells above 20 mm/ }).getByRole("cell", { name: "+1 cells" })).toBeVisible();
+  const gridComparison = compare.getByRole("row", { name: /Grid cells above 20 mm/ });
+  await expect(gridComparison.getByRole("cell", { name: "—" })).toHaveCount(2);
   await compare.getByRole("button", { name: "Clear baseline" }).click();
   await expect(compare.getByRole("button", { name: "Save baseline" })).toBeVisible();
 });
@@ -111,15 +112,15 @@ test("source status distinguishes stale, historical, and missing data and can re
   await page.getByRole("button", { name: "Data sources", exact: true }).click();
   const sources = page.getByRole("region", { name: "Source status" });
   const source = (name: string) => sources.getByRole("listitem").filter({ hasText: name });
-  await expect(source("Open-Meteo forecast")).toContainText("Stale");
-  await expect(source("Municipal Landsat")).toContainText("Historical");
+  await expect(source("Weather forecast")).toContainText("Stale");
+  await expect(source("Surface-temperature imagery")).toContainText("Historical");
   await expect(source("Municipal runoff")).toContainText("90.0 mm input");
-  await expect(source("Bellandur heat inputs")).toContainText("Unavailable");
+  await expect(source("Local heat-model inputs")).toContainText("Unavailable");
   const loadsBeforeRefresh = requests.scenarioLoads();
   requests.restoreWeather();
   await sources.getByRole("button", { name: "Refresh sources" }).click();
-  await expect(source("Open-Meteo forecast")).toContainText("Ready");
-  await expect(source("Open-Meteo forecast")).toContainText("IST");
+  await expect(source("Weather forecast")).toContainText("Ready");
+  await expect(source("Weather forecast")).toContainText("IST");
   await expect(source("Municipal runoff")).toContainText("90.0 mm input");
   expect(requests.scenarioLoads()).toBe(loadsBeforeRefresh);
 });

@@ -3,7 +3,7 @@ import RoutePlaceSearch from "./RoutePlaceSearch";
 import { NAVIGATION_AREA, type Endpoint, useDrivingPlanner } from "../map/drivingPlanner";
 import Icon from "./Icon";
 
-const timeInBengaluru = new Intl.DateTimeFormat("en-IN", {
+const indiaTime = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false,
 });
 
@@ -30,7 +30,7 @@ export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
       const { latitude: lat, longitude: lng } = position.coords;
       if (!(NAVIGATION_AREA.south <= lat && lat <= NAVIGATION_AREA.north
         && NAVIGATION_AREA.west <= lng && lng <= NAVIGATION_AREA.east)) {
-        setGpsStatus("Your current location is outside the supported Bengaluru map area.");
+        setGpsStatus("Your current location is outside the supported India map area.");
         return;
       }
       drive.setPoint("source", { lat, lng, name: "My current location" });
@@ -79,12 +79,12 @@ export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
           <strong>Trip conditions</strong>
           <p>{drive.result.traffic.message} · {drive.result.source}</p>
           {weather?.status === "ready" ? <>
-            <p>{weather.air_temperature_c} °C air · feels like {weather.feels_like_c} °C · {timeInBengaluru.format(new Date(weather.valid_at))} IST</p>
-            <p>{weather.recent_rain_mm} mm over two model hours ending {timeInBengaluru.format(new Date(weather.recent_through))} IST. {weather.upcoming_rain_mm} mm for the following three model hours.</p>
-            <p>City weather estimate by <a href="https://open-meteo.com/">Open-Meteo</a>.</p>
+            <p>{weather.air_temperature_c} °C air · feels like {weather.feels_like_c} °C · {indiaTime.format(new Date(weather.valid_at))} IST</p>
+            <p>{weather.recent_rain_mm} mm over two model hours ending {indiaTime.format(new Date(weather.recent_through))} IST. {weather.upcoming_rain_mm} mm for the following three model hours.</p>
+            <p>Weather estimate for the route start, retrieved from the model grid.</p>
           </> : <p>{weather?.message ?? "Weather data unavailable."}</p>}
           {drive.result.flood_reports.status === "unavailable" && <p>Current road flood reports unavailable.</p>}
-          <p>CityShield favors candidate routes with fewer nearby flood reports and materially less modeled runoff where coverage is comparable. Provider traffic estimates determine travel times when available.</p>
+          <p>Car routes and weather forecasts work across India. Flood screening is available only in the Bengaluru study area; outside it, route choices use road-network estimates and available traffic.</p>
         </div>
         {drive.scenario && <div className="route-conditions route-scenario" aria-label="Rainfall scenario impact">
           <strong>{Number(drive.scenario.rainfallMm.toFixed(1))} mm rainfall scenario</strong>
@@ -99,7 +99,7 @@ export default function DrivingPlanner({ drive, onPick, onSimulationStart }: {
           <button type="button" className="route-option" key={option.id}
             aria-pressed={drive.selectedId === option.id} onClick={() => drive.setSelectedId(option.id)}>
             <strong>{option.labels.join(" · ")}</strong>
-            <span className="block">{Math.max(1, Math.round(option.eta_seconds / 60))} min provider ETA · {option.distance_km.toFixed(1)} km</span>
+            <span className="block">{Math.max(1, Math.round(option.eta_seconds / 60))} min current route estimate · {option.distance_km.toFixed(1)} km</span>
             {scenario && <span className="block route-scenario-estimate">
               {scenario.covered_km > 0 ? <>
                 <b>{Math.max(1, Math.round(scenario.demoEtaSeconds / 60))} min demo ETA</b>
