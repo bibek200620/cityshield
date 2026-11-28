@@ -535,23 +535,32 @@ def annotate_runoff(routes: list[dict], lines: list, weather: dict) -> bool:
     except FileNotFoundError:
         return False
     current = screen_values(grid, weather["recent_rain_mm"])
-    projected = screen_values(grid, weather["recent_rain_mm"] + weather["upcoming_rain_mm"])
     for route, line in zip(routes, lines):
+        window = route.get("weather_window")
+        forecast_rain = (
+            window.get("forecast_rain_mm") if window is not None and window.get("status") == "ready"
+            else None if window is not None
+            else weather.get("upcoming_rain_mm")
+        )
+        projected = screen_values(grid, weather["recent_rain_mm"] + forecast_rain) if forecast_rain is not None else None
         nearby = [int(i) for i in index.query(line, predicate="intersects") if current[i] is not None]
         if not nearby:
             continue
-        forecast_cells = [cells[i] for i in nearby if projected[i] >= RUNOFF_THRESHOLD_MM]
-        forecast_area = unary_union(forecast_cells)
+        forecast_cells = [cells[i] for i in nearby if projected is not None and projected[i] >= RUNOFF_THRESHOLD_MM]
+        forecast_area = unary_union(forecast_cells) if projected is not None else None
         route["runoff"] = {
             "covered_km": covered_km(line, [cells[i] for i in nearby]),
             "current_km": covered_km(line, [cells[i] for i in nearby if current[i] >= RUNOFF_THRESHOLD_MM]),
-            "forecast_km": round(line.intersection(forecast_area).length / 1000, 2),
+            "forecast_km": round(line.intersection(forecast_area).length / 1000, 2) if forecast_area is not None else None,
         }
-        if weather["upcoming_rain_mm"] > 0:
+        if forecast_area is not None and forecast_rain > 0:
             route["forecast_runoff_spans"] = runoff_spans(line, forecast_area)
         route["runoff_comparable"] = route["runoff"]["covered_km"] >= 0.95 * line.length / 1000
 
-    if len(routes) > 1 and all(route.get("runoff_comparable", False) for route in routes):
+    if len(routes) > 1 and all(
+        route.get("runoff_comparable", False) and route.get("runoff", {}).get("forecast_km") is not None
+        for route in routes
+    ):
         ordered = sorted(routes, key=lambda route: route["runoff"]["forecast_km"])
         if ordered[-1]["runoff"]["forecast_km"] - ordered[0]["runoff"]["forecast_km"] >= 0.1:
             ordered[0]["labels"].append("Lower modeled runoff exposure")
@@ -577,14 +586,66 @@ def scenario_route_exposure(lines: list[LineString], rainfall_mm: float) -> list
     return results
 
 
+def _forecast_window(weather: dict, eta_seconds: int, now: float) -> dict:
+    horizon_seconds = max(0, eta_seconds) + 30 * 60
+    horizon_minutes = int((horizon_seconds + 59) // 60)
+    through = now + horizon_seconds
+    if weather.get("status") != "ready":
+        return {"status": "unavailable", "horizon_minutes": horizon_minutes}
+    try:
+        forecast_through = datetime.fromisoformat(weather["forecast_through"].replace("Z", "+00:00")).timestamp()
+        if through > forecast_through + 1:
+            return {"status": "unavailable", "horizon_minutes": horizon_minutes}
+        slots = [
+            slot for slot in weather["hourly_forecast"]
+            if now < datetime.fromisoformat(slot["valid_at"].replace("Z", "+00:00")).timestamp() <= through
+        ]
+        rainfall = round(sum(slot["precipitation_mm"] for slot in slots), 2)
+    except (KeyError, TypeError, ValueError):
+        return {"status": "unavailable", "horizon_minutes": horizon_minutes}
+    return {
+        "status": "ready",
+        "horizon_minutes": horizon_minutes,
+        "through": iso_utc(int(through)),
+        "forecast_rain_mm": rainfall,
+        "forecast_hours_used": len(slots),
+        "sample_location": "route_start",
+    }
+
+
+def _extend_weather_horizon(weather: dict, routes: list[dict], latitude: float, longitude: float, now: float) -> dict:
+    if weather.get("status") != "ready" or not routes:
+        return weather
+    max_horizon = max(max(0, int(route.get("eta_seconds", 0))) + 30 * 60 for route in routes)
+    try:
+        through = datetime.fromisoformat(weather["forecast_through"].replace("Z", "+00:00")).timestamp()
+    except (KeyError, TypeError, ValueError):
+        return weather
+    if now + max_horizon <= through + 1:
+        return weather
+    extended = get_two_day_forecast(latitude, longitude)
+    if extended.get("status") != "ready":
+        return weather
+    result = deepcopy(weather)
+    result["hourly_forecast"] = extended["hourly_forecast"]
+    result["forecast_through"] = extended["forecast_through"]
+    return result
+
+
 def annotate_conditions(routes: list[dict], key: str | None, latitude: float = WEATHER_LOCATION["latitude"],
                         longitude: float = WEATHER_LOCATION["longitude"], *, bengaluru_only: bool = True) -> dict:
     weather = get_weather(latitude, longitude)
+    checked_at = time()
+    forecast_weather = _extend_weather_horizon(weather, routes, latitude, longitude, checked_at)
+    for route in routes:
+        route["weather_window"] = _forecast_window(forecast_weather, int(route.get("eta_seconds", 0)), checked_at)
     if not bengaluru_only:
         return {"weather": weather, "runoff_available": False,
-                "flood_reports": {"status": "unavailable", "source": "TomTom Traffic Incidents"}}
+                "flood_reports": {"status": "unavailable", "source": "TomTom Traffic Incidents"},
+                "historical_flood_context": {"status": "unavailable", "used_for_route_ranking": False,
+                                              "limitation": "Road-level historical flood records are unavailable for this area."}}
     lines = [transform(PROJECT, LineString(route["coordinates"])) for route in routes]
-    runoff_available = annotate_runoff(routes, lines, weather)
+    runoff_available = annotate_runoff(routes, lines, {**weather, "upcoming_rain_mm": 0}) if weather.get("status") == "ready" else False
     flood_reports = {"status": "unavailable", "source": "TomTom Traffic Incidents"}
     if key:
         try:
@@ -607,4 +668,6 @@ def annotate_conditions(routes: list[dict], key: str | None, latitude: float = W
             flood_reports["checked_at"] = iso_utc(int(time()))
         except PROVIDER_ERRORS:
             pass
-    return {"weather": weather, "runoff_available": runoff_available, "flood_reports": flood_reports}
+    from app.api.routes_flood_history import historical_route_context
+    return {"weather": weather, "runoff_available": runoff_available, "flood_reports": flood_reports,
+            "historical_flood_context": historical_route_context()}

@@ -292,7 +292,8 @@ def recommend_route(candidates: list[dict]) -> dict:
     if all("nearby_flood_reports" in option for option in comparable):
         fewest = min(option["nearby_flood_reports"] for option in comparable)
         comparable = [option for option in comparable if option["nearby_flood_reports"] == fewest]
-    if all(option.get("runoff_comparable", False) for option in comparable):
+    if all(option.get("runoff_comparable", False) and option.get("runoff", {}).get("forecast_km") is not None
+           for option in comparable):
         lowest = min(option["runoff"]["forecast_km"] for option in comparable)
         comparable = [option for option in comparable if round(option["runoff"]["forecast_km"] - lowest, 2) < 0.1]
     return min(comparable, key=lambda option: option["eta_seconds"])

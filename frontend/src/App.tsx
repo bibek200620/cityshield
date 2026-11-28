@@ -13,6 +13,7 @@ import MapMascot from "./components/mascot/MapMascot";
 import type { CXCameraAction, CXSiteAction } from "./components/mascot/cxCommands";
 import PlaceSearch, { type MapPlace } from "./components/PlaceSearch";
 import RouteComparisonPanel from "./components/RouteComparisonPanel";
+import RoadStatePanel from "./components/RoadStatePanel";
 import ScenarioComparison from "./components/ScenarioComparison";
 import ScenarioSlider from "./components/ScenarioSlider";
 import SourceHealthPanel from "./components/SourceHealthPanel";
@@ -34,10 +35,11 @@ const layers = [
   { key: "combined", name: "Combined", icon: "heat", description: "Rain and air-temperature overlap screen" },
 ] as const;
 
-type ToolPanel = "drive" | "outlook" | "weatherReport" | "rainfall" | "compare" | "replay" | "data";
+type ToolPanel = "drive" | "roadState" | "outlook" | "weatherReport" | "rainfall" | "compare" | "replay" | "data";
 
 const toolOptions: { id: ToolPanel; label: string; icon: IconName }[] = [
   { id: "drive", label: "Car routes", icon: "route" },
+  { id: "roadState", label: "Road State", icon: "flood" },
   { id: "outlook", label: "Next 3 hours", icon: "clock" },
   { id: "weatherReport", label: "Two-day weather report", icon: "calendar" },
   { id: "rainfall", label: "Rainfall scenario", icon: "rain" },
@@ -52,6 +54,7 @@ const workspaces: { id: ToolPanel | null; label: string }[] = [
   { id: "compare", label: "Compare scenarios" },
   { id: "replay", label: "Storm replay" },
   { id: "drive", label: "Routes" },
+  { id: "roadState", label: "Road State" },
   { id: "weatherReport", label: "Weather" },
   { id: "data", label: "Data sources" },
 ];
@@ -61,9 +64,20 @@ const BENGALURU_ROAD_VIEW: MapPlace = {
   id: "bengaluru-road-view", name: "Bengaluru", center: [BENGALURU_DEFAULT.lng, BENGALURU_DEFAULT.lat],
   bounds: [77.49, 12.88, 77.70, 13.06],
 };
+const BENGALURU_PLACE: MapPlace = {
+  id: "bengaluru-road-state", name: "Bengaluru, Karnataka, India", center: [77.59369, 12.97194],
+  bounds: [77.39, 12.57, 77.85, 13.21],
+};
 
-function MapLayers({ cityFlood, onRoadToggle, onBengaluru }: {
+function isBengaluruArea(place: MapPlace | null) {
+  return Boolean(place && /bengaluru|bangalore|bellandur/i.test(place.name)
+    && place.center[0] >= 77.39 && place.center[0] <= 77.85
+    && place.center[1] >= 12.57 && place.center[1] <= 13.21);
+}
+
+function MapLayers({ cityFlood, onRoadToggle, onBengaluru, roadStatusActive, onToggleRoadStatus }: {
   cityFlood: CityFloodResponse | null; onRoadToggle: () => void; onBengaluru?: () => void;
+  roadStatusActive: boolean; onToggleRoadStatus: () => void;
 }) {
   const visibility = useFloodStore((s) => s.layerVisibility);
   const toggleLayer = useFloodStore((s) => s.toggleLayer);
@@ -82,8 +96,8 @@ function MapLayers({ cityFlood, onRoadToggle, onBengaluru }: {
     <section className="layer-bar" aria-labelledby="layer-title">
       <h2 id="layer-title" className="sidebar-heading">Map layers</h2>
       <div className="layer-list">
-        {layers.map(({ key, name, icon, description }) => (
-          <div key={key} className={`layer-item layer-${icon}`}>
+        {layers.map(({ key, name, icon, description }) => <div key={key}>
+          <div className={`layer-item layer-${icon}`}>
             <label className="layer-row">
               <input type="checkbox" checked={visibility[key]} onChange={key === "cityRoads" ? onRoadToggle : () => toggleLayer(key)}
                 aria-labelledby={`label-${key}`}
@@ -102,7 +116,16 @@ function MapLayers({ cityFlood, onRoadToggle, onBengaluru }: {
                 <button className="pick-button" type="button" onClick={onBengaluru}>View Bengaluru roads</button>}
             </div>
           </div>
-        ))}
+          {key === "floodDepth" && <div className="layer-item layer-route-status">
+            <button className="layer-row road-status-row" type="button" role="switch"
+              aria-checked={roadStatusActive} aria-label="Road flood risk for Bengaluru road segments"
+              onClick={onToggleRoadStatus}>
+              <span className="layer-symbol"><Icon name="route" /></span>
+              <span className="layer-label"><span>Road flood risk</span><small>Bengaluru road segments</small></span>
+              <span className="layer-switch" aria-hidden="true" />
+            </button>
+          </div>}
+        </div>)}
       </div>
     </section>
   );
@@ -127,6 +150,8 @@ export default function App() {
     && (s.layerVisibility.floodDepth || s.layerVisibility.cityRoads || Boolean(place?.corporation)));
   const [currentArea, setCurrentArea] = useState<{ location: LatLng; name: string } | null>(null);
   const [cityFlood, setCityFlood] = useState<{ rainfallMm: number; value: CityFloodResponse } | null>(null);
+  const [roadStateFlood, setRoadStateFlood] = useState<CityFloodResponse | null>(null);
+  const [roadStateRunRequest, setRoadStateRunRequest] = useState(0);
   const [panel, setPanel] = useState<ToolPanel | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [weatherOpen, setWeatherOpen] = useState(false);
@@ -134,6 +159,20 @@ export default function App() {
   const [picking, setPicking] = useState<Endpoint | null>(null);
   const drive = useDrivingPlanner();
   const cameraControl = useRef<((action: CXCameraAction) => void) | null>(null);
+  function toggleRoadStatus() {
+    if (showRoads) {
+      toggleLayer("cityRoads");
+      return;
+    }
+    workspaceTrigger.current = null;
+    setPicking(null);
+    if (!isBengaluruArea(place)) selectPlace(BENGALURU_PLACE);
+    if (panel !== "roadState" || !toolsOpen) setRoadStateFlood(null);
+    if (!useFloodStore.getState().layerVisibility.cityRoads) toggleLayer("cityRoads");
+    setRoadStateRunRequest((count) => count + 1);
+    setPanel("roadState");
+    setToolsOpen(true);
+  }
   const weatherLocation = drive.navigationLocation ?? (place
     ? { lat: place.center[1], lng: place.center[0] } : currentArea?.location ?? BENGALURU_DEFAULT);
   const weatherLocationName = drive.navigationLocation ? "Current location"
@@ -368,6 +407,11 @@ export default function App() {
           onClick={(event) => {
             workspaceTrigger.current = event.currentTarget;
             if (id === null) { closePanel(); return; }
+            if (id === "roadState") {
+              selectPlace(BENGALURU_PLACE);
+              setRoadStateFlood(null);
+              if (!useFloodStore.getState().layerVisibility.cityRoads) toggleLayer("cityRoads");
+            }
             setPanel(id);
             setPicking(null);
             setToolsOpen(true);
@@ -381,9 +425,12 @@ export default function App() {
               weatherLocationName={weatherLocationName} onSiteCommand={performCXAction} />}
             weatherWidget={<ThreeHourOutlook open={weatherOpen} location={weatherLocation} locationName={weatherLocationName} onOpen={() => setWeatherOpen(true)}
               onClose={() => setWeatherOpen(false)} />}
-            cityFlood={displayedFlood?.status === "ready" ? displayedFlood : null}
+            cityFlood={panel === "roadState" && toolsOpen
+              ? roadStateFlood?.status === "ready" ? roadStateFlood : null
+              : displayedFlood?.status === "ready" ? displayedFlood : null}
             scenarioRoadError={displayedFlood?.status === "unavailable" ? displayedFlood.message : null}
             onReset={() => selectPlace(null)}
+            onViewBengaluru={() => selectPlace(BENGALURU_PLACE)}
             drivePoints={drive.points} drivingRoutes={drive.result?.routes} selectedDrivingId={drive.selectedId}
             scenarioRoute={scenarioRoute} trafficSegments={drive.liveTrafficSegments}
             navigation={{ mode: drive.navigationMode, location: drive.navigationLocation, routeMatch: drive.routeMatch }}
@@ -410,7 +457,8 @@ export default function App() {
               }}>Cancel</button>}
             </div>
             {!picking && <MapLayers cityFlood={displayedFlood} onRoadToggle={toggleRoadForecast}
-              onBengaluru={supportsBengaluruSimulation(place) ? undefined : () => selectPlace(BENGALURU_ROAD_VIEW)} />}
+              onBengaluru={supportsBengaluruSimulation(place) ? undefined : () => selectPlace(BENGALURU_ROAD_VIEW)}
+              roadStatusActive={showRoads} onToggleRoadStatus={toggleRoadStatus} />}
             {selectedWard && <WardInspector place={selectedWard} summary={wardSummary} flood={displayedFlood}
               heat={null} failed={wardFailed} onRetry={() => { setWardIndex(null); setWardRequest((count) => count + 1); }}
               onCompare={() => { setPanel("compare"); setToolsOpen(true); }} />}
@@ -458,6 +506,9 @@ export default function App() {
           <div className="tool-content" hidden={panel !== "rainfall"}>
             <ScenarioSlider selectedPlace={place} onSelectPlace={(city) => selectPlace(city, true)} />
           </div>
+          {panel === "roadState" && <div className="tool-content">
+            <RoadStatePanel onScreenChange={setRoadStateFlood} runRequest={roadStateRunRequest} />
+          </div>}
           {panel === "compare" && <div className="tool-content">
             <ScenarioComparison currentFlood={displayedFlood} place={selectedWard} ward={wardSummary} heat={null}
               onEdit={() => setPanel("rainfall")} retryActive={() => setReloadCount((count) => count + 1)}

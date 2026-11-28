@@ -1,10 +1,12 @@
 import pytest
+import networkx as nx
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from shapely.geometry import LineString, box
 from shapely.strtree import STRtree
 
 from app.routing import conditions
+from app.api import routes_route
 from app.main import app
 
 
@@ -99,6 +101,84 @@ def test_weather_conditions_follow_timestamps_and_allow_missing_optional_fields(
     result = conditions.parse_weather(payload, 7500)
     assert result["status"] == "ready"
     assert all(hour["weather_code"] is None for hour in result["hourly_forecast"])
+
+
+def test_route_weather_window_covers_route_eta_plus_thirty_minutes():
+    now = 1_800
+    weather = {
+        "status": "ready",
+        "forecast_through": conditions.iso_utc(14_400),
+        "hourly_forecast": [
+            {"valid_at": conditions.iso_utc(timestamp), "precipitation_mm": rain}
+            for timestamp, rain in ((3_600, 1.5), (7_200, 2.5), (10_800, 5.0))
+        ],
+    }
+
+    window = conditions._forecast_window(weather, 3_600, now)
+
+    assert window["status"] == "ready"
+    assert window["horizon_minutes"] == 90
+    assert window["through"] == conditions.iso_utc(7_200)
+    assert window["forecast_rain_mm"] == 4.0
+    assert window["forecast_hours_used"] == 2
+
+
+def test_route_weather_window_does_not_treat_missing_horizon_as_dry():
+    weather = {
+        "status": "ready",
+        "forecast_through": conditions.iso_utc(7_200),
+        "hourly_forecast": [],
+    }
+
+    window = conditions._forecast_window(weather, 7_200, 1_800)
+
+    assert window == {"status": "unavailable", "horizon_minutes": 150}
+
+
+def test_astar_route_graph_uses_recent_and_trip_window_rain(monkeypatch):
+    now = 1_800
+    current_graph = nx.Graph()
+    current_graph.add_node("A", lat=12.9, lng=77.6)
+    current_graph.add_node("B", lat=12.901, lng=77.601)
+    current_graph.add_node("C", lat=12.9005, lng=77.6)
+    current_graph.add_edge("A", "B", state="clear", base_travel_time_s=5, length_m=50, edge_id="direct")
+    current_graph.add_edge("A", "C", state="clear", base_travel_time_s=4, length_m=40, edge_id="north-1")
+    current_graph.add_edge("C", "B", state="clear", base_travel_time_s=4, length_m=40, edge_id="north-2")
+    forecast_graph = current_graph.copy()
+    forecast_graph["A"]["B"]["state"] = "flooded"
+    scenario = type("Scenario", (), {"road_graph": current_graph})()
+    observed = {}
+    monkeypatch.setattr(routes_route, "time", lambda: now)
+    monkeypatch.setattr(routes_route, "get_weather", lambda *_args: {
+        "status": "ready", "recent_rain_mm": 4, "air_temperature_c": 25, "feels_like_c": 26,
+    })
+    monkeypatch.setattr(routes_route, "_extend_weather_horizon", lambda weather, *_args: weather)
+    monkeypatch.setattr(routes_route, "_forecast_window", lambda *_args: {
+        "status": "ready", "horizon_minutes": 90, "forecast_rain_mm": 2,
+    })
+
+    def compute_live(intensity, duration, **_kwargs):
+        observed["intensity"] = intensity
+        observed["duration"] = duration
+        return type("ForecastScenario", (), {"road_graph": forecast_graph})()
+
+    monkeypatch.setattr(routes_route.cache, "compute_live", compute_live)
+    monkeypatch.setattr("app.api.routes_flood_history.historical_route_context", lambda: {
+        "status": "ready", "used_for_route_ranking": False,
+        "limitation": "District-level historical context only.",
+    })
+    req = type("Request", (), {"start": type("Point", (), {"lat": 12.9, "lng": 77.6})()})()
+
+    graph, context, _path, _cost = routes_route._route_weather_graph(
+        req, scenario, "A", "B", routes_route.shortest_path_astar, 1.0,
+    )
+
+    assert observed["duration"] == 210
+    assert observed["intensity"] == pytest.approx(6 / 3.5)
+    assert routes_route.shortest_path_astar(graph, "A", "B")[0] == ["A", "C", "B"]
+    assert context["forecast_road_state_used"] is True
+    assert context["modeled_rainfall_total_mm"] == 6
+    assert context["historical_flood_context"]["used_for_route_ranking"] is False
 
 
 def test_two_day_forecast_returns_only_complete_next_48_provider_hours():

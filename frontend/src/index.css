@@ -143,6 +143,7 @@ button:enabled, summary { cursor: pointer; }
 }
 .layer-heat { --layer-start: #ffd7c6a6; --layer-end: #fcf1f66e; --layer-color: #70372e; }
 .layer-combined { --layer-start: #d6c7ffa1; --layer-end: #f2eeff73; --layer-color: #49367c; }
+.layer-route-status { --layer-start: #c7e6ff8c; --layer-end: #eaf5ff6b; --layer-wash: #f0f8ff73; --layer-color: #184c80; }
 .layer-row {
   position: relative;
   isolation: isolate;
@@ -169,6 +170,12 @@ button:enabled, summary { cursor: pointer; }
 .layer-row:has(input:disabled) { cursor: default; filter: saturate(.55); }
 .layer-row input:disabled { cursor: default; }
 .layer-row:has(input:checked)::before { opacity: 1; }
+.road-status-row { width: 100%; color: inherit; text-align: left; }
+.road-status-row:focus-visible { outline: 3px solid #286ac1; outline-offset: 2px; }
+.road-status-row[aria-checked="true"] { border-color: #f8fbff; }
+.road-status-row[aria-checked="true"]::before { opacity: 1; }
+.road-status-row[aria-checked="true"] .layer-switch { background: #2465c1; border-color: #35659f; }
+.road-status-row[aria-checked="true"] .layer-switch::after { transform: translateX(13px); }
 .layer-row:has(input:focus-visible) { outline: 3px solid #286ac1; outline-offset: 2px; }
 .layer-row input { position: absolute; width: 100%; height: 100%; inset: 0; opacity: 0; cursor: pointer; }
 .layer-symbol { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 8px; background: var(--layer-wash); color: var(--layer-color); }
@@ -196,8 +203,11 @@ button:enabled, summary { cursor: pointer; }
 }
 .app-error { margin-top: 7px; padding: 7px 9px; border-radius: 8px; color: var(--caution); background: var(--caution-bg); font-size: 12px; overflow-wrap: anywhere; }
 .app-error button { min-height: 27px; text-decoration: underline; }
-.map-reset {
+.map-view-controls {
   position: absolute; z-index: 2; bottom: 184px; right: 10px;
+  display: grid; gap: 7px;
+}
+.map-reset {
   display: flex; align-items: center; gap: 6px; min-height: 38px; padding: 6px 9px;
   border-radius: 8px; color: var(--ink); background: var(--surface); box-shadow: var(--map-shadow);
   font-size: 12px; font-weight: 800;
@@ -362,6 +372,36 @@ button:enabled, summary { cursor: pointer; }
 }
 .weather-report-unavailable { display: grid; gap: 5px; padding: 11px; border-radius: 8px; background: var(--soft); }
 
+.road-state { display: grid; gap: 11px; }
+.road-state h3 { font-size: 15px; font-weight: 850; }
+.road-state > p, .road-state-data > span, .road-state-data small, .road-state-history > p {
+  color: var(--muted); font-size: 12px; line-height: 1.5;
+}
+.road-state-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 8px; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
+.road-state-modes legend, .road-state-data label { color: var(--ink); font-size: 12px; font-weight: 800; }
+.road-state-modes label { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 3px 5px; color: var(--ink); font-size: 12px; white-space: nowrap; }
+.tool-content .road-state-modes input[type="radio"] { width: 16px; min-width: 16px; height: 16px; min-height: 16px; margin: 0; padding: 0; border: 0; accent-color: var(--accent); }
+.road-state-data { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #f8fbff; }
+.road-state-data strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.road-state-data small { font-size: 11px; }
+.road-state-run { width: 100%; }
+.road-state-error { padding: 9px 10px; border-radius: 7px; color: var(--caution) !important; background: var(--caution-bg); }
+.road-state-result { padding: 8px 10px; border: 1px solid #c6d7ce; border-radius: 7px; background: #f1f8f3; color: #294f39 !important; }
+.road-state-key { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 7px 10px; font-size: 12px; }
+.road-state-key > strong { grid-column: 1 / -1; }
+.road-state-key span { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+.road-state-key i { display: inline-block; width: 28px; height: 8px; border-radius: 2px; }
+.road-state-marker, .road-risk-dot { width: 9px !important; height: 9px !important; border: 2px solid #fff; border-radius: 50% !important; background: #8b272e; box-shadow: 0 0 0 1px #6d2227; }
+.road-state-gradient { background: linear-gradient(90deg, #eebf6a, #db6f3d, #8b272e); }
+.road-state-history { display: grid; gap: 11px; }
+.road-state-history .historical-flood-history { padding: 10px 0 0; border-top: 1px solid var(--line); }
+.road-state-historical-case { display: grid; gap: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #f8fbff; }
+.road-state-historical-case h4 { font-size: 13px; font-weight: 850; }
+.road-state-historical-case p { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.road-state-historical-case strong { color: var(--ink); }
+.road-state-historical-case .secondary-button { justify-self: start; }
+.map-legend .road-risk-dot { width: 9px; height: 9px; }
+
 .weather-report-section { display: grid; gap: 16px; font-variant-numeric: tabular-nums; }
 .weather-report-heading h3 { font-size: clamp(22px, 3vw, 32px); font-weight: 850; letter-spacing: -.03em; line-height: 1.15; }
 .weather-report-heading p { margin-top: 4px; color: var(--muted); font-size: 12px; }
@@ -448,8 +488,8 @@ button:enabled, summary { cursor: pointer; }
   .map-frame .maplibregl-ctrl-bottom-right { z-index: 2; }
   .map-frame .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group:nth-child(2) { margin-bottom: 126px; }
   .map-frame .maplibregl-ctrl-bottom-left { bottom: 140px; right: 57px; }
-  .map-reset { bottom: 301px; width: 38px; justify-content: center; }
-  .map-reset span { display: none; }
+  .map-view-controls { bottom: 301px; }
+  .map-reset { min-height: 38px; }
   .map-status { bottom: 166px; }
 }
 

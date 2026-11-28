@@ -66,3 +66,21 @@ def historical_flood_events() -> dict:
             "license": "CC BY 4.0",
         },
     }
+
+
+def historical_route_context() -> dict:
+    """Return aggregate historic context without implying road-level evidence."""
+    records = _records()
+    return {
+        "status": "ready" if records else "unavailable",
+        "location": "Bengaluru Urban district",
+        "location_precision": "district",
+        "event_records": len(records),
+        "daily_time_of_day_available": False,
+        "road_level_data_available": False,
+        "used_for_route_ranking": False,
+        "limitation": (
+            "Historical records have day or date-range precision and no road locations, "
+            "event-matched rainfall, or flood footprints. They are shown as context only."
+        ),
+    }
