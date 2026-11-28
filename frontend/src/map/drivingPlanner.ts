@@ -205,7 +205,7 @@ export function useDrivingPlanner() {
   const scenarioRoutes = useMemo(() => scenarioValue?.status === "ready" && result ? result.routes.map((route, index) => {
     const exposure = scenarioValue.routes[index];
     const providerSecondsPerKm = route.eta_seconds / exposure.route_km;
-    // Deliberately hypothetical speeds for a presentation. Keep the provider ETA intact.
+    // Deliberately hypothetical speeds for a presentation. Keep the current route estimate intact.
     const delay = (exposure.exposed_km - exposure.high_km) * Math.max(0, 240 - providerSecondsPerKm)
       + exposure.high_km * Math.max(0, 720 - providerSecondsPerKm);
     return { ...exposure, id: route.id, demoEtaSeconds: route.eta_seconds + Math.max(0, delay) };

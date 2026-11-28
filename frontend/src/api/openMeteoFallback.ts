@@ -2,7 +2,6 @@ import type { LatLng, TwoDayWeatherReportResponse, WeatherAvailabilityResponse }
 
 const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 const LOCATION = { latitude: 12.98, longitude: 77.59 };
-const SOURCE = "Open-Meteo weather model";
 const HOUR = 3600;
 const HOURLY_UNITS = {
   temperature_2m: "°C",
@@ -77,10 +76,7 @@ function readForecast(value: unknown, now: number, location: LatLng): { nowcast:
     number(valueAt("precipitation", hour), 0);
   const shared = {
     status: "ready" as const,
-    source: SOURCE,
     provenance: {
-      provider: "Open-Meteo", api_version: "v1", endpoint: ENDPOINT,
-      model_selection: "provider default Best Match (automatic)",
       cell_selection: "land", model_identifier: null, model_version: null,
       model_note: "The response does not identify the exact model or model run.",
       requested_location: { latitude: location.lat, longitude: location.lng },
@@ -146,7 +142,7 @@ export async function withOpenMeteoFallback<K extends "nowcast" | "report">(
   location: LatLng = { lat: LOCATION.latitude, lng: LOCATION.longitude },
 ) {
   signal?.throwIfAborted();
-  if (backend.status !== "unavailable" || !["provider_error", "timeout"].includes(backend.reason)) {
+  if (backend.status !== "unavailable" || !["upstream_error", "timeout"].includes(backend.reason)) {
     return backend;
   }
   const key = `${location.lat},${location.lng}`;
@@ -167,6 +163,6 @@ export async function withOpenMeteoFallback<K extends "nowcast" | "report">(
     return intervals[kind];
   } catch {
     signal?.throwIfAborted();
-    return backend;
+    return { ...backend, message: "CityShield and the direct forecast source are temporarily unavailable." };
   }
 }

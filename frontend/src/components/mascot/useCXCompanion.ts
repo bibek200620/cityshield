@@ -4,7 +4,7 @@ import { isWithinNavigationArea, type useDrivingPlanner } from "../../map/drivin
 import { distanceSpoken, parseVoiceCommand, readCXWakePhrase, spokenWeather, upcomingDirection, weatherFollowup } from "./cxCommands";
 import { type VoiceOutput, type VoiceSession, useCXListening } from "./useCXListening";
 
-const help = "Ask for the current weather, a forecast for the next six hours, or say navigate to a place. On a route, ask for the next turn or how far is left. Say stop listening to turn off the microphone.";
+const help = "Ask for weather or a forecast in any Indian city, or say navigate to a place. On a route, ask for the next turn or how far is left. Say stop listening to turn off the microphone.";
 const CONVERSATION_IDLE_MS = 45_000;
 
 function greetingReply(text: string): string | null {
@@ -30,10 +30,14 @@ export function useCXCompanion(
   distances: number[],
   read: VoiceOutput | undefined,
   selectedWeatherLocation: { lat: number; lng: number },
+  onAlertsCommand?: (enabled: boolean) => string,
 ) {
   const choice = useRef<{ results: PlaceSearchResult[]; expiresAt: number } | null>(null);
   const [awake, setAwake] = useState(false);
-  const conversation = useRef<{ expiresAt: number; timer?: number; weather: boolean; history: CXConversationTurn[] }>({
+  const conversation = useRef<{
+    expiresAt: number; timer?: number; weather: boolean; history: CXConversationTurn[];
+    weatherLocation?: { lat: number; lng: number };
+  }>({
     expiresAt: 0, weather: false, history: [],
   });
   const request = useRef<AbortController | null>(null);
@@ -97,6 +101,12 @@ export function useCXCompanion(
     }
     if (choice.current && Date.now() > choice.current.expiresAt) choice.current = null;
     switch (command.kind) {
+      case "alerts-on":
+        reply(onAlertsCommand?.(true) ?? "Weather alerts are on for this location.");
+        return;
+      case "alerts-off":
+        reply(onAlertsCommand?.(false) ?? "Weather alerts are off.");
+        return;
       case "standby":
         resetConversation();
         session.reply("Standing by. Say hello C X when you need me.");
@@ -162,7 +172,25 @@ export function useCXCompanion(
           : "Place search is unavailable right now. Try again in a moment.";
         try {
           if (command.kind === "weather") {
-            answer = await spokenWeather(command.period, controller.signal, weatherLocation);
+            let target = conversation.current.weatherLocation ?? weatherLocation;
+            let locationName: string | null = null;
+            if (command.location) {
+              const response = await api.searchPlaces(command.location, controller.signal);
+              if (controller.signal.aborted) return;
+              const match = response.results.find((item) => isWithinNavigationArea(item) && item.name.trim());
+              if (match) {
+                target = { lat: match.lat, lng: match.lng };
+                locationName = placeLabel(match);
+                conversation.current.weatherLocation = target;
+              } else {
+                answer = `I couldn’t find ${command.location} in India. Try a nearby city or district.`;
+              }
+            }
+            if (!command.location || locationName) {
+              answer = await spokenWeather(command.period, controller.signal, target, command.rainProbability);
+              if (locationName) answer = `For ${locationName}, ${answer}`;
+              conversation.current.weatherLocation = target;
+            }
           } else {
             const response = await api.searchPlaces(command.query, controller.signal);
             if (controller.signal.aborted) return;
@@ -247,7 +275,12 @@ export function useCXCompanion(
     if (action.kind === "weather") {
       const period = action.day ? { day: action.day } as const
         : action.hours ? { hours: action.hours, atEnd: action.at_end } as const : undefined;
-      const answer = await spokenWeather(period, signal, weatherLocation);
+      const answer = await spokenWeather(
+        period ?? (action.focus === "rain_probability" ? { day: "today" } : undefined),
+        signal,
+        conversation.current.weatherLocation ?? weatherLocation,
+        action.focus === "rain_probability",
+      );
       if (!signal.aborted) {
         conversation.current.weather = true;
         lastReply.current = answer;

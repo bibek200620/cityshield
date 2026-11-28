@@ -33,7 +33,7 @@ export default function ForecastBrief({ onRead, autoSpeak }: { onRead?: (brief: 
       if (response.status === "unavailable") {
         setError(response.message);
       } else if (response.hourly_forecast.length < hours) {
-        setError("The provider returned fewer forecast hours than requested.");
+        setError("The forecast service returned fewer hours than requested.");
       } else {
         setReport({ hours, response });
         if (autoSpeak) {
@@ -91,7 +91,7 @@ export default function ForecastBrief({ onRead, autoSpeak }: { onRead?: (brief: 
             </tr>)}</tbody>
           </table>
         </details>
-        <p>Retrieved {time(report.response.provenance.retrieved_at)} IST. City-scale forecast from <a href="https://open-meteo.com/">Open-Meteo</a>.</p>
+        <p>Retrieved {time(report.response.provenance.retrieved_at)} IST. City-scale model forecast.</p>
       </section>}
     </div>
   );

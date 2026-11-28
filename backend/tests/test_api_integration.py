@@ -6,7 +6,7 @@ from app.main import app
 
 def test_full_api_flow(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "HEAT_SCENE_DIR", str(tmp_path / "missing-scene"))
-    monkeypatch.setattr("app.api.routes_weather.get_weather", lambda: {
+    monkeypatch.setattr("app.api.routes_weather.get_weather", lambda *_args: {
         "status": "unavailable", "source": "Open-Meteo weather model", "message": "Fresh weather estimates unavailable.",
     })
     with TestClient(app) as client:
@@ -50,7 +50,7 @@ def test_full_api_flow(monkeypatch, tmp_path):
         weather_resp = client.get("/api/weather/nowcast")
         assert weather_resp.status_code == 200
         assert weather_resp.json()["status"] == "unavailable"
-        assert weather_resp.json()["source"] == "Open-Meteo weather model"
+        assert "source" not in weather_resp.json()
 
         start, end = infra_list[0], infra_list[1]
         route_resp = client.post("/api/route", json={

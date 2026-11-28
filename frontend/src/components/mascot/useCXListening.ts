@@ -41,6 +41,7 @@ export function useCXListening(
 ) {
   const [phase, setPhase] = useState<Phase>("off");
   const [error, setError] = useState("");
+  const [transcript, setTranscript] = useState("");
   const latest = useRef({ read, onCommand, onStop, keepListening });
   latest.current = { read, onCommand, onStop, keepListening };
   const state = useRef<{
@@ -119,7 +120,7 @@ export function useCXListening(
     state.recognizer = recognition;
     recognition.lang = "en-IN";
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     let transcript = "";
     let noSpeech = false;
     recognition.onstart = () => {
@@ -127,8 +128,11 @@ export function useCXListening(
     };
     recognition.onresult = (event) => {
       if (state.recognizer !== recognition) return;
-      const result = event.results[event.resultIndex];
-      if (result?.isFinal) transcript = result[0].transcript.trim();
+      const results = Array.from(event.results);
+      const heard = results.map((result) => result[0]?.transcript.trim() ?? "").filter(Boolean).join(" ");
+      if (heard) setTranscript(heard);
+      transcript = results.filter((result) => result.isFinal)
+        .map((result) => result[0]?.transcript.trim() ?? "").filter(Boolean).join(" ").trim();
     };
     recognition.onerror = ({ error }) => {
       if (state.recognizer !== recognition) return;
@@ -145,8 +149,10 @@ export function useCXListening(
       if (state.recognizer !== recognition) return;
       state.recognizer = undefined;
       if (!transcript) {
-        state.emptyEnds = noSpeech ? 0 : state.emptyEnds + 1;
-        if (state.emptyEnds >= 3) fail("Speech recognition ended. Start a new voice session to try again.");
+        state.emptyEnds += 1;
+        if (state.emptyEnds >= 2) fail(noSpeech
+          ? "I didn’t hear a request. Check your microphone, then try again."
+          : "Speech recognition stopped. Start a new voice session to try again.");
         else resume();
         return;
       }
@@ -177,6 +183,7 @@ export function useCXListening(
     state.lastInput = Date.now();
     state.emptyEnds = 0;
     state.enabled = true;
+    setTranscript("");
     setError("");
     setPhase("starting");
     listen();
@@ -194,5 +201,5 @@ export function useCXListening(
   }, []);
 
   const active = phase !== "off" && phase !== "error";
-  return { active, phase, error, supported: Boolean(read && recognitionConstructor()), start, stop, speak };
+  return { active, phase, error, transcript, supported: Boolean(read && recognitionConstructor()), start, stop, speak };
 }

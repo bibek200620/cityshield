@@ -1,7 +1,7 @@
 .map-footer {
   position: absolute;
   z-index: 4;
-  inset: auto auto 16px var(--gutter);
+  inset: auto auto 42px var(--gutter);
   display: flex;
   align-items: end;
   gap: 12px;
@@ -80,6 +80,9 @@
   bottom: calc(100% + 12px);
   left: 5px;
   width: min(320px, calc(100vw - 2 * var(--gutter) - 10px));
+  max-height: min(60dvh, 520px);
+  overflow: auto;
+  overscroll-behavior: contain;
   display: grid;
   gap: 8px;
   padding: 13px 15px 12px;
@@ -113,6 +116,12 @@
 .mascot-alerts li + li { padding-top: 7px; border-top: 1px solid #d6dfec; }
 .mascot-alerts strong { display: block; margin-bottom: 2px; font-size: 13px; font-weight: 800; }
 .mascot-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 6px 9px; }
+.mascot-scan-progress, .mascot-scan-results { display: grid; width: 100%; gap: 6px; }
+.mascot-scan-progress progress { width: 100%; height: 8px; accent-color: #2359a7; }
+.mascot-scan-error { width: 100%; color: #8c332f !important; }
+.mascot-scan-caveat { width: 100%; font-size: 10px !important; }
+.mascot-scan-results .mascot-alerts { max-height: 23dvh; padding-inline-start: 0; list-style: none; }
+.mascot-voice:disabled { cursor: wait; opacity: .65; }
 .mascot-voice, .mascot-expressions summary {
   display: flex; align-items: center; gap: 5px; padding: 4px 7px; min-height: 29px;
   border-radius: 8px; color: #164584; background: #edf4ff; font-size: 11px; font-weight: 800;
@@ -121,6 +130,14 @@
 .mascot-voice.mascot-expand { display: none; }
 .mascot-voice svg { width: 14px; height: 14px; }
 .mascot-voice.mascot-talk { background: #2359a7; color: white; min-height: 36px; }
+.mascot-voice-panel { display: grid; gap: 6px; padding: 9px; border: 1px solid #c7d6e8; border-radius: 10px; background: #f3f7fc; }
+.mascot-voice-panel-heading { display: flex; align-items: center; gap: 7px; color: #173e79; font-size: 12px; }
+.mascot-voice-panel .mascot-talk { justify-content: center; width: 100%; min-height: 42px; font-size: 12px; }
+.mascot-voice-panel .mascot-stop { justify-content: center; width: 100%; min-height: 38px; color: #842d32; background: #fff0f0; }
+.voice-live-indicator { width: 8px; height: 8px; border-radius: 50%; background: #22865f; box-shadow: 0 0 0 3px #22865f24; }
+.voice-transcript { padding: 7px 8px; border-radius: 7px; background: white; overflow-wrap: anywhere; }
+.voice-session-hint, .mascot-voice-help { font-size: 11px !important; line-height: 1.45 !important; }
+.mascot-voice-error { color: #8c332f !important; font-size: 11px !important; }
 .mascot-mic-state {
   position: absolute;
   z-index: 1;
@@ -181,7 +198,7 @@
 @media (max-width: 720px) {
   .map-footer { inset: auto 10px 34px; align-items: start; flex-direction: column; gap: 3px; max-width: none; }
   .map-mascot { --mascot-height: 100px; width: 89px; }
-  .mascot-bubble { bottom: calc(100% + 10px); left: 0; width: min(273px, calc(100vw - 62px)); padding: 9px 11px; }
+  .mascot-bubble { bottom: calc(100% + 10px); left: 0; width: min(273px, calc(100vw - 62px)); max-height: min(60dvh, 480px); padding: 9px 11px; }
   .mascot-bubble[data-panel]:not([data-panel="home"]) { width: min(342px, calc(100vw - 62px)); }
   .mascot-tool :is(input[type="number"], input[type="search"]) { font-size: 16px; }
   .mascot-bubble[data-compact="true"] .mascot-alerts { max-height: 87px; }

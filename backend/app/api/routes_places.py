@@ -3,15 +3,17 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from math import isfinite
+from math import atan2, cos, isfinite, radians, sin, sqrt
 from threading import Lock
 from time import monotonic, sleep
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+from datetime import datetime, timezone
+
+import requests
 
 from fastapi import APIRouter, HTTPException, Query
-
 from app.core.config import settings
 
 router = APIRouter()
@@ -88,4 +90,114 @@ def search_places(query: str = Query(min_length=2, max_length=120)) -> dict:
         "source": "OpenStreetMap Nominatim",
         "attribution": "© OpenStreetMap contributors",
         "results": list(results),
+    }
+
+
+def _overpass_query(latitude: float, longitude: float, radius_m: int) -> dict:
+    """Query a small set of mapped emergency/community amenities on demand."""
+    global _next_provider_call
+    around = f"around:{radius_m},{latitude:.5f},{longitude:.5f}"
+    amenity_values = "hospital|clinic|doctors|fire_station|police|community_centre|shelter"
+    query = f"""[out:json][timeout:15];
+(
+  node({around})[amenity~"{amenity_values}"];
+  way({around})[amenity~"{amenity_values}"];
+  relation({around})[amenity~"{amenity_values}"];
+  node({around})[healthcare~"hospital|clinic"];
+  way({around})[healthcare~"hospital|clinic"];
+  relation({around})[healthcare~"hospital|clinic"];
+);
+out center tags 60;"""
+    request_headers = {
+        "User-Agent": "CityShield/0.1 (India public-safety research map)",
+        "Accept": "application/json",
+    }
+    with _provider_lock:
+        sleep(max(0, _next_provider_call - monotonic()))
+        _next_provider_call = monotonic() + 1.1
+        response = requests.post(
+            "https://overpass-api.de/api/interpreter",
+            data={"data": query}, headers=request_headers, timeout=(4, 18),
+        )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict) or not isinstance(payload.get("elements"), list):
+        raise ValueError("Invalid mapped facility response")
+    return payload
+
+
+def _facility_category(tags: dict) -> str:
+    amenity = str(tags.get("amenity", ""))
+    healthcare = str(tags.get("healthcare", ""))
+    categories = {
+        "hospital": "hospital", "clinic": "clinic", "doctors": "clinic",
+        "fire_station": "fire_station", "police": "police",
+        "community_centre": "community_centre", "shelter": "shelter",
+    }
+    return categories.get(amenity, healthcare if healthcare in {"hospital", "clinic"} else "community")
+
+
+def _distance_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    lat1r, lat2r = radians(lat1), radians(lat2)
+    dlat, dlng = lat2r - lat1r, radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(lat1r) * cos(lat2r) * sin(dlng / 2) ** 2
+    return 6_371_000 * 2 * atan2(sqrt(a), sqrt(max(0.0, 1 - a)))
+
+
+@lru_cache(maxsize=128)
+def _nearby_facilities_cached(latitude: float, longitude: float, radius_m: int, _hour_slot: int) -> tuple[dict, ...]:
+    try:
+        payload = _overpass_query(latitude, longitude, radius_m)
+    except (requests.RequestException, URLError, TimeoutError, OSError, ValueError, TypeError) as exc:
+        raise HTTPException(503, "Nearby mapped listings are temporarily unavailable.") from exc
+    results = []
+    seen: set[str] = set()
+    for item in payload["elements"]:
+        if not isinstance(item, dict):
+            continue
+        tags = item.get("tags") if isinstance(item.get("tags"), dict) else {}
+        if not (tags.get("name") and (tags.get("amenity") or tags.get("healthcare"))):
+            continue
+        location = item.get("center") if isinstance(item.get("center"), dict) else item
+        try:
+            lat, lng = float(location["lat"]), float(location["lon"])
+            element_id = f"{item['type']}/{int(item['id'])}"
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not (_INDIA_SOUTH <= lat <= _INDIA_NORTH and _INDIA_WEST <= lng <= _INDIA_EAST):
+            continue
+        if _distance_m(latitude, longitude, lat, lng) > radius_m or element_id in seen:
+            continue
+        seen.add(element_id)
+        results.append({
+            "id": element_id,
+            "name": str(tags["name"])[:160],
+            "category": _facility_category(tags),
+            "latitude": lat,
+            "longitude": lng,
+            "map_url": f"https://www.openstreetmap.org/{element_id}",
+            "status": "mapped_listing_unverified",
+        })
+        if len(results) >= 60:
+            break
+    return tuple(results)
+
+
+@router.get("/api/places/nearby")
+def nearby_facilities(
+    latitude: float = Query(..., ge=6, le=38),
+    longitude: float = Query(..., ge=68, le=98),
+    radius_m: int = Query(3000, ge=250, le=10000),
+) -> dict:
+    lat, lng = round(latitude, 5), round(longitude, 5)
+    results = list(_nearby_facilities_cached(lat, lng, radius_m, int(monotonic() // 3600)))
+    return {
+        "status": "ready" if results else "empty",
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "results": results,
+        "limitations": [
+            "Listings are mapped community data and may be incomplete, closed, or out of date.",
+            "A listing does not verify emergency capacity, accessibility, operational status, or cooling-centre availability.",
+            "No public report or route is marked verified or safe based on these listings.",
+        ],
     }

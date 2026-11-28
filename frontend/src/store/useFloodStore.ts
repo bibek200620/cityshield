@@ -6,8 +6,6 @@ import {
   RouteResponse,
   ScenarioSummary,
   SimulateResponse,
-  HeatWorkflowResponse,
-  ExposureResponse,
 } from "../api/client";
 
 export interface LayerVisibility {
@@ -19,6 +17,7 @@ export interface LayerVisibility {
   infra: boolean;
   route: boolean;
   heat: boolean;
+  surfaceTemperature: boolean;
   combined: boolean;
 }
 
@@ -46,11 +45,6 @@ interface FloodStore {
   appliedRainfall: AppliedRainfallScenario | null;
   heatOffsetC: number;
   currentRainfall: { intensity: number; duration: number };
-  heatData: HeatWorkflowResponse | null;
-  combinedExposure: ExposureResponse | null;
-  combinedExposureError: string | null;
-  heatLoading: boolean;
-  heatError: string | null;
   layerVisibility: LayerVisibility;
   activeNav: string;
   searchQuery: string;
@@ -58,7 +52,6 @@ interface FloodStore {
   error: string | null;
 
   loadInitial: () => Promise<void>;
-  loadHeat: () => Promise<void>;
   runScenario: (scenarioId: string, heatOffsetC?: number) => Promise<void>;
   runCustomRainfall: (intensity: number, duration: number, heatOffsetC: number, floodDemo?: boolean) => Promise<void>;
   stopSimulation: () => void;
@@ -99,20 +92,11 @@ export const useFloodStore = create<FloodStore>((set, get) => {
         selectedPresetId: presetId,
         currentRainfall: { intensity, duration },
         heatOffsetC: heatOffsetC ?? 0,
-        combinedExposure: null,
-        combinedExposureError: null,
         layerVisibility: heatOffsetC === undefined ? state.layerVisibility : {
-          ...state.layerVisibility, floodDepth: true, cityRoads: true,
+          ...state.layerVisibility,
           pilotFlood: floodDemo || state.layerVisibility.pilotFlood,
-          heat: heatOffsetC !== 0 || state.layerVisibility.heat,
         },
       }));
-      try {
-        const combinedExposure = await api.getCombinedExposure(result.scenario_id, request.signal);
-        if (!request.signal.aborted) set({ combinedExposure });
-      } catch (error) {
-        if (!request.signal.aborted) set({ combinedExposureError: (error as Error).message });
-      }
     } catch (error) {
       if (!request.signal.aborted) set({ error: (error as Error).message });
     } finally {
@@ -133,42 +117,26 @@ export const useFloodStore = create<FloodStore>((set, get) => {
     selectedRouteId: "recommended",
     vehicleType: "ambulance",
     selectedNodeId: null,
-    simulationActive: true,
+    simulationActive: false,
     appliedRainfall: null,
     heatOffsetC: 0,
     currentRainfall: { intensity: 60, duration: 90 },
-    heatData: null,
-    combinedExposure: null,
-    combinedExposureError: null,
-    heatLoading: false,
-    heatError: null,
     layerVisibility: {
       roads: true,
-      floodDepth: true,
+      floodDepth: false,
       pilotFlood: false,
       cityRoads: false,
       drainage: true,
       infra: true,
       route: true,
       heat: false,
+      surfaceTemperature: false,
       combined: false,
     },
     activeNav: "Dashboard",
     searchQuery: "",
     loading: false,
     error: null,
-
-    loadHeat: async () => {
-      set({ heatLoading: true, heatError: null });
-      try {
-        const heatData = await api.getHeatWorkflow();
-        set({ heatData });
-      } catch (e) {
-        set({ heatData: null, heatError: (e as Error).message });
-      } finally {
-        set({ heatLoading: false });
-      }
-    },
 
     loadInitial: async () => {
       set({ loading: true, error: null });
@@ -178,10 +146,6 @@ export const useFloodStore = create<FloodStore>((set, get) => {
           api.getCriticalInfrastructure(),
         ]);
         set({ scenarios, criticalInfra: infra });
-        void get().loadHeat();
-        if (get().simulationActive && !scenarioRequest && scenarios.length > 0) {
-          await get().runScenario(scenarios[1]?.scenario_id ?? scenarios[0].scenario_id);
-        }
       } catch (error) {
         set({ error: (error as Error).message });
       } finally {
@@ -209,12 +173,10 @@ export const useFloodStore = create<FloodStore>((set, get) => {
         heatOffsetC: 0,
         simulateResult: null,
         activeScenarioId: null,
-        combinedExposure: null,
-        combinedExposureError: null,
         route: null,
         loading: false,
         error: null,
-        layerVisibility: { ...state.layerVisibility, floodDepth: false, pilotFlood: false, cityRoads: false, combined: false },
+        layerVisibility: { ...state.layerVisibility, pilotFlood: false, cityRoads: false },
       }));
     },
 

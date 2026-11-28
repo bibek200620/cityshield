@@ -61,6 +61,7 @@ class ConversationDecision(BaseModel):
     day: Literal["today", "tomorrow"] | None = None
     hours: Annotated[int, Field(strict=True, ge=1, le=720)] | None = None
     at_end: bool = False
+    focus: Literal["rain_probability"] | None = None
 
 
 _CX_DECISION_SCHEMA = {
@@ -73,6 +74,7 @@ _CX_DECISION_SCHEMA = {
         "day": {"type": "STRING", "enum": ["today", "tomorrow"]},
         "hours": {"type": "INTEGER"},
         "at_end": {"type": "BOOLEAN", "description": "For weather at a point in time, such as in four hours."},
+        "focus": {"type": "STRING", "enum": ["rain_probability"], "description": "Use when the user asks for a chance or probability of rain."},
     },
     "required": ["kind"],
 }
@@ -295,7 +297,10 @@ def _conversation_response(decision: ConversationDecision, request: Conversation
     if decision.kind == "weather":
         if decision.day and decision.hours:
             raise ValueError("Conflicting forecast periods")
-        action.update(day=decision.day, hours=decision.hours, at_end=decision.at_end)
+        day = decision.day or ("today" if decision.focus == "rain_probability" and not decision.hours else None)
+        action.update(day=day, hours=decision.hours, at_end=decision.at_end)
+        if decision.focus:
+            action["focus"] = decision.focus
     return {"status": "ready", "reply": "I’ll check that for you.", "action": action}
 
 
@@ -328,7 +333,10 @@ def assistant_conversation(request: ConversationRequest) -> dict:
                 "and direction for the next instruction on an active trip. Use route for an actual request to plan "
                 "or navigate to a place. Copy the destination and any given origin as exact phrases the user said, "
                 "including current-location phrases. If discussing a hypothetical route or missing a destination, "
-                "reply or ask a question. CityShield supports weather and routing across India. It looks up places "
+                "reply or ask a question. For a request for the chance or probability of rain, use weather with "
+                "focus rain_probability and a relevant day. The app reports forecast rainfall amounts and tells "
+                "the user that a probability percentage is unavailable; never invent one. CityShield supports "
+                "weather and routing across India. It looks up places "
                 "and fetches weather and route data itself. "
                 "Never invent local conditions, distances, directions, or claim a route was set by you."
             )}]},
@@ -340,6 +348,6 @@ def assistant_conversation(request: ConversationRequest) -> dict:
         }, timeout=6)
         return _conversation_response(ConversationDecision.model_validate_json(text), request)
     except (URLError, TimeoutError, ValueError, KeyError, IndexError, TypeError):
-        return {"status": "unavailable", "reason": "provider"}
+        return {"status": "unavailable", "reason": "upstream"}
     finally:
         _conversation_slots.release()

@@ -214,7 +214,7 @@ def test_conversation_rejects_route_endpoints_not_present_in_user_turn(conversat
 
     monkeypatch.setattr(routes_assistant, "urlopen", fake_provider)
     response = conversation_client.post("/api/assistant/conversation", json={"message": "Route to Lalbagh"})
-    assert response.json() == {"status": "unavailable", "reason": "provider"}
+    assert response.json() == {"status": "unavailable", "reason": "upstream"}
 
 
 def test_conversation_returns_unavailable_on_provider_failure(conversation_client, monkeypatch):
@@ -223,4 +223,4 @@ def test_conversation_returns_unavailable_on_provider_failure(conversation_clien
 
     monkeypatch.setattr(routes_assistant, "urlopen", timeout)
     response = conversation_client.post("/api/assistant/conversation", json={"message": "Hello"})
-    assert response.json() == {"status": "unavailable", "reason": "provider"}
+    assert response.json() == {"status": "unavailable", "reason": "upstream"}

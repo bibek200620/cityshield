@@ -57,8 +57,8 @@ def test_weather_uses_completed_hours_and_rejects_stale_readings():
     assert summary["hourly_forecast"][2]["relative_humidity_pct"] == 64
     assert summary["forecast_through"] == conditions.iso_utc(18000)
     provenance = summary["provenance"]
-    assert provenance["api_version"] == "v1"
-    assert provenance["model_selection"] == "provider default Best Match (automatic)"
+    assert "api_version" not in provenance
+    assert "model_selection" not in provenance
     assert provenance["requested_location"] == {"latitude": 12.98, "longitude": 77.59}
     assert provenance["grid_cell_center"]["elevation_m"] == 900
     assert provenance["spatial_resolution_m"] is None
@@ -110,7 +110,7 @@ def test_two_day_forecast_returns_only_complete_next_48_provider_hours():
     assert result["forecast_through"] == conditions.iso_utc(180000)
     assert len(result["hourly_forecast"]) == 48
     assert result["hourly_forecast"][0]["air_temperature_c"] == 25.2
-    assert result["provenance"]["provider"] == "Open-Meteo"
+    assert "provider" not in result["provenance"]
     assert result["provenance"]["retrieved_at"] == "1970-01-01T02:03:00+00:00"
 
 

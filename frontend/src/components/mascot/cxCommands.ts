@@ -3,7 +3,8 @@ import { summarizeHourly } from "../../map/weatherReport";
 
 export type WeatherPeriod = { hours: number; atEnd?: boolean } | { day: "today" | "tomorrow" };
 export type VoiceCommand =
-  | { kind: "weather"; period?: WeatherPeriod }
+  | { kind: "alerts-on" | "alerts-off" }
+  | { kind: "weather"; period?: WeatherPeriod; location?: string; rainProbability?: boolean }
   | { kind: "destination"; query: string }
   | { kind: "choose"; index: number }
   | { kind: "confirm" | "decline" | "cancel-route" | "stop" | "standby" | "direction" | "eta" | "repeat" | "help" | "unknown" };
@@ -42,6 +43,8 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
   if (option) return { kind: "choose", index: (ordinals[option[1]] ?? spokenNumber(option[1])) - 1 };
   if (/^(?:repeat(?: that)?|say that again)$/.test(lower)) return { kind: "repeat" };
   if (/^(?:help|what can you do|what can i say)$/.test(lower)) return { kind: "help" };
+  if (/^(?:(?:turn|switch) )?alerts? (?:on|enable)$/.test(lower)) return { kind: "alerts-on" };
+  if (/^(?:(?:turn|switch) )?alerts? (?:off|disable)$/.test(lower)) return { kind: "alerts-off" };
   if (/\b(?:next turn|next step|next direction|which way|where do i turn)\b/.test(lower)) return { kind: "direction" };
   if (/\b(?:eta|e t a|how far|how long (?:until|to get|left|remaining)|time (?:left|remaining)|when (?:will|do) (?:we|i) (?:get there|arrive))\b/.test(lower)) return { kind: "eta" };
   const destination = /^(?:(?:can|could|would) you )?(?:(?:(?:navigate|drive|take me|go|route|(?:get |give me )?directions|show me the way) to)|(?:set (?:my |the )?destination to)|(?:how (?:do|can) i get to)|i(?:'d like| want) to go to)\s+(.+)$/i.exec(text);
@@ -49,22 +52,34 @@ export function parseVoiceCommand(transcript: string): VoiceCommand {
     const query = destination[1].replace(/\s+please$/i, "").trim();
     return query.length >= 2 && query.length <= 120 ? { kind: "destination", query } : { kind: "unknown" };
   }
-  if (/^(?:(?:what(?:'s| is) the )?(?:weather|temperature)(?: like)?(?: right now| today)?|is it (?:raining|going to rain)|will it rain|(?:give me |what(?:'s| is) )?(?:the )?forecast(?: for .+)?|(?:how much )?rain(?: is| will .+?)? (?:expected|forecast)?(?: today| tomorrow)?|(?:what(?:'s| is) )?(?:the )?(?:weather|forecast)(?: going to be)? (?:for|in|over|during) .+|(?:weather|forecast) (?:for|in|over|during) .+)\??$/i.test(lower)) {
+  const rainProbability = /^(?:what(?:'s| is)\s+)?(?:the\s+)?(?:chances?|probability)\s+of\s+rain(?: .+)?\??$/i.test(lower);
+  const weatherRequest = rainProbability || /^(?:what(?:'s| is)\s+(?:the\s+)?(?:weather|temperature|forecast)(?: .+)?|weather(?: .+)?|forecast(?: .+)?|is it (?:raining|going to rain)(?: .+)?|will it rain(?: .+)?|rain(?: .+))\??$/i.test(lower);
+  if (weatherRequest) {
+    const inPlace = /\b(?:weather|temperature|forecast|chance of rain|probability of rain)\b.*?\b(?:in|at)\s+(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
+    const forPlace = /\b(?:weather|temperature|forecast)\s+for\s+(.+?)(?=\s+(?:for (?:the )?next|next|in (?:the )?next|over (?:the )?next|today|tomorrow|right now|now)\b|$)/i.exec(text);
+    const requestedPlace = (inPlace?.[1] ?? forPlace?.[1])?.trim();
+    const location = requestedPlace && !/^(?:(?:the )?next|today|tomorrow|right now|now)\b/i.test(requestedPlace)
+      ? requestedPlace : undefined;
+    const weatherCommand = (period?: WeatherPeriod, asksRainProbability = false): VoiceCommand => ({
+      kind: "weather", ...(period ? { period } : {}), ...(location ? { location } : {}),
+      ...(asksRainProbability ? { rainProbability: true } : {}),
+    });
+    if (rainProbability) return weatherCommand({ day: /\btomorrow\b/i.test(lower) ? "tomorrow" : "today" }, true);
     const duration = /\b(next|for(?: the next)?|in)\s+([a-z\d-]+(?: [a-z\d-]+)?)\s+(hours?|hrs?|days?)\b/.exec(lower);
     if (duration) {
-      return { kind: "weather", period: {
+      return weatherCommand({
         hours: spokenNumber(duration[2]) * (duration[3].startsWith("day") ? 24 : 1),
         atEnd: duration[1] === "in",
-      } };
+      });
     }
-    if (/\b(?:next|in an) hour\b/.test(lower)) return { kind: "weather", period: { hours: 1 } };
-    if (/\btomorrow\b/.test(lower)) return { kind: "weather", period: { day: "tomorrow" } };
-    if (/\btoday\b/.test(lower) && !/\b(?:now|current)\b/.test(lower)) return { kind: "weather", period: { day: "today" } };
+    if (/\b(?:next|in an) hour\b/.test(lower)) return weatherCommand({ hours: 1 });
+    if (/\btomorrow\b/.test(lower)) return weatherCommand({ day: "tomorrow" });
+    if (/\btoday\b/.test(lower) && !/\b(?:now|current)\b/.test(lower)) return weatherCommand({ day: "today" });
     if (/\b(?:next|hours?|days?|week|minutes?|weekend|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/.test(lower)) {
-      return { kind: "weather", period: { hours: NaN } };
+      return weatherCommand({ hours: NaN });
     }
     const forecast = /\bforecast\b/.test(lower) && !/\b(?:now|current)\b/.test(lower);
-    return { kind: "weather", period: forecast ? { hours: 3 } : undefined };
+    return weatherCommand(forecast ? { hours: 3 } : undefined);
   }
   return { kind: "unknown" };
 }
@@ -89,7 +104,7 @@ const conditions = [
 const localDay = (timeMs: number) => Math.floor((timeMs + 19_800_000) / 86_400_000);
 const localTime = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "numeric", hour12: true });
 
-export async function spokenWeather(period: WeatherPeriod | undefined, signal: AbortSignal, location?: LatLng) {
+export async function spokenWeather(period: WeatherPeriod | undefined, signal: AbortSignal, location?: LatLng, rainProbability = false) {
   if (!period) {
     const result = await api.getWeatherNowcast(signal, location);
     if (result.status !== "ready") return "The current weather estimate is unavailable. Try again in a moment.";
@@ -121,7 +136,8 @@ export async function spokenWeather(period: WeatherPeriod | undefined, signal: A
   const rain = summary.firstWet
     ? ` About ${Number(summary.rain.toFixed(1))} millimetres of rain are forecast, with the first rainy hour ending at ${localTime.format(new Date(summary.firstWet.valid_at))}.`
     : " No rain is forecast for that period.";
-  return `For this location ${label}, expect temperatures ${temperature} degrees Celsius.${rain}`;
+  const probabilityNote = rainProbability ? " A rain-probability percentage is not available for this forecast." : "";
+  return `For this location ${label}, expect temperatures ${temperature} degrees Celsius.${rain}${probabilityNote}`;
 }
 
 export function upcomingDirection(route: DrivingOption, distances: number[], progress: number) {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type AssistantOutlook, type LatLng, type WeatherAvailabilityResponse } from "../api/client";
+import { api, type LatLng, type PointForecastResponse, type WeatherAvailabilityResponse } from "../api/client";
 import Icon, { type IconName } from "./Icon";
+import PointForecast from "./PointForecast";
 import TwoDayWeatherReport from "./TwoDayWeatherReport";
 
 const bengaluruTime = new Intl.DateTimeFormat("en-IN", {
@@ -41,16 +42,17 @@ function condition(code?: number | null, isDay?: number | null): Condition {
   return { label: "Condition unavailable", sky: "neutral", icon: "thermometer" };
 }
 
-export default function ThreeHourOutlook({ open, onOpen, onClose, outlook, location, locationName = "India" }: {
+export default function ThreeHourOutlook({ open, onOpen, onClose, location, locationName = "India" }: {
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
-  outlook: AssistantOutlook | null;
   location?: LatLng;
   locationName?: string;
 }) {
   const [weather, setWeather] = useState<WeatherAvailabilityResponse | null>(null);
+  const [pointForecast, setPointForecast] = useState<PointForecastResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [request, setRequest] = useState(0);
   const [paused, setPaused] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -61,15 +63,43 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook, locat
 
   useEffect(() => {
     const controller = new AbortController();
+    setWeather(null);
+    setPointForecast(null);
+    setError(null);
+    setLoading(true);
     api.getWeatherNowcast(controller.signal, latitude !== undefined && longitude !== undefined
       ? { lat: latitude, lng: longitude } : undefined)
-      .then((result) => {
-        if (!controller.signal.aborted) setWeather(result);
-      })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) {
-          setError(reason instanceof Error ? reason.message : "The outlook could not load.");
+      .then(async (result) => {
+        if (controller.signal.aborted) return;
+        setWeather(result);
+        if (result.status === "unavailable") {
+          try {
+            const point = { lat: latitude ?? 12.9716, lng: longitude ?? 77.5946 };
+            const fallback = await api.getPointForecast(point, controller.signal);
+            if (!controller.signal.aborted) setPointForecast(fallback);
+          } catch {
+            if (!controller.signal.aborted) {
+              setError("The point forecast could not load. Check the backend forecast configuration.");
+            }
+          }
         }
+      })
+      .catch(async () => {
+        if (!controller.signal.aborted) {
+          try {
+            const fallback = await api.getPointForecast(
+              { lat: latitude ?? 12.9716, lng: longitude ?? 77.5946 }, controller.signal,
+            );
+            if (!controller.signal.aborted) setPointForecast(fallback);
+          } catch {
+            if (!controller.signal.aborted) {
+              setError("The point forecast could not load. Check the backend forecast configuration.");
+            }
+          }
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
   }, [request, latitude, longitude]);
@@ -82,19 +112,25 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook, locat
   }, [open]);
 
   const forecast = weather?.status === "ready" ? weather : null;
+  const pointCurrent = pointForecast?.hours[0] ?? null;
   const current = condition(forecast?.weather_code, forecast?.is_day);
   const animated = current.sky !== "neutral" && current.sky !== "night";
-  const unavailable = error ?? (weather?.status === "unavailable" ? weather.message : null);
+  const unavailable = !loading && !forecast && !pointCurrent
+    ? error ?? (weather?.status === "unavailable" ? weather.message : null)
+    : null;
 
   return (
     <>
       <button ref={preview} type="button" className="weather-preview" data-sky={current.sky}
         aria-label="Open next 3 hours forecast" aria-haspopup="dialog" onClick={onOpen}>
         <span className="preview-heading">
-          <span>Next 3 hours</span>
+          <span><span>Next 3 hours</span><small>{locationName}</small></span>
           <Icon name="chevron" />
         </span>
         {forecast ? <>
+          {forecast.is_stale && <span className="forecast-stale-note" role="status">
+            Cached estimate · last updated {Math.max(1, Math.round((forecast.stale_age_seconds ?? 60) / 60))} min ago
+          </span>}
           <span className="preview-current">
             <span className="preview-temp" aria-label={`Current estimate ${degrees(forecast.air_temperature_c)} Celsius`}>
               {degrees(forecast.air_temperature_c)}
@@ -110,7 +146,23 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook, locat
               </span>;
             })}
           </span>
-        </> : <span className="preview-empty" role="status">{unavailable ? "Forecast unavailable" : "Loading forecast…"}</span>}
+        </> : pointCurrent ? <>
+          <span className="preview-condition">Point forecast</span>
+          <span className="preview-current">
+            <span className="preview-temp" aria-label={`Forecast ${degrees(pointCurrent.air_temperature_c)} Celsius`}>
+              {degrees(pointCurrent.air_temperature_c)}
+            </span>
+            <span className="preview-condition">Air temperature</span>
+          </span>
+          <span className="preview-hours">
+            {pointForecast?.hours.slice(0, 3).map((hour) => <span key={hour.valid_at}>
+              <time dateTime={hour.valid_at}>{timeLabel(hour.valid_at)}</time>
+              <span className="preview-hour-value">{degrees(hour.air_temperature_c)}</span>
+            </span>)}
+          </span>
+        </> : <span className="preview-empty" role="status">
+          {unavailable ? <><span>Forecast unavailable</span><small>{unavailable}</small></> : "Loading forecast…"}
+        </span>}
       </button>
 
       <dialog className="weather-dialog" ref={dialog} aria-labelledby="weather-title" data-sky={current.sky}
@@ -134,10 +186,46 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook, locat
             <button type="button" onClick={() => {
               setError(null);
               setWeather(null);
+              setPointForecast(null);
               setRequest((value) => value + 1);
             }}>Retry forecast</button>
           </div>}
-          {!forecast && !unavailable && <p role="status">Loading the hourly outlook…</p>}
+          {!forecast && !pointCurrent && !unavailable && <p role="status">Loading the hourly outlook…</p>}
+          {pointForecast && pointCurrent && !forecast && <>
+            <section className="weather-overview" aria-label={`${locationName} point forecast`}>
+              <div className="weather-reading">
+                <span className="weather-big-temp">{degrees(pointCurrent.air_temperature_c)}</span>
+                <span className="weather-condition"><Icon name="thermometer" />Air temperature forecast</span>
+                <p>Point forecast · {timeLabel(pointCurrent.valid_at)} IST</p>
+              </div>
+              <dl className="weather-summary">
+                <div><dt>Feels like</dt><dd>{degrees(pointCurrent.feels_like_c)}</dd></div>
+                <div><dt>Precipitation</dt><dd>{pointCurrent.precipitation_mm.toFixed(1)} <small>mm</small></dd></div>
+                <div><dt>Relative humidity</dt><dd>{pointCurrent.relative_humidity_pct === null
+                  ? "Unavailable" : `${Math.round(pointCurrent.relative_humidity_pct)}%`}</dd></div>
+              </dl>
+            </section>
+            <section className="weather-hourly" aria-labelledby="point-forecast-hourly-title">
+              <h3 id="point-forecast-hourly-title">Next forecast hours</h3>
+              <table>
+                <thead><tr><th scope="col">Time</th><th scope="col">Air temp.</th><th scope="col">Feels like</th>
+                  <th scope="col">Precip.</th><th scope="col">Humidity</th></tr></thead>
+                <tbody>{pointForecast.hours.slice(0, 3).map((hour) => <tr key={hour.valid_at}>
+                  <th scope="row"><time dateTime={hour.valid_at}>{timeLabel(hour.valid_at)}</time></th>
+                  <td>{hour.air_temperature_c.toFixed(1)} °C</td>
+                  <td>{hour.feels_like_c.toFixed(1)} °C</td>
+                  <td>{hour.precipitation_mm.toFixed(1)} mm</td>
+                  <td>{hour.relative_humidity_pct === null ? "—" : `${Math.round(hour.relative_humidity_pct)}%`}</td>
+                </tr>)}</tbody>
+              </table>
+            </section>
+            <details className="weather-method" open>
+              <summary>Forecast source and limits</summary>
+              <p>Point forecast for {locationName} near {pointForecast.location.latitude.toFixed(3)}°N, {pointForecast.location.longitude.toFixed(3)}°E.
+                This is forecast air temperature, not satellite land-surface temperature and not an official warning.</p>
+              <p>Retrieved {timeLabel(pointForecast.retrieved_at)} IST{pointForecast.model_run ? ` · model run ${timeLabel(pointForecast.model_run)} IST` : ""}.</p>
+            </details>
+          </>}
           {forecast && <>
             <section className="weather-overview" aria-label={`Current ${locationName} weather estimate`}>
               <div className="weather-reading">
@@ -173,20 +261,20 @@ export default function ThreeHourOutlook({ open, onOpen, onClose, outlook, locat
             </section>
             <details className="weather-method">
               <summary>Forecast source and coverage</summary>
-              <p>Open-Meteo model estimates for the Bengaluru grid cell at {forecast.provenance.grid_cell_center.latitude.toFixed(3)}°N, {forecast.provenance.grid_cell_center.longitude.toFixed(3)}°E.
+              <p>Model-based weather estimates for {locationName} near {forecast.provenance.grid_cell_center.latitude.toFixed(3)}°N, {forecast.provenance.grid_cell_center.longitude.toFixed(3)}°E.
                 Air temperature is estimated at 2 m. Model resolution is unspecified.</p>
               <p>Retrieved {timeLabel(forecast.provenance.retrieved_at)} IST. Forecasts describe a city-scale grid point.
                 Follow official alerts for flood and heatwave warnings.</p>
-              <a href="https://open-meteo.com/">Open-Meteo</a>
             </details>
           </>}
+          {location && <PointForecast location={location} locationName={locationName} />}
           <div className="weather-detail-actions">
             <button type="button" aria-expanded={showReport} aria-controls="weather-two-day"
               onClick={() => setShowReport((value) => !value)}>{showReport ? "Hide two-day weather report" : "Two-day weather report"}<Icon name="chevron" /></button>
             {forecast && animated && <button type="button" className="weather-motion-toggle"
               onClick={() => setPaused((value) => !value)}>{paused ? "Resume background motion" : "Pause background motion"}</button>}
           </div>
-        <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport outlook={outlook} location={location} locationName={locationName} />}</div>
+        <div id="weather-two-day" hidden={!showReport}>{showReport && <TwoDayWeatherReport location={location} locationName={locationName} />}</div>
         </div>
       </dialog>
     </>

@@ -28,6 +28,10 @@ async function installVoice(page: Page) {
       recognition.onresult?.({ resultIndex: 0, results: [{ isFinal: true, 0: { transcript } }] });
       recognition.onend?.();
     });
+    window.addEventListener("cx-test-interim", () => {
+      const recognition = Recognition.active;
+      recognition?.onresult?.({ resultIndex: 0, results: [{ isFinal: false, 0: { transcript: "What is the weather in Mysuru" } }] });
+    });
     window.addEventListener("cx-test-denial", () => Recognition.active?.onerror?.({ error: "not-allowed" }));
     Object.defineProperty(window, "SpeechRecognition", { value: Recognition });
     Object.defineProperty(window, "SpeechSynthesisUtterance", { value: class {
@@ -67,12 +71,12 @@ async function installVoice(page: Page) {
   const cx = page.getByRole("button", { name: "CX assistant", exact: true });
   await expect(page.getByRole("button", { name: "Stop listening" })).toHaveCount(0);
   await cx.click();
-  await page.getByRole("button", { name: "Talk to CX" }).click();
-  await expect(page.getByRole("button", { name: "Stop listening" })).toContainText("Say hello CX");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect(page.locator(".voice-session-hint")).toContainText(/hello cx/i);
 }
 
 async function say(page: Page, text: string) {
-  await expect(page.getByRole("button", { name: "Stop listening" })).toContainText(/Listening|Say hello CX/);
+  await expect(page.locator(".voice-session-hint")).toContainText(/Listening|hello cx/i);
   await page.evaluate((detail) => window.dispatchEvent(new CustomEvent("cx-test-transcript", { detail })), text);
 }
 
@@ -88,10 +92,9 @@ test("CX wakes on request, speaks conversational replies, and clears context on 
     return route.fulfill({ headers, json: { status: "ready", reply: "Navigate to Lalbagh." } });
   });
   await installVoice(page);
-  const indicator = page.getByRole("button", { name: "Stop listening" });
   const body = page.locator("body");
   await say(page, "Navigate to Lalbagh");
-  await expect(indicator).toContainText(/Starting|Say hello CX/);
+  await expect(page.locator(".voice-session-hint")).toContainText(/Starting|hello cx/i);
   expect(placeSearches).toBe(0);
 
   await say(page, "Hello CX");
@@ -115,19 +118,48 @@ test("CX wakes on request, speaks conversational replies, and clears context on 
 
   await say(page, "Go to sleep");
   await expect(body).toHaveAttribute("data-spoken", /Standing by/);
-  await expect(indicator).toContainText("Say hello CX");
+  await expect(page.locator(".voice-session-hint")).toContainText(/hello cx/i);
   await say(page, "CX agent, tell me a story");
   await expect.poll(() => requests[2]).toEqual({ message: "tell me a story", history: [] });
   await expect(body).toHaveAttribute("data-spoken", "Navigate to Lalbagh.");
+});
+
+test("CX shows a live transcript and makes the next action clear", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 740 });
+  await installVoice(page);
+  const indicator = page.getByRole("button", { name: "Stop listening" });
+  await expect(indicator).toBeVisible();
+  await expect(page.locator(".mascot-bubble")).toBeInViewport();
+  await page.evaluate(() => window.dispatchEvent(new Event("cx-test-interim")));
+  await expect(page.locator(".voice-transcript")).toContainText("What is the weather in Mysuru");
+  await expect(page.locator(".voice-session-hint")).toContainText(/hello cx/i);
+  await say(page, "Hello CX");
+  await expect(page.locator(".voice-transcript")).toContainText("Hello CX");
+  await expect(page.locator(".mascot-voice-help")).toContainText("browser may process microphone audio online");
+  await expect(page.getByRole("button", { name: "Stop listening" })).toBeVisible();
+});
+
+test("closing CX ends the microphone session", async ({ page }) => {
+  await installVoice(page);
+  await expect(page.getByRole("button", { name: "Stop listening" })).toBeVisible();
+  await page.getByRole("button", { name: "Close CX bubble" }).click();
+  await expect(page.getByRole("button", { name: "Stop listening" })).toHaveCount(0);
+  await expect(page.locator("#mascot-bubble")).toHaveCount(0);
+  await page.getByRole("button", { name: "CX assistant", exact: true }).click();
+  const talk = page.getByRole("button", { name: "Start talking" });
+  await expect(talk).toBeVisible();
+  await talk.focus();
+  await talk.press("Enter");
+  await expect(page.getByRole("button", { name: "Stop listening" })).toBeVisible();
 });
 
 test("CX returns to the wake phrase after conversation inactivity", async ({ page }) => {
   await page.clock.install();
   await installVoice(page);
   await say(page, "CX agent");
-  await expect(page.getByRole("button", { name: "Stop listening" })).toContainText("Listening");
+  await expect(page.locator(".voice-session-hint")).toContainText("Listening");
   await page.clock.fastForward(46_000);
-  await expect(page.getByRole("button", { name: "Stop listening" })).toContainText("Say hello CX");
+  await expect(page.locator(".voice-session-hint")).toContainText(/hello cx/i);
   await say(page, "Stop listening");
   await expect(page.getByRole("button", { name: "Stop listening" })).toHaveCount(0);
 });
@@ -219,7 +251,7 @@ test("CX speaks current weather and a requested forecast duration without a tran
   await installVoice(page);
   await say(page, "Hey C X, what's the weather now?");
   await expect(page.locator("body")).toHaveAttribute("data-spoken", /25 degrees Celsius.*overcast/);
-  await expect(page.getByText("what's the weather now?", { exact: false })).toHaveCount(0);
+  await expect(page.locator(".voice-transcript")).toContainText("what's the weather now?");
   await say(page, "And for the next six hours?");
   await expect(page.locator("body")).toHaveAttribute("data-spoken", /next 6 hours.*22 and 27.*6 millimetres/);
   await say(page, "What is the forecast for the next three days?");
@@ -277,4 +309,5 @@ test("CX stops recognition and explains denied microphone access", async ({ page
   await page.evaluate(() => window.dispatchEvent(new Event("cx-test-denial")));
   await expect(page.getByRole("button", { name: "Stop listening" })).toHaveCount(0);
   await expect(page.getByText("Allow microphone access in your browser to talk to CX.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try voice again" })).toBeVisible();
 });

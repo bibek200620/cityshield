@@ -7,6 +7,106 @@ export interface LatLng {
   lng: number;
 }
 
+export interface WeatherGridLocation extends LatLng {
+  id: string;
+}
+
+export interface WeatherGridResponse {
+  status: "ready" | "partial" | "unavailable";
+  results: {
+    id: string;
+    air_temperature_2m_c: number;
+    feels_like_2m_c: number | null;
+    relative_humidity_pct: number | null;
+    wind_speed_kmh: number | null;
+    rainfall_24h_mm: number;
+    model_grid_center: LatLng;
+    model_run: string;
+    valid_start: string;
+    valid_end: string;
+    retrieved_at: string;
+    stale: boolean;
+  }[];
+  checked_locations: number;
+  unavailable_locations: number;
+  checked_at: string;
+}
+
+export interface PointForecastResponse {
+  location: { latitude: number; longitude: number };
+  model_run: string | null;
+  model_updated_at: string | null;
+  retrieved_at: string;
+  current?: {
+    valid_at: string | null;
+    air_temperature_c: number | null;
+    feels_like_c: number | null;
+    heat_index_c: number | null;
+    relative_humidity_pct: number | null;
+    wind_speed_kmh: number | null;
+    uv_index: number | null;
+    precipitation_1h_mm: number | null;
+    condition: string | null;
+  };
+  hours: {
+    valid_at: string;
+    air_temperature_c: number;
+    feels_like_c: number;
+    precipitation_mm: number;
+    precipitation_probability_pct?: number | null;
+    relative_humidity_pct: number | null;
+    wind_speed_kmh?: number | null;
+    uv_index?: number | null;
+    wet_bulb_c?: number | null;
+    condition?: string | null;
+    pictocode?: number;
+  }[];
+  limitations?: string[];
+}
+
+export type PointAirQualityResponse = {
+  status: "unavailable";
+  message: string;
+} | {
+  status: "ready" | "empty";
+  checked_at: string;
+  valid_at: string | null;
+  indexes: { name: string; value: number; category: string; dominant_pollutant: string | null }[];
+  pollutants: { name: string; value: number | null; unit: string | null }[];
+  limitations: string[];
+};
+
+export interface NearbyFacilitiesResponse {
+  status: "ready" | "empty";
+  checked_at: string;
+  results: { id: string; name: string; category: string | null; latitude: number; longitude: number;
+    map_url: string | null; status: "mapped_listing_unverified" }[];
+  limitations: string[];
+}
+
+export interface FloodHistoryResponse {
+  status: "ready" | "unavailable";
+  location: string;
+  location_precision: "district";
+  events: {
+    id: string;
+    start_date: string;
+    end_date: string;
+    date_precision: string;
+    reported_cause: string;
+    source_event_source: string;
+    districts_listed: string[];
+    location_name: string;
+    location_precision: "district";
+    has_coordinates: false;
+    multi_district_event: boolean;
+    evaluation_eligible: false;
+    quality_flags: string[];
+  }[];
+  limitations: string[];
+  citation: { dataset: string; doi: string; license: string };
+}
+
 export interface PlaceSearchResult extends LatLng {
   id: string;
   name: string;
@@ -85,11 +185,11 @@ export interface CXConversationTurn {
 
 export type CXConversationAction =
   | { kind: "route"; source?: string; destination?: string }
-  | { kind: "weather"; hours?: number; day?: "today" | "tomorrow"; at_end?: boolean }
+  | { kind: "weather"; hours?: number; day?: "today" | "tomorrow"; at_end?: boolean; focus?: "rain_probability" }
   | { kind: "eta" | "direction" };
 
 type CXConversationResponse = { status: "ready"; reply: string; action?: CXConversationAction }
-  | { status: "unavailable"; reason: "disabled" | "busy" | "provider" };
+  | { status: "unavailable"; reason: "disabled" | "busy" | "upstream" };
 
 export type AssistantRouteContext = { status: "unavailable" } | {
   status: "ready";
@@ -191,20 +291,14 @@ export type WeatherAvailabilityResponse =
   | {
     status: "unavailable";
     message: string;
-    reason: "timeout" | "provider_error" | "stale_data" | "missing_data" | "invalid_data";
-    source: string;
+    reason: "timeout" | "upstream_error" | "stale_data" | "missing_data" | "invalid_data";
     checked_at: string;
   }
   | {
     status: "ready";
-    source: string;
+    is_stale?: boolean;
+    stale_age_seconds?: number;
     provenance: {
-      provider: string;
-      api_version: string;
-      endpoint: string;
-      model_selection: string;
-      model_identifier: string | null;
-      model_version: string | null;
       model_note: string;
       cell_selection: string;
       requested_location: { latitude: number; longitude: number };
@@ -246,7 +340,6 @@ export type TwoDayWeatherReportResponse =
   | Extract<WeatherAvailabilityResponse, { status: "unavailable" }>
   | {
     status: "ready";
-    source: string;
     provenance: Extract<WeatherAvailabilityResponse, { status: "ready" }> ["provenance"];
     forecast_hours: 48;
     forecast_from: string;
@@ -337,6 +430,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+function weatherApiUnavailable() {
+  return {
+    status: "unavailable" as const,
+    message: "CityShield's weather service is unreachable; trying an alternate forecast source.",
+    reason: "upstream_error" as const,
+    checked_at: new Date().toISOString(),
+  };
+}
+
 export const api = {
   driveRoutes: (source: LatLng, destination: LatLng, signal: AbortSignal) =>
     request<DrivingResponse>("/api/drive/routes", {
@@ -361,12 +463,37 @@ export const api = {
   getCriticalInfrastructure: () => request<CriticalInfraItem[]>("/api/critical-infrastructure"),
   getWeatherNowcast: async (signal?: AbortSignal, location?: LatLng): Promise<WeatherAvailabilityResponse> => {
     const query = location ? `?latitude=${location.lat}&longitude=${location.lng}` : "";
-    return withOpenMeteoFallback(await request<WeatherAvailabilityResponse>(`/api/weather/nowcast${query}`, { signal }), "nowcast", signal, location);
+    let response: WeatherAvailabilityResponse;
+    try {
+      response = await request<WeatherAvailabilityResponse>(`/api/weather/nowcast${query}`, { signal });
+    } catch (reason) {
+      if (signal?.aborted) throw reason;
+      response = weatherApiUnavailable();
+    }
+    return withOpenMeteoFallback(response, "nowcast", signal, location);
   },
   getWeatherReport: async (signal?: AbortSignal, location?: LatLng): Promise<TwoDayWeatherReportResponse> => {
     const query = location ? `?latitude=${location.lat}&longitude=${location.lng}` : "";
-    return withOpenMeteoFallback(await request<TwoDayWeatherReportResponse>(`/api/weather/report${query}`, { signal }), "report", signal, location);
+    let response: TwoDayWeatherReportResponse;
+    try {
+      response = await request<TwoDayWeatherReportResponse>(`/api/weather/report${query}`, { signal });
+    } catch (reason) {
+      if (signal?.aborted) throw reason;
+      response = weatherApiUnavailable();
+    }
+    return withOpenMeteoFallback(response, "report", signal, location);
   },
+  getWeatherGrid: (locations: WeatherGridLocation[], signal?: AbortSignal) =>
+    request<WeatherGridResponse>("/api/weather/grid", {
+      method: "POST", body: JSON.stringify({ locations }), signal,
+    }),
+  getPointForecast: (location: LatLng, signal?: AbortSignal) =>
+    request<PointForecastResponse>(`/api/weather/point-forecast?latitude=${location.lat}&longitude=${location.lng}`, { signal }),
+  getPointAirQuality: (location: LatLng, signal?: AbortSignal) =>
+    request<PointAirQualityResponse>(`/api/weather/air-quality?latitude=${location.lat}&longitude=${location.lng}`, { signal }),
+  getNearbyFacilities: (location: LatLng, signal?: AbortSignal) =>
+    request<NearbyFacilitiesResponse>(`/api/places/nearby?latitude=${location.lat}&longitude=${location.lng}`, { signal }),
+  getFloodHistory: (signal?: AbortSignal) => request<FloodHistoryResponse>("/api/flood/events", { signal }),
   getAssistantOutlook: (signal: AbortSignal) => request<AssistantOutlook>("/api/assistant/outlook", { signal }),
   getAssistantPhrasing: (signal: AbortSignal) => request<AssistantPhrasing>("/api/assistant/phrasing", { signal }),
   askCX: (message: string, history: CXConversationTurn[], signal: AbortSignal) =>

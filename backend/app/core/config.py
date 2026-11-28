@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     # API
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     TOMTOM_API_KEY: SecretStr | None = None
+    METEOBLUE_API_KEY: SecretStr | None = None
+    GOOGLE_MAPS_API_KEY: SecretStr | None = None
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-2.5-flash-lite"
     CX_CONVERSATION_ENABLED: bool = True
